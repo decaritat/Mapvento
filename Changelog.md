@@ -42,8 +42,12 @@ once released versions are maintained.
 - Added an editable project title and description, plus accessible route-card
   actions for properties, GPX export, and confirmed route removal.
 - Extracted route geometry, metrics, elevation-profile calculations, GPX handling,
-  and project normalization into independently testable modules with Vitest
-  unit coverage.
+  and project validation into independently testable modules with Vitest unit
+  coverage. Opening a project validates the complete current-version format,
+  rejects invalid files, and safely falls back for invalid local storage.
+  Separated Leaflet integration, file operations, route and point editors,
+  route list, toolbar, header, elevation profile and their styles from the
+  application coordinator.
 - Restricted project title and description fields to edit mode, hid the project
   description counter outside that mode, and auto-sized the description field
   without exceeding a quarter of the sidebar.
@@ -65,7 +69,9 @@ once released versions are maintained.
   dragging, insertion, and deletion while read-only panning is active.
 - Added routing provider BRouter. Hiking routes use `hiking-beta` and cycling
   routes use `trekking`; BRouter GeoJSON geometry is normalized before it is 
-  displayed.
+  displayed. Each route has an independent cancellable routing request, with
+  a visible loading state, stale-result protection, and targeted retry; editing
+  route properties does not interrupt or overwrite an active calculation.
 - Added consistent error-banner handling for unavailable map layers and
   routing failures, with provider-specific BRouter messages, retry actions,
   a close button, and the existing direct route fallback.

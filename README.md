@@ -12,7 +12,9 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 - Routing through BRouter with separate hiking-beta and trekking profiles and a
   direct fallback when the provider fails; routing failures are shown per route
   with provider-specific messages, a retry action, and a dismissible error
-  banner
+  banner. Calculations run independently per route: changing route properties
+  does not interrupt an unrelated or still-valid calculation, while changing
+  its routing inputs or retrying replaces the affected calculation.
 - Visible map-layer errors with a consistent retry banner when tile providers
   are unavailable; the banner can be dismissed with its close button
 - Route waypoints created by clicking, deleted through the context menu or Delete key, and inserted by dragging onto the route
@@ -29,6 +31,19 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 - Zoom-dependent map scale and north arrow
 - About dialog (Info) with version, project links, data attributions, and a
   filterable list of third-party components with license texts
+
+Project files use the current version 1 format. Opening a file validates its
+required fields, route and point IDs, coordinates, optional geometry, elevations
+and timestamps, POI symbols, and map layer. Files with an unsupported version
+or invalid data are rejected as a whole; unsupported or incomplete older files
+are not migrated. Invalid locally stored projects fall back to a new project.
+
+The React app coordinates project state and composes the route list, editors,
+map toolbar and elevation profile. Leaflet map creation, layers and map events
+are encapsulated in `useLeafletMap`; routing and project file operations have
+separate hooks. Component styles are split into ordered CSS files imported by
+`App.css` to preserve the shared cascade.
+
 ## Development
 
 ```text

@@ -64,6 +64,21 @@ describe('BRouter integration', () => {
     })
   })
 
+  it.each([[181, 52], [-181, 52], [13, 91], [13, -91]])(
+    'rejects out-of-range provider coordinates: %s, %s',
+    async (longitude, latitude) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          features: [{ geometry: { coordinates: [[13, 52], [longitude, latitude]] } }],
+        }),
+      }))
+      await expect(
+        requestRouteGeometry('hiking', [[13, 52], [14, 53]], new AbortController().signal),
+      ).rejects.toMatchObject({ kind: 'invalid-response' })
+    },
+  )
+
   it('surfaces provider and invalid-response errors', async () => {
     vi.stubGlobal(
       'fetch',

@@ -1,7 +1,32 @@
-import { describe, expect, it } from 'vitest'
-import { initialProject, normalizeProject, readInitialProject, supportedLayerId } from '../src/project'
+import { describe, expect, it, vi } from 'vitest'
+import { parseGpx } from '../src/gpx'
+import { initialProject, normalizeProject, readInitialProject } from '../src/project'
 
-describe('project normalization', () => {
+const route = {
+  ...initialProject.routes[0],
+  nodes: [
+    { id: 'node-1', coordinate: [13, 52] },
+    { id: 'node-2', coordinate: [14, 53] },
+  ],
+  geometry: [[13, 52], [14, 53]],
+  elevations: [10, 20],
+  timestamps: ['2025-05-01T10:00:00Z', null],
+}
+
+const point = {
+  id: 'point-1',
+  name: 'Gipfel',
+  description: '',
+  coordinate: [13, 52],
+  source: 'poi',
+  editable: false,
+  icon: 'summit',
+}
+
+const project = { ...initialProject, routes: [route], points: [point] }
+const roundTrip = (value: unknown) => JSON.parse(JSON.stringify(value))
+
+describe('project validation', () => {
   it('starts a new project with one empty editable route', () => {
     expect(initialProject.routes).toHaveLength(1)
     expect(initialProject.routes[0]).toMatchObject({
@@ -11,108 +36,176 @@ describe('project normalization', () => {
       nodes: [],
     })
     expect(initialProject.routes[0].color).toBeUndefined()
+    expect(roundTrip(normalizeProject(roundTrip(initialProject)))).toEqual(initialProject)
   })
 
-  it('preserves project data and restores a supported map layer', () => {
-    const project = {
-      ...initialProject,
+  it('preserves valid project, route, geometry, GPX, point and layer data', () => {
+    const saved = {
+      ...project,
       name: 'Meine Tour',
       mapLayerId: 'opentopomap',
-      routes: [{ id: 'route-1' }],
+      routes: [{
+        ...route,
+        editable: false,
+        gpxType: 'cycling',
+        type: 'cycling',
+        color: '#123456',
+        customColor: '#123456',
+        routingState: 'ready',
+        routingError: '',
+        showDistanceMarkers: true,
+        distanceMarkerMode: 'manual',
+        distanceMarkerStepKm: 0.5,
+      }],
     }
-
-    expect(normalizeProject(project)).toEqual(project)
+    expect(roundTrip(normalizeProject(roundTrip(saved)))).toEqual(saved)
   })
 
-  it('falls back to OpenStreetMap for unknown or absent map layers', () => {
-    expect(supportedLayerId('retired-layer')).toBe('osm')
-    expect(normalizeProject({ ...initialProject, mapLayerId: undefined }).mapLayerId).toBe('osm')
+  it('accepts empty projects and the optional fields omitted by the application', () => {
+    const empty = { ...initialProject, routes: [], activeRouteId: '' }
+    expect(roundTrip(normalizeProject(empty))).toEqual(empty)
+    const minimalRoute = { id: 'route-1', name: '', description: '', type: 'hiking', editable: true, nodes: [] }
+    const minimalPoint = { id: 'point-1', name: '', description: '', coordinate: [-180, 90], source: 'manual' }
+    const saved = { ...initialProject, routes: [minimalRoute], points: [minimalPoint] }
+    expect(roundTrip(normalizeProject(saved))).toEqual(saved)
   })
 
-  it('adds an empty description when opening an older project file', () => {
-    const { description: _description, ...olderProject } = initialProject
-    expect(normalizeProject(olderProject).description).toBe('')
-  })
-
-  it('limits imported project and route descriptions to 180 characters', () => {
-    const project = normalizeProject({
+  it('round-trips an actual imported GPX route and waypoints', () => {
+    const imported = parseGpx(
+      '<gpx><wpt lat="52.5" lon="13.4"><name>Gipfel</name></wpt><trk><trkseg><trkpt lat="52.5" lon="13.4"><ele>100</ele><time>2025-05-01T10:00:00Z</time></trkpt><trkpt lat="52.6" lon="13.5"><ele>200</ele></trkpt></trkseg></trk></gpx>',
+    )
+    expect(imported).not.toBeNull()
+    const saved = {
       ...initialProject,
-      description: 'p'.repeat(200),
-      routes: [{ id: 'route-1', description: 'r'.repeat(200) }],
-    })
-
-    expect(project.description).toHaveLength(180)
-    expect(project.routes[0].description).toHaveLength(180)
+      routes: [imported!.route],
+      points: imported!.waypoints,
+      activeRouteId: imported!.route.id,
+    }
+    expect(roundTrip(normalizeProject(roundTrip(saved)))).toEqual(roundTrip(saved))
   })
 
-  it('persists read-only route state and GPX timestamps through project normalization', () => {
-    const project = normalizeProject({
-      ...initialProject,
-      routes: [
-        {
-          ...initialProject.routes[0],
-          editable: false,
-          gpxType: 'cycling',
-          timestamps: ['2025-05-01T10:00:00Z', '2025-05-01T11:00:00Z'],
-        },
-      ],
-      points: [
-        {
-          id: 'gpx-point-1',
-          name: 'GPX-Wegpunkt',
-          description: '',
-          coordinate: [13, 52],
-          source: 'poi',
-          editable: false,
-        },
-      ],
-    })
-
-    const restored = normalizeProject(JSON.parse(JSON.stringify(project)))
-    expect(restored.routes[0].editable).toBe(false)
-    expect(restored.routes[0].gpxType).toBe('cycling')
-    expect(restored.routes[0].timestamps).toEqual(project.routes[0].timestamps)
-    expect(restored.points[0].editable).toBe(false)
+  it('retains the existing 180-character project and route description limit', () => {
+    const saved = { ...project, description: 'p'.repeat(200), routes: [{ ...route, description: 'r'.repeat(200) }] }
+    const restored = normalizeProject(saved)
+    expect(restored.description).toHaveLength(180)
+    expect(restored.routes[0].description).toHaveLength(180)
   })
 
-  it('adds a default icon to legacy points and preserves selected icons', () => {
-    const project = normalizeProject({
-      ...initialProject,
-      points: [
-        {
-          id: 'point-1',
-          name: 'Alter Punkt',
-          description: '',
-          coordinate: [13, 52],
-          source: 'manual',
-        },
-        {
-          id: 'point-2',
-          name: 'Gipfel',
-          description: '',
-          coordinate: [13.1, 52.1],
-          source: 'poi',
-          icon: 'summit',
-        },
-      ],
-    })
-
-    expect(project.points[0].icon).toBe('flag')
-    expect(project.points[1].icon).toBe('summit')
+  it.each([
+    null,
+    'project',
+    [],
+    { ...project, version: 2 },
+    { ...project, version: '1' },
+    { ...project, version: undefined },
+    { ...project, name: null },
+    { ...project, description: undefined },
+    { ...project, routes: {} },
+    { ...project, points: null },
+    { ...project, mapLayerId: undefined },
+    { ...project, mapLayerId: 'retired-layer' },
+    { ...project, activeRouteId: 'missing' },
+    { ...project, activeRouteId: '' },
+    { ...project, routes: [], activeRouteId: 'route-1' },
+    { ...project, routes: [route, route] },
+    { ...project, points: [point, point] },
+  ])('rejects invalid project structure or references: %#', (invalid) => {
+    expect(() => normalizeProject(invalid)).toThrow('Ungültiges Projekt')
   })
 
-  it('rejects values that do not contain route and point arrays', () => {
-    expect(() => normalizeProject(null)).toThrow('Ungültiges Projekt')
-    expect(() => normalizeProject({ routes: {}, points: [] })).toThrow('Ungültiges Projekt')
-    expect(() => normalizeProject({ routes: [], points: null })).toThrow('Ungültiges Projekt')
+  it.each([
+    null, 'route', 1, [], {},
+    { ...route, id: '' },
+    { ...route, id: 1 },
+    { ...route, name: null },
+    { ...route, description: undefined },
+    { ...route, type: 'driving' },
+    { ...route, editable: 'true' },
+    { ...route, nodes: null },
+    { ...route, nodes: ['node'] },
+    { ...route, nodes: [{ id: '', coordinate: [0, 0] }] },
+    { ...route, nodes: [route.nodes[0], route.nodes[0]] },
+    { ...route, geometry: 'line' },
+    { ...route, geometry: [] },
+    { ...route, geometry: [[13, 52], 'invalid'] },
+    { ...route, elevations: [1] },
+    { ...route, elevations: [1, null] },
+    { ...route, elevations: [1, Infinity] },
+    { ...route, timestamps: ['2025-05-01T10:00:00Z'] },
+    { ...route, timestamps: ['invalid', null] },
+    { ...route, timestamps: [1, null] },
+    { ...route, routingState: 'broken' },
+    { ...route, routingError: false },
+    { ...route, gpxType: 1 },
+    { ...route, color: null },
+    { ...route, customColor: 12 },
+    { ...route, showDistanceMarkers: 1 },
+    { ...route, distanceMarkerMode: 'fixed' },
+    { ...route, distanceMarkerStepKm: NaN },
+  ])('rejects invalid routes and optional route data: %#', (invalid) => {
+    expect(() => normalizeProject({ ...project, routes: [invalid] })).toThrow('Ungültiges Projekt')
   })
 
-  it('loads the initial project when storage is empty, invalid, or malformed', () => {
-    expect(readInitialProject({ getItem: () => null })).toBe(initialProject)
-    expect(readInitialProject({ getItem: () => '{' })).toBe(initialProject)
-    expect(
-      readInitialProject({ getItem: () => JSON.stringify({ ...initialProject, mapLayerId: 'old' }) })
-        .mapLayerId,
-    ).toBe('osm')
+  it.each([
+    null, 'point', 1, [], {},
+    { ...point, id: '' },
+    { ...point, name: 1 },
+    { ...point, description: undefined },
+    { ...point, source: 'route' },
+    { ...point, editable: 'false' },
+    { ...point, icon: 'unknown' },
+    { ...point, icon: null },
+  ])('rejects invalid points: %#', (invalid) => {
+    expect(() => normalizeProject({ ...project, points: [invalid] })).toThrow('Ungültiges Projekt')
+  })
+
+  it.each([
+    null, '13,52', [], [13], [13, 52, 10], ['13', 52],
+    [NaN, 52], [Infinity, 52], [-181, 0], [181, 0], [0, -91], [0, 91],
+  ])('rejects invalid node, geometry and point coordinates: %#', (coordinate) => {
+    expect(() => normalizeProject({
+      ...project,
+      routes: [{ ...route, nodes: [{ id: 'node', coordinate }] }],
+    })).toThrow('Ungültiges Projekt')
+    expect(() => normalizeProject({
+      ...project,
+      routes: [{ ...route, geometry: [coordinate] }],
+    })).toThrow('Ungültiges Projekt')
+    expect(() => normalizeProject({
+      ...project,
+      points: [{ ...point, coordinate }],
+    })).toThrow('Ungültiges Projekt')
+  })
+
+  it('rejects sparse arrays rather than skipping entries', () => {
+    expect(() => normalizeProject({ ...project, routes: Array(1) })).toThrow('Ungültiges Projekt')
+    expect(() => normalizeProject({ ...project, points: Array(1) })).toThrow('Ungültiges Projekt')
+  })
+
+  it('accepts heights and timestamps matching the generated geometry without stored geometry', () => {
+    const saved = {
+      ...project,
+      routes: [{ ...route, geometry: undefined, elevations: Array(13).fill(10), timestamps: Array(13).fill(null) }],
+    }
+    expect(normalizeProject(saved).routes[0].elevations).toHaveLength(13)
+    expect(() => normalizeProject({
+      ...saved,
+      routes: [{ ...saved.routes[0], elevations: [10, 20] }],
+    })).toThrow('Ungültiges Projekt')
+  })
+
+  it('falls back safely when storage is empty, malformed, invalid, or inaccessible', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      expect(readInitialProject({ getItem: () => null })).toBe(initialProject)
+      expect(readInitialProject({ getItem: () => '{' })).toBe(initialProject)
+      expect(readInitialProject({ getItem: () => JSON.stringify({ ...project, routes: ['broken'] }) })).toBe(initialProject)
+      expect(readInitialProject({ getItem: () => JSON.stringify({ ...project, mapLayerId: 'old' }) })).toBe(initialProject)
+      expect(readInitialProject({ getItem: () => { throw new Error('Storage unavailable') } })).toBe(initialProject)
+      expect(warn).toHaveBeenCalledTimes(4)
+      expect(roundTrip(readInitialProject({ getItem: () => JSON.stringify(project) }))).toEqual(project)
+    } finally {
+      warn.mockRestore()
+    }
   })
 })

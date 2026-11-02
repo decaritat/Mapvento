@@ -142,6 +142,14 @@ export async function requestRouteGeometry(
         Array.isArray(coordinate) &&
         Number.isFinite(coordinate[0]) && Number.isFinite(coordinate[1]),
     )
+  if (validCoordinates?.some(([longitude, latitude]) =>
+    longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90,
+  )) {
+    throw new RoutingError(
+      'invalid-response',
+      `${ROUTING_PROVIDER.label} hat ungültige Koordinaten geliefert.`,
+    )
+  }
   const geometry = validCoordinates?.map(
     ([longitude, latitude]) => [longitude, latitude] as Coordinate,
   )
