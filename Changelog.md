@@ -42,9 +42,10 @@ once released versions are maintained.
 - Added an editable project title and description, plus accessible route-card
   actions for properties, GPX export, and confirmed route removal.
 - Extracted route geometry, metrics, elevation-profile calculations, GPX handling,
-  and project validation into independently testable modules with Vitest unit
-  coverage. Opening a project validates the complete current-version format,
-  rejects invalid files, and safely falls back for invalid local storage.
+  elevation-provider fallback, and project validation into independently testable
+  modules with Vitest unit coverage. Opening a project validates the complete
+  current-version format, rejects invalid files, and safely falls back for invalid
+  local storage.
   Separated Leaflet integration, file operations, route and point editors,
   route list, toolbar, header, elevation profile and their styles from the
   application coordinator.

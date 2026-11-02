@@ -1,6 +1,10 @@
 import {
-  getDisplayedRouteCoordinates,
+  defaultElevationProvider,
   getDisplayedRouteElevations,
+  type ElevationProvider,
+} from './elevation'
+import {
+  getDisplayedRouteCoordinates,
   type Coordinate,
   type MapPoint,
   type Route,
@@ -27,12 +31,16 @@ export function escapeXml(value: string) {
     .replaceAll("'", '&apos;')
 }
 
-export function toGpx(route: Route, points: MapPoint[]) {
+export function toGpx(
+  route: Route,
+  points: MapPoint[],
+  fallback: ElevationProvider = defaultElevationProvider,
+) {
   if (!route.editable) {
     throw new Error('Schreibgeschützte GPX-Routen können nicht exportiert werden.')
   }
   const routeCoordinates = getDisplayedRouteCoordinates(route)
-  const elevations = getDisplayedRouteElevations(route)
+  const elevations = getDisplayedRouteElevations(route, fallback)
   const timestamps =
     route.timestamps?.length === routeCoordinates.length ? route.timestamps : []
   const track = routeCoordinates

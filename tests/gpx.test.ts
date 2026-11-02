@@ -119,6 +119,38 @@ describe('GPX import and export', () => {
     expect(routeMetrics(imported!.route).ascent).toBe(40)
   })
 
+  it('prefers imported and interpolated GPX heights over a replacement fallback', () => {
+    const imported = parseGpx(
+      '<gpx><trk><trkseg><trkpt lat="52.5" lon="13.4"><ele>100</ele></trkpt><trkpt lat="52.51" lon="13.41"/><trkpt lat="52.52" lon="13.42"><ele>140</ele></trkpt></trkseg></trk></gpx>',
+    )
+    expect(imported).not.toBeNull()
+    const fallback = { elevationAt: () => 999 }
+
+    expect(imported!.route.elevations).toEqual([100, 120, 140])
+    expect(routeMetrics(imported!.route, fallback).elevations).toEqual([100, 120, 140])
+    expect(routeMetrics(imported!.route, fallback).ascent).toBe(40)
+  })
+
+  it('uses the same replacement fallback for GPX exports', () => {
+    const document = new DOMParser().parseFromString(
+      toGpx({ ...route, elevations: undefined }, [], { elevationAt: () => 123 }),
+      'application/xml',
+    )
+
+    expect(Array.from(document.querySelectorAll('trkpt ele'), (ele) => ele.textContent))
+      .toEqual(['123', '123'])
+  })
+
+  it('exports stored elevations in preference to a replacement fallback', () => {
+    const document = new DOMParser().parseFromString(
+      toGpx(route, [], { elevationAt: () => 123 }),
+      'application/xml',
+    )
+
+    expect(Array.from(document.querySelectorAll('trkpt ele'), (ele) => ele.textContent))
+      .toEqual(['34', '41'])
+  })
+
   it('rejects malformed GPX and documents without track points', () => {
     expect(parseGpx('<gpx><broken></gpx>')).toBeNull()
     expect(parseGpx('<gpx><metadata><name>Kein Track</name></metadata></gpx>')).toBeNull()

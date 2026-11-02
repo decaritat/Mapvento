@@ -13,6 +13,7 @@ import {
   getElevationScale,
   isValidDistanceMarkerStepKm,
   profileDetailsAtFraction,
+  profileDetailsAtIndex,
   routeMetrics,
   selectedRoutePointDetails,
 } from '../src/routeMetrics'
@@ -93,6 +94,33 @@ describe('route geometry and metrics', () => {
 
     expect(getDisplayedRouteCoordinates(route)).toHaveLength(13)
     expect(routeMetrics(route).elevations).toHaveLength(13)
+  })
+
+  it('keeps synthetic metrics and profile values for geometry without stored elevations', () => {
+    const route = createRoute()
+    delete route.elevations
+
+    const metrics = routeMetrics(route)
+    expect(metrics.elevations).toEqual([588, 594, 600])
+    expect(metrics.ascent).toBe(12)
+    expect(metrics.descent).toBe(0)
+    expect(metrics.high).toBe(600)
+    expect(metrics.low).toBe(588)
+    expect(profileDetailsAtFraction(route, 0.5)?.elevation).toBe(594)
+  })
+
+  it('uses a replacement fallback consistently in metrics and profile details', () => {
+    const route = createRoute()
+    delete route.elevations
+    const fallback = { elevationAt: ([lon]: [number, number]) => 100 + lon * 1000 }
+
+    expect(routeMetrics(route, fallback).elevations).toEqual([100, 110, 120])
+    expect(profileDetailsAtFraction(route, 0.5, fallback)?.elevation).toBe(110)
+    expect(selectedRoutePointDetails(route, 'node-2', fallback)?.elevation).toBe(120)
+    expect(
+      profileDetailsAtIndex({ ...route, nodes: [], geometry: undefined }, 0, undefined, fallback)
+        .elevation,
+    ).toBe(100)
   })
 
   it('resolves profile fractions to the nearest sampled point and clamps the ends', () => {
