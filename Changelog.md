@@ -66,7 +66,9 @@ once released versions are maintained.
   dragging, insertion, and deletion while read-only panning is active.
 - Added routing provider BRouter. Hiking routes use `hiking-beta` and cycling
   routes use `trekking`; BRouter GeoJSON geometry is normalized before it is 
-  displayed.
+  displayed. Each route has an independent cancellable routing request, with
+  a visible loading state, stale-result protection, and targeted retry; editing
+  route properties does not interrupt or overwrite an active calculation.
 - Added consistent error-banner handling for unavailable map layers and
   routing failures, with provider-specific BRouter messages, retry actions,
   a close button, and the existing direct route fallback.

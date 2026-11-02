@@ -24,14 +24,11 @@ import {
   OSM_COPYRIGHT_URL,
 } from './providers'
 import {
-  describeRoutingError,
-  requestRouteGeometry,
   ROUTING_PROVIDER,
   routingProfileLabel,
 } from './routing'
 import {
   getDisplayedRouteCoordinates,
-  getRouteCoordinates,
   getRouteInsertionIndex,
   type Coordinate,
   type MapPoint,
@@ -59,6 +56,7 @@ import {
 import { escapeXml, parseGpx, toGpx } from './gpx'
 import { normalizeProject, readInitialProject } from './project'
 import { projectCoordinate } from './mapCoordinates'
+import { useRouteRouting } from './useRouteRouting'
 import {
   defaultPoiIcon,
   getPoiIcon,
@@ -371,8 +369,6 @@ function App() {
   const lastSearchAtRef = useRef(0)
   const searchCacheRef = useRef(new Map<string, PlaceSearchResult[]>())
   const suppressNextRouteClickRef = useRef(false)
-  const routedSignatureRef = useRef('')
-  const routedRetryRef = useRef(0)
   const [project, setProject] = useState<ProjectFile>(readInitialProject)
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameDraft, setProjectNameDraft] = useState('')
@@ -385,7 +381,6 @@ function App() {
   const [notice, setNotice] = useState('')
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [mapLayerRetry, setMapLayerRetry] = useState(0)
-  const [routingRetry, setRoutingRetry] = useState(0)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -520,18 +515,30 @@ function App() {
   const profilePointDetails = activeHoveredProfilePoint ?? activeSelectedPointDetails
   const activeElevationScale = getElevationScale(activeMetrics?.elevations ?? [])
   const activeDistanceScale = getDistanceScale(activeMetrics?.length ?? 0)
-  const routeNodeSignature = useMemo(
-    () =>
-      project.routes
-        .map(
-          (route) =>
-            `${route.id}:${route.type}:${route.nodes
-              .map((node) => `${node.coordinate[0]},${node.coordinate[1]}`)
-              .join(';')}`,
-        )
-        .join('|'),
-    [project.routes],
-  )
+  const retryRouteRouting = useRouteRouting(project, setProject, {
+    onSuccess: (routeId) => {
+      setErrorBanner((current) =>
+        current?.action === 'routing-retry' && current.routeId === routeId ? null : current,
+      )
+      setNotice(`Route über ${ROUTING_PROVIDER.label} berechnet.`)
+    },
+    onFailure: (routeId, message) => {
+      setErrorBanner({
+        title: 'Routing fehlgeschlagen',
+        message: `${message} Die direkte Verbindung bleibt als Fallback sichtbar.`,
+        action: 'routing-retry',
+        routeId,
+      })
+    },
+  })
+
+  const bannerRoute = errorBanner?.action === 'routing-retry'
+    ? project.routes.find((route) => route.id === errorBanner.routeId)
+    : undefined
+  const visibleErrorBanner = errorBanner?.action === 'routing-retry' &&
+    (bannerRoute?.routingState !== 'fallback' || !bannerRoute.routingError)
+    ? null
+    : errorBanner
 
   function activateToolMode(mode: ToolMode) {
     setToolMode(mode)
@@ -671,94 +678,6 @@ function App() {
       mapRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    if (
-      routedSignatureRef.current === routeNodeSignature &&
-      routedRetryRef.current === routingRetry
-    ) return
-    routedSignatureRef.current = routeNodeSignature
-    routedRetryRef.current = routingRetry
-    const abortController = new AbortController()
-    const candidates = project.routes.filter(
-      (route) =>
-        route.editable && route.nodes.length >= 2 && route.routingState !== 'ready',
-    )
-    if (!candidates.length) return () => abortController.abort()
-
-    Promise.all(
-      candidates.map(async (route) => {
-        try {
-          const routeGeometry = await requestRouteGeometry(
-            route.type,
-            route.nodes.map((node) => node.coordinate),
-            abortController.signal,
-          )
-          return {
-            id: route.id,
-            ...routeGeometry,
-            routingState: 'ready' as const,
-            routingError: undefined,
-          }
-        } catch (error) {
-          if (abortController.signal.aborted) {
-            return {
-              id: route.id,
-              coordinates: getRouteCoordinates(route),
-              elevations: undefined,
-              routingState: 'fallback' as const,
-              routingError: undefined,
-            }
-          }
-          const message = describeRoutingError(error)
-          return {
-            id: route.id,
-            coordinates: getRouteCoordinates(route),
-            elevations: undefined,
-            routingState: 'fallback' as const,
-            routingError: message,
-          }
-        }
-      }),
-    ).then((results) => {
-      if (abortController.signal.aborted) return
-      setProject((current) => ({
-        ...current,
-        routes: current.routes.map((route) => {
-          const result = results.find((item) => item.id === route.id)
-          return result
-            ? {
-                ...route,
-                geometry: result.coordinates,
-                elevations: result.elevations,
-                timestamps: undefined,
-                routingState: result.routingState,
-                routingError: result.routingError,
-              }
-            : route
-        }),
-      }))
-      const fallbackUsed = results.some((result) => result.routingState === 'fallback')
-      const fallbackResult = results.find(
-        (result) => result.routingState === 'fallback' && result.routingError,
-      )
-      if (fallbackUsed && fallbackResult?.routingError) {
-        setErrorBanner({
-          title: 'Routing fehlgeschlagen',
-          message: `${fallbackResult.routingError} Die direkte Verbindung bleibt als Fallback sichtbar.`,
-          action: 'routing-retry',
-          routeId: fallbackResult.id,
-        })
-      } else if (!fallbackUsed) {
-        setErrorBanner((current) =>
-          current?.action === 'routing-retry' ? null : current,
-        )
-        setNotice(`Route über ${ROUTING_PROVIDER.label} berechnet.`)
-      }
-    })
-
-    return () => abortController.abort()
-  }, [project.routes, routeNodeSignature, routingRetry])
 
   useEffect(() => {
     const map = mapRef.current
@@ -1419,7 +1338,14 @@ function App() {
           : route.editable
             ? {
                 ...route,
-                ...routeEditor.draft,
+                name: routeEditor.draft.name,
+                description: routeEditor.draft.description,
+                type: routeEditor.draft.type,
+                color: routeEditor.draft.color,
+                customColor: routeEditor.draft.customColor,
+                showDistanceMarkers: routeEditor.draft.showDistanceMarkers,
+                distanceMarkerMode: routeEditor.draft.distanceMarkerMode,
+                distanceMarkerStepKm: routeEditor.draft.distanceMarkerStepKm,
                 ...(route.type !== routeEditor.draft.type
                   ? {
                       geometry: undefined,
@@ -1528,15 +1454,7 @@ function App() {
 
   function retryRouting(route: Route) {
     if (!route.editable || route.nodes.length < 2) return
-    setProject((current) => ({
-      ...current,
-      routes: current.routes.map((item) =>
-        item.id === route.id
-          ? { ...item, routingState: 'idle', routingError: undefined }
-          : item,
-      ),
-    }))
-    setRoutingRetry((value) => value + 1)
+    retryRouteRouting(route.id)
     setErrorBanner((current) =>
       current?.action === 'routing-retry' && current.routeId === route.id
         ? null
@@ -2618,22 +2536,22 @@ function App() {
                 {notice}
               </div>
             )}
-            {errorBanner && (
+            {visibleErrorBanner && (
               <StatusBanner
-                title={errorBanner.title}
-                message={errorBanner.message}
+                title={visibleErrorBanner.title}
+                message={visibleErrorBanner.message}
                 actionLabel={
-                  errorBanner.action === 'map-retry'
+                  visibleErrorBanner.action === 'map-retry'
                     ? 'Kartenlayer erneut laden'
                     : 'Routing erneut versuchen'
                 }
                 onAction={() => {
-                  if (errorBanner.action === 'map-retry') {
+                  if (visibleErrorBanner.action === 'map-retry') {
                     retryMapLayer()
                     return
                   }
-                  const route = errorBanner.routeId
-                    ? project.routes.find((item) => item.id === errorBanner.routeId)
+                  const route = visibleErrorBanner.routeId
+                    ? project.routes.find((item) => item.id === visibleErrorBanner.routeId)
                     : undefined
                   if (route) retryRouting(route)
                 }}
