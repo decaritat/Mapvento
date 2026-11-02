@@ -58,6 +58,7 @@ import {
 } from './routeMetrics'
 import { escapeXml, parseGpx, toGpx } from './gpx'
 import { normalizeProject, readInitialProject } from './project'
+import { projectCoordinate } from './mapCoordinates'
 import {
   defaultPoiIcon,
   getPoiIcon,
@@ -730,6 +731,7 @@ function App() {
                 ...route,
                 geometry: result.coordinates,
                 elevations: result.elevations,
+                timestamps: undefined,
                 routingState: result.routingState,
                 routingError: result.routingError,
               }
@@ -912,7 +914,7 @@ function App() {
           window.setTimeout(() => {
             suppressNextRouteClickRef.current = false
           }, 350)
-          insertNodeAtCoordinate(route.id, [releasePoint.lng, releasePoint.lat])
+          insertNodeAtCoordinate(route.id, projectCoordinate(releasePoint))
         }
         cleanupDrag = () => {
           document.removeEventListener('mousemove', onMouseMove)
@@ -936,7 +938,7 @@ function App() {
           suppressNextRouteClickRef.current = false
           return
         }
-        insertNodeAtCoordinate(route.id, [event.latlng.lng, event.latlng.lat])
+        insertNodeAtCoordinate(route.id, projectCoordinate(event.latlng))
       })
       line.on('mousedown', onMouseDown)
       routeLayersRef.current.push(outline, line)
@@ -1080,7 +1082,7 @@ function App() {
         })
         marker.on('dragend', () => {
           const coordinate = marker.getLatLng()
-          updateNode(route.id, node.id, [coordinate.lng, coordinate.lat])
+          updateNode(route.id, node.id, projectCoordinate(coordinate))
         })
         markersRef.current.push(marker)
       })
@@ -1128,7 +1130,7 @@ function App() {
           id: uid('point'),
           name: 'Neuer POI',
           description: '',
-          coordinate: [event.latlng.lng, event.latlng.lat],
+          coordinate: projectCoordinate(event.latlng),
           source: 'poi',
           icon: defaultPoiIcon,
         }
@@ -1147,7 +1149,7 @@ function App() {
       }
       const node: RouteNode = {
         id: uid('node'),
-        coordinate: [event.latlng.lng, event.latlng.lat],
+        coordinate: projectCoordinate(event.latlng),
       }
       setProject((current) => ({
         ...current,

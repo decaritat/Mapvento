@@ -42,8 +42,9 @@ once released versions are maintained.
 - Added an editable project title and description, plus accessible route-card
   actions for properties, GPX export, and confirmed route removal.
 - Extracted route geometry, metrics, elevation-profile calculations, GPX handling,
-  and project normalization into independently testable modules with Vitest
-  unit coverage.
+  and project validation into independently testable modules with Vitest unit
+  coverage. Opening a project validates the complete current-version format,
+  rejects invalid files, and safely falls back for invalid local storage.
 - Restricted project title and description fields to edit mode, hid the project
   description counter outside that mode, and auto-sized the description field
   without exceeding a quarter of the sidebar.
