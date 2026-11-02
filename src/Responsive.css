@@ -1,0 +1,44 @@
+.hidden-input {
+  display: none;
+}
+
+@media (max-width: 1150px) {
+  .inspector {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(3, minmax(70px, 1fr));
+  }
+
+  .compact-metric-grid {
+    grid-template-columns: repeat(3, minmax(70px, 1fr));
+  }
+
+  .elevation-mini-chart-button {
+    flex-basis: 170px;
+    width: 170px;
+  }
+}
+
+@media (max-width: 979px) {
+  .workspace {
+    grid-template-columns: clamp(240px, 28vw, 312px) minmax(0, 1fr);
+  }
+
+  .inspector.expanded {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(180px, auto);
+  }
+
+  .inspector.expanded .metric-grid {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(70px, 1fr));
+    grid-template-rows: repeat(2, minmax(42px, auto));
+  }
+
+  .inspector.expanded .elevation-card {
+    min-height: 180px;
+  }
+}
