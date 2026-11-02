@@ -38,6 +38,12 @@ and timestamps, POI symbols, and map layer. Files with an unsupported version
 or invalid data are rejected as a whole; unsupported or incomplete older files
 are not migrated. Invalid locally stored projects fall back to a new project.
 
+The React app coordinates project state and composes the route list, editors,
+map toolbar and elevation profile. Leaflet map creation, layers and map events
+are encapsulated in `useLeafletMap`; routing and project file operations have
+separate hooks. Component styles are split into ordered CSS files imported by
+`App.css` to preserve the shared cascade.
+
 ## Development
 
 ```text

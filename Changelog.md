@@ -45,6 +45,9 @@ once released versions are maintained.
   and project validation into independently testable modules with Vitest unit
   coverage. Opening a project validates the complete current-version format,
   rejects invalid files, and safely falls back for invalid local storage.
+  Separated Leaflet integration, file operations, route and point editors,
+  route list, toolbar, header, elevation profile and their styles from the
+  application coordinator.
 - Restricted project title and description fields to edit mode, hid the project
   description counter outside that mode, and auto-sized the description field
   without exceeding a quarter of the sidebar.
