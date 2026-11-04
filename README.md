@@ -24,7 +24,8 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 - Route name, description, type, and color
 - Elevation profile with distance, elevation, and time information
 - Distance, ascent, descent, duration, highest-point, and lowest-point metrics
-- Saving and opening project files
+- A keyboard-accessible header menu for opening and saving projects, managing
+  caches, viewing application information, and exiting the desktop app
 - GPX export for editable routes and read-only GPX import; imported routes can
   change color and distance markers while geometry, name, and description stay
   locked; available GPX route types are shown read-only, timestamps/elevations
@@ -82,7 +83,8 @@ the highest available tiles enlarged locally.
 
 ### Local tile cache
 
-The layer tool shows the application tile cache, its 100 MiB image-data limit,
+The header menu's **Cache verwalten** dialog shows the application tile cache,
+its 100 MiB image-data limit,
 provider counts, zoom levels and expired entries. It reports coverage of the
 rectangle enclosing the current project's route geometry and points at the
 current map zoom (limited to each provider's native zoom). This is not a

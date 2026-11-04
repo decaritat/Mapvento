@@ -308,21 +308,6 @@
   font-weight: 700;
 }
 
-.tile-cache-control p {
-  margin: 5px 0;
-}
-
-.tile-cache-provider {
-  display: grid;
-  gap: 3px;
-  padding: 5px 0;
-  border-top: 1px solid rgba(38, 52, 59, 0.18);
-}
-
-.tile-cache-provider button {
-  margin-right: 5px;
-}
-
 .map-search > .map-tool-button {
   border-top-left-radius: 2px;
   border-top-right-radius: 2px;

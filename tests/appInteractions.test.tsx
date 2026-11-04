@@ -4,11 +4,20 @@ import L from 'leaflet'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { initialProject } from '../src/project'
+import { tileCache } from '../src/tileCache'
 
 function button(container: ParentNode, label: string) {
   const result = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
   if (!result) throw new Error(`Button not found: ${label}`)
   return result
+}
+
+async function headerAction(container: HTMLElement, label: string) {
+  await act(async () => button(container, 'Hauptmenü').click())
+  const action = Array.from(container.querySelectorAll<HTMLButtonElement>('.header-menu button'))
+    .find((item) => item.textContent?.trim() === label)
+  if (!action) throw new Error(`Menu action not found: ${label}`)
+  await act(async () => action.click())
 }
 
 async function changeText(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -109,9 +118,7 @@ describe('application interactions', () => {
         marker!.setLatLng([52.6, 13.6])
         marker!.fire('dragend')
       })
-      const save = Array.from(container.querySelectorAll('button'))
-        .find((item) => item.textContent?.trim() === 'Projekt speichern')!
-      await act(async () => save.click())
+      await headerAction(container, 'Projekt speichern')
       const project = JSON.parse(write.mock.calls[0][0])
       const coordinates = project.routes[0].nodes.map((node: { coordinate: number[] }) => node.coordinate)
       expect(coordinates[0]).toEqual([13, 52])
@@ -266,9 +273,7 @@ describe('application interactions', () => {
         .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(container.querySelector('.point-marker-label')?.textContent).toBe('Rastplatz')
 
-      const save = Array.from(container.querySelectorAll('button'))
-        .find((item) => item.textContent?.trim() === 'Projekt speichern')!
-      await act(async () => save.click())
+      await headerAction(container, 'Projekt speichern')
       const saved = JSON.parse(write.mock.calls[0][0])
       expect(saved.routes[0]).toMatchObject({ name: 'Neue Tour', description: 'Am See' })
       expect(saved.points).toHaveLength(1)
@@ -313,10 +318,8 @@ describe('application interactions', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<App />))
-      const info = Array.from(container.querySelectorAll('button'))
-        .find((item) => item.textContent?.trim() === 'Info')!
-      info.focus()
-      await act(async () => info.click())
+      const trigger = button(container, 'Hauptmenü')
+      await headerAction(container, 'Info')
       const dialog = document.querySelector<HTMLElement>('.about-dialog')!
       expect(document.activeElement).toBe(dialog)
       await vi.waitFor(() =>
@@ -335,7 +338,40 @@ describe('application interactions', () => {
       await act(async () => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(document.querySelector('.about-dialog')).toBeNull()
       await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
-      expect(document.activeElement).toBe(info)
+      expect(document.activeElement).toBe(trigger)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('opens the cache dialog from the header and restores focus after Escape', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.spyOn(tileCache, 'stats').mockResolvedValue({
+      bytes: 100, count: 1, stale: 0,
+      layers: { osm: { bytes: 100, count: 1, stale: 0, zooms: [7], tiles: [] } },
+    })
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const trigger = button(container, 'Hauptmenü')
+      await headerAction(container, 'Cache verwalten')
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="cache-title"]')!
+      expect(document.activeElement).toBe(dialog)
+      expect(container.querySelector('.app-shell')?.hasAttribute('inert')).toBe(true)
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
+      expect(dialog.textContent).toContain('OpenStreetMap')
+      expect(dialog.textContent).toContain('Gesamten Kachelcache löschen')
+      const buttons = dialog.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
+      buttons[0].focus()
+      await act(async () => buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(buttons[buttons.length - 1])
+      await act(async () => dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(document.querySelector('[aria-labelledby="cache-title"]')).toBeNull()
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
+      expect(document.activeElement).toBe(trigger)
     } finally {
       await act(async () => root.unmount())
       container.remove()
@@ -359,9 +395,7 @@ describe('application interactions', () => {
       await act(async () => exportButton.click())
       expect(write.mock.calls[0][0]).toContain('<gpx')
       expect(write.mock.calls[0][0]).toContain(initialProject.routes[0].name)
-      const saveButton = Array.from(container.querySelectorAll('button'))
-        .find((item) => item.textContent?.trim() === 'Projekt speichern')!
-      await act(async () => saveButton.click())
+      await headerAction(container, 'Projekt speichern')
       expect(JSON.parse(write.mock.calls[1][0])).toEqual(initialProject)
       expect(picker).toHaveBeenCalledTimes(2)
       expect(close).toHaveBeenCalledTimes(2)
@@ -421,7 +455,7 @@ describe('application interactions', () => {
       const trigger = button(container, 'Kartenlayer auswählen')
       await act(async () => trigger.click())
       expect(Array.from(container.querySelectorAll('.map-layer-panel legend')).map((legend) => legend.textContent))
-        .toEqual(['Basiskarte', 'Kartenebenen', 'Kachelcache'])
+        .toEqual(['Basiskarte', 'Kartenebenen'])
       const close = button(container, 'Kartenlayer schließen')
       close.focus()
       await act(async () => close.click())
@@ -496,7 +530,7 @@ describe('application interactions', () => {
       expect(map.hasLayer(retriedHiking)).toBe(false)
       expect(container.textContent).not.toContain('Kartenlayer nicht erreichbar')
       await act(async () => hiking.click())
-      await act(async () => container.querySelector<HTMLButtonElement>('.solid-button')!.click())
+      await headerAction(container, 'Projekt speichern')
       const saved = JSON.parse(write.mock.calls[0][0])
       expect(saved.mapOverlayIds).toEqual(['waymarked-cycling', 'waymarked-hiking'])
       expect(saved.mapLayerId).toBe('opentopomap')
