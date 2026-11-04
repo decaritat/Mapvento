@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { parseGpx } from '../src/gpx'
+import { DEFAULT_LAYER_ID, layers } from '../src/mapLayers'
 import { initialProject, normalizeProject, readInitialProject } from '../src/project'
 
 const route = {
@@ -61,6 +62,39 @@ describe('project validation', () => {
     expect(roundTrip(normalizeProject(roundTrip(saved)))).toEqual(saved)
   })
 
+  it.each(layers.filter((layer) => !layer.requiresKey))('preserves the registered layer $id', ({ id }) => {
+    expect(normalizeProject({ ...project, mapLayerId: id }).mapLayerId).toBe(id)
+  })
+
+  it('falls back to the default layer for an unknown layer without losing project data', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const onLayerFallback = vi.fn()
+    try {
+      const saved = { ...project, mapLayerId: 'retired-layer' }
+      expect(roundTrip(normalizeProject(saved, onLayerFallback))).toEqual(roundTrip({ ...saved, mapLayerId: DEFAULT_LAYER_ID }))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('retired-layer'))
+      expect(onLayerFallback).toHaveBeenCalledWith(expect.stringContaining('OpenStreetMap Carto'))
+      expect(roundTrip(readInitialProject({ getItem: () => JSON.stringify(saved) }, onLayerFallback)))
+        .toEqual(roundTrip({ ...saved, mapLayerId: DEFAULT_LAYER_ID }))
+      expect(onLayerFallback).toHaveBeenCalledTimes(2)
+      expect(() => normalizeProject({ ...saved, name: null }, onLayerFallback)).toThrow('Ungültiges Projekt')
+      expect(onLayerFallback).toHaveBeenCalledTimes(2)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it('does not restore registered layers requiring an API key', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    layers.push({ ...layers[0], id: 'keyed-layer', requiresKey: true })
+    try {
+      expect(normalizeProject({ ...project, mapLayerId: 'keyed-layer' }).mapLayerId).toBe(DEFAULT_LAYER_ID)
+    } finally {
+      layers.pop()
+      warn.mockRestore()
+    }
+  })
+
   it('accepts empty projects and the optional fields omitted by the application', () => {
     const empty = { ...initialProject, routes: [], activeRouteId: '' }
     expect(roundTrip(normalizeProject(empty))).toEqual(empty)
@@ -103,7 +137,7 @@ describe('project validation', () => {
     { ...project, routes: {} },
     { ...project, points: null },
     { ...project, mapLayerId: undefined },
-    { ...project, mapLayerId: 'retired-layer' },
+    { ...project, mapLayerId: null },
     { ...project, activeRouteId: 'missing' },
     { ...project, activeRouteId: '' },
     { ...project, routes: [], activeRouteId: 'route-1' },
@@ -200,7 +234,7 @@ describe('project validation', () => {
       expect(readInitialProject({ getItem: () => null })).toBe(initialProject)
       expect(readInitialProject({ getItem: () => '{' })).toBe(initialProject)
       expect(readInitialProject({ getItem: () => JSON.stringify({ ...project, routes: ['broken'] }) })).toBe(initialProject)
-      expect(readInitialProject({ getItem: () => JSON.stringify({ ...project, mapLayerId: 'old' }) })).toBe(initialProject)
+      expect(readInitialProject({ getItem: () => JSON.stringify({ ...project, mapLayerId: null }) })).toBe(initialProject)
       expect(readInitialProject({ getItem: () => { throw new Error('Storage unavailable') } })).toBe(initialProject)
       expect(warn).toHaveBeenCalledTimes(4)
       expect(roundTrip(readInitialProject({ getItem: () => JSON.stringify(project) }))).toEqual(project)

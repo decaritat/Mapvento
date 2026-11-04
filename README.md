@@ -34,15 +34,21 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 
 Project files use the current version 1 format. Opening a file validates its
 required fields, route and point IDs, coordinates, optional geometry, elevations
-and timestamps, POI symbols, and map layer. Files with an unsupported version
-or invalid data are rejected as a whole; unsupported or incomplete older files
-are not migrated. Invalid locally stored projects fall back to a new project.
+and timestamps, POI symbols, and the map-layer field. Files with an unsupported
+version or invalid data are rejected as a whole; unsupported or incomplete older
+files are not migrated. An unavailable map-layer ID falls back to OpenStreetMap
+Carto with a visible notice and a console warning. Invalid locally stored
+projects fall back to a new project.
 
 The React app coordinates project state and composes the route list, editors,
 map toolbar and elevation profile. Leaflet map creation, layers and map events
 are encapsulated in `useLeafletMap`; routing and project file operations have
 separate hooks. Component styles are split into ordered CSS files imported by
 `App.css` to preserve the shared cascade.
+
+`src/mapLayers.ts` is the UI-independent registry for map-layer definitions.
+The map, layer dropdown, and project validation use the same registry; layers
+requiring an API key cannot be restored from a project.
 
 `src/elevation.ts` defines the synchronous elevation fallback provider used by
 route metrics, profile details, and GPX export. Complete finite elevations
