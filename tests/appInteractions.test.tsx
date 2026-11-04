@@ -11,6 +11,15 @@ function button(container: ParentNode, label: string) {
   return result
 }
 
+async function changeText(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+  const setter = Object.getOwnPropertyDescriptor(prototype, 'value')!.set!
+  await act(async () => {
+    setter.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
 describe('application interactions', () => {
   afterEach(() => {
     localStorage.clear()
@@ -79,7 +88,7 @@ describe('application interactions', () => {
       await act(async () => root.render(<App />))
       const map = mapSpy.mock.results[0].value
       let line: L.Polyline | undefined
-      map.eachLayer((layer) => {
+      map.eachLayer((layer: L.Layer) => {
         if (layer instanceof L.Polyline && layer.options.interactive) line = layer
       })
       expect(line).toBeDefined()
@@ -90,7 +99,7 @@ describe('application interactions', () => {
       expect(container.querySelectorAll('.route-node')).toHaveLength(3)
 
       let marker: L.Marker | undefined
-      map.eachLayer((layer) => {
+      map.eachLayer((layer: L.Layer) => {
         if (layer instanceof L.Marker && layer.options.draggable && layer.getLatLng().lng === 13.5) {
           marker = layer
         }
@@ -134,7 +143,7 @@ describe('application interactions', () => {
       await act(async () => root.render(<App />))
       const map = mapSpy.mock.results[0].value
       let line: L.Polyline | undefined
-      map.eachLayer((layer) => {
+      map.eachLayer((layer: L.Layer) => {
         if (layer instanceof L.Polyline && layer.options.interactive) line = layer
       })
       expect(map.dragging.enabled()).toBe(true)
@@ -156,6 +165,7 @@ describe('application interactions', () => {
 
   it('imports a GPX route and waypoints as read-only through the route dialog', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const mapSpy = vi.spyOn(L, 'map')
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -168,15 +178,161 @@ describe('application interactions', () => {
         .find((item) => item.textContent?.includes('Weiter'))!
       await act(async () => confirm.click())
       const input = container.querySelector<HTMLInputElement>('input[accept=".gpx,application/gpx+xml"]')!
-      const xml = '<gpx><wpt lat="52" lon="13"><name>Gipfel</name></wpt><trk><name>Testtour</name><trkseg><trkpt lat="52" lon="13"/></trkseg></trk></gpx>'
+      const xml = '<gpx><wpt lat="52" lon="13"><name>Gipfel</name></wpt><trk><name>Testtour</name><trkseg><trkpt lat="52" lon="13"/><trkpt lat="53" lon="14"/></trkseg></trk></gpx>'
       Object.defineProperty(input, 'files', { configurable: true, value: [{ text: async () => xml }] })
       await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })))
       expect(container.textContent).toContain('Testtour')
       expect(container.textContent).toContain('GPX schreibgeschützt importiert.')
       expect(container.textContent).toContain('READ-ONLY')
       expect(container.querySelectorAll('.point-marker')).toHaveLength(1)
+      expect(container.querySelectorAll('.route-node')).toHaveLength(0)
+      await act(async () => mapSpy.mock.results[0].value.fire('click', {
+        latlng: L.latLng(52.5, 13.5),
+        originalEvent: new MouseEvent('click'),
+      }))
+      expect(container.textContent).toContain('Diese Route ist schreibgeschützt.')
+      expect(container.querySelectorAll('.route-node')).toHaveLength(0)
       await act(async () => button(container, 'Aktionen für Testtour').click())
       expect(document.querySelector('[role="menu"]')?.textContent).not.toContain('GPX exportieren')
+      const properties = document.querySelector<HTMLButtonElement>('[role="menuitem"]')!
+      await act(async () => properties.click())
+      expect(document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')?.disabled).toBe(true)
+      expect(document.querySelector<HTMLTextAreaElement>('[aria-label="Routenbeschreibung"]')?.disabled).toBe(true)
+      await act(async () => button(document, 'Routeneigenschaften verwerfen und schließen').click())
+      await act(async () => container.querySelector<HTMLElement>('.point-marker')!.click())
+      expect(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')?.disabled).toBe(true)
+      expect(document.querySelector('[aria-label="POI löschen"]')).toBeNull()
+      expect(document.querySelector('[aria-label="POI-Eigenschaften übernehmen"]')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('saves route and POI edits and discards cancelled drafts', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const mapSpy = vi.spyOn(L, 'map')
+    const write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('showSaveFilePicker', vi.fn().mockResolvedValue({
+      createWritable: async () => ({ write, close: async () => {} }),
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const openProperties = async (name: string) => {
+        await act(async () => button(container, `Aktionen für ${name}`).click())
+        await act(async () => document.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())
+      }
+
+      await openProperties(initialProject.routes[0].name)
+      const routeName = document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')!
+      expect(document.activeElement).toBe(routeName)
+      await changeText(routeName, 'Neue Tour')
+      await changeText(document.querySelector<HTMLTextAreaElement>('[aria-label="Routenbeschreibung"]')!, 'Am See')
+      await act(async () => button(document, 'Routeneigenschaften übernehmen').click())
+      expect(container.textContent).toContain('Neue Tour')
+      await openProperties('Neue Tour')
+      await changeText(document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')!, 'Verworfene Tour')
+      await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(document.querySelector('[aria-label="Routenname"]')).toBeNull()
+      expect(container.textContent).toContain('Neue Tour')
+      expect(container.textContent).not.toContain('Verworfene Tour')
+
+      await act(async () => button(container, 'Punkt oder POI setzen').click())
+      await act(async () => mapSpy.mock.results[0].value.fire('click', {
+        latlng: L.latLng(52, 13),
+        originalEvent: new MouseEvent('click', { clientX: 100, clientY: 100 }),
+      }))
+      await changeText(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!, 'Hütte')
+      await act(async () => button(document, 'POI-Eigenschaften übernehmen').click())
+      expect(container.querySelector('.point-marker-label')?.textContent).toBe('Hütte')
+      await act(async () => container.querySelector<HTMLElement>('.point-marker')!.click())
+      await changeText(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!, 'Rastplatz')
+      await changeText(document.querySelector<HTMLTextAreaElement>('[aria-label="POI-Beschreibung"]')!, 'Am Wasser')
+      await act(async () => button(document, 'POI-Eigenschaften übernehmen').click())
+      expect(container.querySelector('.point-marker-label')?.textContent).toBe('Rastplatz')
+      expect(container.textContent).toContain('POI aktualisiert.')
+      await act(async () => container.querySelector<HTMLElement>('.point-marker')!.click())
+      await changeText(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!, 'Verworfen')
+      const iconPicker = document.querySelector<HTMLButtonElement>('.poi-icon-picker-toggle')!
+      await act(async () => iconPicker.click())
+      expect(iconPicker.getAttribute('aria-expanded')).toBe('true')
+      await act(async () => iconPicker.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(iconPicker.getAttribute('aria-expanded')).toBe('false')
+      expect(document.querySelector('[aria-label="POI-Titel"]')).not.toBeNull()
+      await act(async () => document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(container.querySelector('.point-marker-label')?.textContent).toBe('Rastplatz')
+
+      const save = Array.from(container.querySelectorAll('button'))
+        .find((item) => item.textContent?.trim() === 'Projekt speichern')!
+      await act(async () => save.click())
+      const saved = JSON.parse(write.mock.calls[0][0])
+      expect(saved.routes[0]).toMatchObject({ name: 'Neue Tour', description: 'Am See' })
+      expect(saved.points).toHaveLength(1)
+      expect(saved.points[0]).toMatchObject({ name: 'Rastplatz', description: 'Am Wasser', coordinate: [13, 52] })
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('handles Escape and focus in the creation dialog and route menu', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, 'Neue Route erstellen oder GPX importieren').click())
+      const radio = document.querySelector<HTMLInputElement>('input[name="route-creation-mode"][value="new"]')!
+      expect(document.activeElement).toBe(radio)
+      await act(async () => radio.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(document.querySelector('.route-creation-dialog')).toBeNull()
+      expect(container.querySelectorAll('.route-card')).toHaveLength(1)
+
+      const trigger = button(container, `Aktionen für ${initialProject.routes[0].name}`)
+      await act(async () => trigger.click())
+      const firstAction = document.querySelector<HTMLButtonElement>('[role="menuitem"]')!
+      expect(document.activeElement).toBe(firstAction)
+      await act(async () => firstAction.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(document.querySelector('[role="menu"]')).toBeNull()
+      expect(document.activeElement).toBe(trigger)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('traps focus in the About dialog and restores it after Escape', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const info = Array.from(container.querySelectorAll('button'))
+        .find((item) => item.textContent?.trim() === 'Info')!
+      info.focus()
+      await act(async () => info.click())
+      const dialog = document.querySelector<HTMLElement>('.about-dialog')!
+      expect(document.activeElement).toBe(dialog)
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, select, summary, [tabindex="0"]',
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      first.focus()
+      await act(async () => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(last)
+      await act(async () => last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(first)
+      await act(async () => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(document.querySelector('.about-dialog')).toBeNull()
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
+      expect(document.activeElement).toBe(info)
     } finally {
       await act(async () => root.unmount())
       container.remove()
@@ -214,6 +370,7 @@ describe('application interactions', () => {
 
   it('restores a map layer, switches it, and removes the map on unmount', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const mapSpy = vi.spyOn(L, 'map')
     const tiles = vi.spyOn(L, 'tileLayer')
     const removeMap = vi.spyOn(L.Map.prototype, 'remove')
     localStorage.setItem('trailforge-project', JSON.stringify({ ...initialProject, mapLayerId: 'opentopomap' }))
@@ -223,6 +380,9 @@ describe('application interactions', () => {
     try {
       await act(async () => root.render(<App />))
       expect(tiles.mock.calls[0][0]).toContain('opentopomap.org')
+      const map = mapSpy.mock.results[0].value
+      const initialTiles = tiles.mock.results[0].value
+      expect(map.hasLayer(initialTiles)).toBe(true)
       const dropdown = container.querySelector<HTMLButtonElement>('.dropdown-trigger')!
       await act(async () => dropdown.click())
       const osm = Array.from(container.querySelectorAll<HTMLElement>('[role="option"]'))
@@ -231,6 +391,10 @@ describe('application interactions', () => {
       expect(tiles.mock.calls.at(-1)?.[0]).toContain('tile.openstreetmap.org')
       expect(dropdown.textContent).toContain('OpenStreetMap Carto')
       const currentTiles = tiles.mock.results.at(-1)!.value
+      expect(map.hasLayer(initialTiles)).toBe(false)
+      expect(map.hasLayer(currentTiles)).toBe(true)
+      await act(async () => initialTiles.fire('tileerror'))
+      expect(container.textContent).not.toContain('Kartenlayer nicht erreichbar')
       await act(async () => currentTiles.fire('tileerror'))
       expect(container.textContent).toContain('Kartenlayer nicht erreichbar')
       const retry = container.querySelector<HTMLButtonElement>('.status-banner-action')!

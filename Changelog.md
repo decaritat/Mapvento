@@ -48,7 +48,9 @@ once released versions are maintained.
   local storage.
   Separated Leaflet integration, file operations, route and point editors,
   route list, toolbar, header, elevation profile and their styles from the
-  application coordinator.
+  application coordinator. Added network-independent React and Leaflet
+  interaction coverage for project and GPX imports, routing retry, route and
+  POI edits, and dialog keyboard and focus behavior.
 - Restricted project title and description fields to edit mode, hid the project
   description counter outside that mode, and auto-sized the description field
   without exceeding a quarter of the sidebar.
