@@ -57,6 +57,7 @@ export type ProjectFile = {
   points: MapPoint[]
   activeRouteId: string
   mapLayerId: string
+  mapOverlayIds?: string[]
 }
 
 export function distanceKm(a: Coordinate, b: Coordinate) {

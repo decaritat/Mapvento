@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { parseGpx } from '../src/gpx'
-import { DEFAULT_LAYER_ID, layers } from '../src/mapLayers'
+import { DEFAULT_LAYER_ID, layers, overlayLayers } from '../src/mapLayers'
 import { initialProject, normalizeProject, readInitialProject } from '../src/project'
 
 const route = {
@@ -64,6 +64,29 @@ describe('project validation', () => {
 
   it.each(layers.filter((layer) => !layer.requiresKey))('preserves the registered layer $id', ({ id }) => {
     expect(normalizeProject({ ...project, mapLayerId: id }).mapLayerId).toBe(id)
+  })
+
+  it('round-trips optional overlay selections and preserves older version 1 projects', () => {
+    const saved = { ...project, mapOverlayIds: overlayLayers.map((layer) => layer.id) }
+    expect(roundTrip(normalizeProject(roundTrip(saved)))).toEqual(roundTrip(saved))
+    expect(normalizeProject(project).mapOverlayIds).toBeUndefined()
+    expect(normalizeProject({ ...project, mapOverlayIds: [] }).mapOverlayIds).toEqual([])
+  })
+
+  it('rejects malformed or duplicate overlays and reports unavailable providers', () => {
+    for (const mapOverlayIds of [null, 'waymarked-hiking', [null], [''], Array(1), ['waymarked-hiking', 'waymarked-hiking']]) {
+      expect(() => normalizeProject({ ...project, mapOverlayIds })).toThrow('Ungültiges Projekt')
+    }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const notice = vi.fn()
+    try {
+      expect(normalizeProject({ ...project, mapOverlayIds: ['retired', 'waymarked-hiking'] }, notice).mapOverlayIds)
+        .toEqual(['waymarked-hiking'])
+      expect(notice).toHaveBeenCalledWith(expect.stringContaining('Karten-Overlays'))
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('retired'))
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('falls back to the default layer for an unknown layer without losing project data', () => {

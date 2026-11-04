@@ -104,7 +104,7 @@ function App() {
   const [elevationExpanded, setElevationExpanded] = useState(false)
   const [notice, setNotice] = useState(initial.warning)
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
-  const [mapLayerRetry, setMapLayerRetry] = useState(0)
+  const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -635,17 +635,8 @@ function App() {
     setNotice(`${ROUTING_PROVIDER.label} wird erneut versucht.`)
   }
 
-  function retryMapLayer() {
-    setErrorBanner((current) =>
-      current?.action === 'map-retry' ? null : current,
-    )
-    setMapLayerRetry((value) => value + 1)
-  }
-
-  function clearMapError() {
-    setErrorBanner((current) =>
-      current?.action === 'map-retry' ? null : current,
-    )
+  function retryMapLayer(failedLayerId: string) {
+    setMapLayerRetry((current) => ({ layerId: failedLayerId, sequence: (current?.sequence ?? 0) + 1 }))
   }
 
   async function searchPlaces(event: FormEvent<HTMLFormElement>) {
@@ -726,13 +717,7 @@ function App() {
       onClick={() => contextMenu && setContextMenu(null)}
     >
 
-      <ProjectHeader layerId={layerId} routePropertiesOpen={routePropertiesOpen} setNotice={setNotice}
-        changeLayer={(nextLayerId) => {
-          clearMapError()
-          setLayerId(nextLayerId)
-          setProject((current) => ({ ...current, mapLayerId: nextLayerId }))
-        }}
-        projectInput={projectInput} saveProject={saveProject} importProject={importProject}
+      <ProjectHeader projectInput={projectInput} saveProject={saveProject} importProject={importProject}
         openAbout={() => setAboutOpen(true)} />
 
       <main className="workspace">
@@ -919,7 +904,17 @@ function App() {
               searchLoading={searchLoading} searchMessage={searchMessage} searchResults={searchResults}
               focusSearchResultOnMap={focusSearchResultOnMap} setSearchMessage={setSearchMessage}
               toolMode={toolMode} activateToolMode={activateToolMode} activeRoute={activeRoute}
-              focusRoute={focusRoute} />
+              focusRoute={focusRoute} layerId={layerId} overlayIds={project.mapOverlayIds ?? []}
+              changeLayer={(nextLayerId) => {
+                setLayerId(nextLayerId)
+                setProject((current) => ({ ...current, mapLayerId: nextLayerId }))
+              }}
+              toggleOverlay={(id, enabled) => setProject((current) => ({
+                ...current,
+                mapOverlayIds: enabled
+                  ? [...(current.mapOverlayIds ?? []).filter((item) => item !== id), id]
+                  : (current.mapOverlayIds ?? []).filter((item) => item !== id),
+              }))} />
             {notice && (
               <div className="map-notice" role="status" aria-live="polite">
                 {notice}
@@ -936,7 +931,7 @@ function App() {
                 }
                 onAction={() => {
                   if (visibleErrorBanner.action === 'map-retry') {
-                    retryMapLayer()
+                    retryMapLayer(visibleErrorBanner.layerId ?? layerId)
                     return
                   }
                   const route = visibleErrorBanner.routeId

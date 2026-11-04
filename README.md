@@ -2,11 +2,12 @@
 
 Trailforge is a locally installable open-source application for planning hikes and cycling tours. It is intended as a clear alternative to online outdoor platforms for tour planning and navigation: routes are created, edited, analyzed, and exported as GPX files on an OpenStreetMap-based map.
 
-Trailforge is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online by default; offline and cache support is planned for a later stage.
+Trailforge is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online by default; dedicated offline and tile-cache support is planned for a later stage.
 
 ## Current status
 
-- OpenStreetMap Carto and OpenTopoMap
+- OpenStreetMap Carto and OpenTopoMap base maps, with independently selectable
+  Waymarked Trails hiking and cycling overlays in the map's layer tool
 - Manually triggered place search for towns, landmarks, and other locations, with map highlighting
 - Multiple independently editable hiking and cycling routes
 - Routing through BRouter with separate hiking-beta and trekking profiles and a
@@ -34,10 +35,12 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 
 Project files use the current version 1 format. Opening a file validates its
 required fields, route and point IDs, coordinates, optional geometry, elevations
-and timestamps, POI symbols, and the map-layer field. Files with an unsupported
+and timestamps, POI symbols, the base layer and optional overlay IDs. Older
+version 1 files without overlay IDs open with no overlays enabled. Files with an unsupported
 version or invalid data are rejected as a whole; unsupported or incomplete older
 files are not migrated. An unavailable map-layer ID falls back to OpenStreetMap
-Carto with a visible notice and a console warning. Invalid locally stored
+Carto with a visible notice and a console warning; unavailable overlays are
+disabled with a notice. Invalid locally stored
 projects fall back to a new project.
 
 The React app coordinates project state and composes the route list, editors,
@@ -47,8 +50,39 @@ separate hooks. Component styles are split into ordered CSS files imported by
 `App.css` to preserve the shared cascade.
 
 `src/mapLayers.ts` is the UI-independent registry for map-layer definitions.
-The map, layer dropdown, and project validation use the same registry; layers
+The map, layer tool, and project validation use the same registry; layers
 requiring an API key cannot be restored from a project.
+
+### Map providers and tile usage
+
+The layer tool selects one base map and any combination of overlays. Overlays
+are drawn below editable routes and points; their attribution appears on the
+map while enabled. All currently configured providers are keyless. Tile
+requests go directly to the respective provider, which can observe the
+requester's IP address. Zoom levels beyond a provider's available tiles use
+the highest available tiles enlarged locally.
+
+| Provider | Attribution and terms | Limits |
+| --- | --- | --- |
+| OpenStreetMap Carto | [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) | No published numeric quota. Normal interactive viewing only; no bulk download, prefetch or offline archives. HTTP caching and application identification required. |
+| OpenTopoMap | © OpenTopoMap, CC BY-SA 3.0; © OpenStreetMap contributors, SRTM; [usage and FAQ](https://opentopomap.org/about#faq) | No published numeric quota. Avoid bulk downloads and excessive server load; availability is not guaranteed. |
+| Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The provider's public policy does not explicitly address native applications; we follow the OSM guidelines. |
+
+The app does not implement a dedicated tile cache: Leaflet requests image tiles
+normally and relies on the browser/WebView HTTP cache. Persistence, capacity and
+expiry behavior are platform-dependent and have not been verified across the
+desktop targets; offline use is not promised. For phase 2, verify both desktop
+webviews' caching and provider permissions, then implement a bounded,
+provider-aware persistent cache where needed, respecting HTTP freshness and
+conditional requests. Cache only tiles actually viewed, and do not implement
+prefetch or offline downloads unless the provider explicitly permits them.
+
+Thunderforest Transport requires an [API key](https://www.thunderforest.com/docs/apikeys/)
+and account-specific [quotas](https://www.thunderforest.com/pricing/); it is not
+configured. The public ÖPNV-Karte tile endpoint is listed by the
+[OSM raster provider catalog](https://wiki.openstreetmap.org/wiki/Raster_tile_providers),
+but its third-party app usage conditions have not been verified, so it is not
+included either.
 
 `src/elevation.ts` defines the synchronous elevation fallback provider used by
 route metrics, profile details, and GPX export. Complete finite elevations

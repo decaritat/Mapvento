@@ -228,6 +228,84 @@
   position: relative;
 }
 
+.map-layer-control {
+  position: relative;
+}
+
+.map-layer-panel {
+  position: absolute;
+  top: 0;
+  left: 40px;
+  z-index: 1200;
+  width: min(250px, calc(100vw - 90px));
+  padding: 10px;
+  border: 1px solid rgba(38, 52, 59, 0.24);
+  border-radius: 7px;
+  color: #26343b;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.28);
+  cursor: default;
+  font-size: 12px;
+}
+
+.map-layer-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-layer-close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(38, 52, 59, 0.18);
+  border-radius: 5px;
+  color: #52636b;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.map-layer-close:hover,
+.map-layer-close:focus-visible {
+  color: #10251a;
+  background: rgba(194, 245, 198, 0.96);
+}
+
+.map-layer-panel fieldset {
+  padding: 4px 0;
+  margin: 0;
+  border: 0;
+}
+
+.map-layer-panel legend {
+  font-weight: 700;
+}
+
+.map-layer-option,
+.map-layer-option label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-layer-option {
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.map-layer-option label {
+  cursor: pointer;
+}
+
+.map-layer-option a {
+  color: #315a44;
+  font-weight: 700;
+}
+
 .map-search > .map-tool-button {
   border-top-left-radius: 2px;
   border-top-right-radius: 2px;

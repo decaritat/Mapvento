@@ -26,6 +26,11 @@ export const ALL_PROVIDER_ATTRIBUTIONS = [
     url: 'https://opentopomap.org/about',
   },
   {
+    name: 'Waymarked Trails',
+    text: 'Wander- und Fahrradrouten © Waymarked Trails (CC BY-SA 3.0 DE), Daten © OpenStreetMap-Mitwirkende.',
+    url: 'https://hiking.waymarkedtrails.org/#help-legal',
+  },
+  {
     name: 'Nominatim',
     text: 'Ortssuche über den öffentlichen Nominatim-Dienst der OpenStreetMap Foundation.',
     url: GEOCODING_PROVIDER.url,

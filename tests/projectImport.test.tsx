@@ -65,7 +65,8 @@ describe('project loading in the app', () => {
       await act(async () => root.render(<App />))
       const title = container.querySelector<HTMLInputElement>('[aria-label="Projektname"]')
       expect(title?.value).toBe(saved.name)
-      expect(container.querySelector('.dropdown-trigger')?.textContent).toContain('OpenStreetMap Carto')
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Kartenlayer auswählen"]')!.click())
+      expect(container.querySelector<HTMLInputElement>('input[value="osm"]')?.checked).toBe(true)
       expect(container.textContent).toContain('Der gespeicherte Kartenlayer ist nicht verfügbar.')
 
       const input = container.querySelector<HTMLInputElement>('input[accept=".json,.trailforge.json"]')!
