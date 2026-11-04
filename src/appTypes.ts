@@ -5,6 +5,7 @@ export type ErrorBanner = {
   message: string
   action: 'map-retry' | 'routing-retry'
   routeId?: string
+  layerId?: string
 }
 
 export type NodeSelection = { routeId: string; nodeId: string }

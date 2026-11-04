@@ -383,13 +383,11 @@ describe('application interactions', () => {
       const map = mapSpy.mock.results[0].value
       const initialTiles = tiles.mock.results[0].value
       expect(map.hasLayer(initialTiles)).toBe(true)
-      const dropdown = container.querySelector<HTMLButtonElement>('.dropdown-trigger')!
-      await act(async () => dropdown.click())
-      const osm = Array.from(container.querySelectorAll<HTMLElement>('[role="option"]'))
-        .find((item) => item.textContent?.includes('OpenStreetMap Carto'))!
+      await act(async () => button(container, 'Kartenlayer auswählen').click())
+      const osm = container.querySelector<HTMLInputElement>('input[value="osm"]')!
       await act(async () => osm.click())
       expect(tiles.mock.calls.at(-1)?.[0]).toContain('tile.openstreetmap.org')
-      expect(dropdown.textContent).toContain('OpenStreetMap Carto')
+      expect(osm.checked).toBe(true)
       const currentTiles = tiles.mock.results.at(-1)!.value
       expect(map.hasLayer(initialTiles)).toBe(false)
       expect(map.hasLayer(currentTiles)).toBe(true)
@@ -406,6 +404,115 @@ describe('application interactions', () => {
     } finally {
       await act(async () => root.unmount())
       expect(removeMap).toHaveBeenCalledOnce()
+      container.remove()
+    }
+  })
+
+  it('closes the map layer panel with its close button and restores focus', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const trigger = button(container, 'Kartenlayer auswählen')
+      await act(async () => trigger.click())
+      expect(Array.from(container.querySelectorAll('.map-layer-panel legend')).map((legend) => legend.textContent))
+        .toEqual(['Basiskarte', 'Kartenebenen'])
+      const close = button(container, 'Kartenlayer schließen')
+      close.focus()
+      await act(async () => close.click())
+      expect(container.querySelector('.map-layer-panel')).toBeNull()
+      expect(trigger.getAttribute('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(trigger)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('combines, saves and restores overlays independently with per-layer error handling', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const tiles = vi.spyOn(L, 'tileLayer')
+    const mapSpy = vi.spyOn(L, 'map')
+    const write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('showSaveFilePicker', vi.fn().mockResolvedValue({
+      createWritable: async () => ({ write, close: async () => {} }),
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      const base = tiles.mock.results[0].value
+      const trigger = button(container, 'Kartenlayer auswählen')
+      await act(async () => trigger.click())
+      const hiking = container.querySelector<HTMLInputElement>('.map-layer-panel input[type="checkbox"]')!
+      const cycling = container.querySelectorAll<HTMLInputElement>('.map-layer-panel input[type="checkbox"]')[1]
+      await act(async () => hiking.click())
+      const hikingTiles = tiles.mock.results.at(-1)!.value
+      expect(tiles.mock.calls.at(-1)?.[0]).toContain('/hiking/')
+      expect(hikingTiles.options.pane).toBe('routeOverlays')
+      expect(hikingTiles.options.maxNativeZoom).toBe(18)
+      expect(map.hasLayer(base)).toBe(true)
+      expect(map.hasLayer(hikingTiles)).toBe(true)
+      expect(container.querySelector('.leaflet-control-attribution')?.textContent).toContain('Waymarked Trails')
+      await act(async () => cycling.click())
+      const cyclingTiles = tiles.mock.results.at(-1)!.value
+      expect(tiles.mock.calls.at(-1)?.[0]).toContain('/cycling/')
+      expect(map.hasLayer(hikingTiles)).toBe(true)
+      expect(map.hasLayer(cyclingTiles)).toBe(true)
+      await act(async () => container.querySelector<HTMLInputElement>('input[value="opentopomap"]')!.click())
+      expect(map.hasLayer(base)).toBe(false)
+      expect(map.hasLayer(hikingTiles)).toBe(true)
+      expect(map.hasLayer(cyclingTiles)).toBe(true)
+      expect(tiles.mock.calls.at(-1)?.[0]).toContain('opentopomap.org')
+
+      await act(async () => hikingTiles.fire('tileerror'))
+      expect(container.textContent).toContain('Waymarked Trails – Wanderwege')
+      await act(async () => cyclingTiles.fire('tileerror'))
+      await act(async () => cyclingTiles.fire('load'))
+      await act(async () => hikingTiles.fire('load'))
+      expect(container.textContent).toContain('Waymarked Trails – Wanderwege')
+      await act(async () => container.querySelector<HTMLButtonElement>('.status-banner-action')!.click())
+      const retriedHiking = tiles.mock.results.at(-1)!.value
+      expect(tiles.mock.calls.at(-1)?.[0]).toContain('/hiking/')
+      expect(map.hasLayer(hikingTiles)).toBe(false)
+      expect(map.hasLayer(cyclingTiles)).toBe(true)
+      await act(async () => hikingTiles.fire('tileerror'))
+      expect(container.textContent).toContain('Waymarked Trails – Fahrradrouten')
+      await act(async () => container.querySelector<HTMLButtonElement>('.status-banner-action')!.click())
+      expect(tiles.mock.calls.at(-1)?.[0]).toContain('/cycling/')
+      expect(map.hasLayer(cyclingTiles)).toBe(false)
+      expect(map.hasLayer(retriedHiking)).toBe(true)
+      expect(container.textContent).not.toContain('Kartenlayer nicht erreichbar')
+      await act(async () => retriedHiking.fire('tileerror'))
+      expect(container.textContent).toContain('Waymarked Trails – Wanderwege')
+      await act(async () => hiking.click())
+      expect(map.hasLayer(retriedHiking)).toBe(false)
+      expect(container.textContent).not.toContain('Kartenlayer nicht erreichbar')
+      await act(async () => hiking.click())
+      await act(async () => container.querySelector<HTMLButtonElement>('.solid-button')!.click())
+      const saved = JSON.parse(write.mock.calls[0][0])
+      expect(saved.mapOverlayIds).toEqual(['waymarked-cycling', 'waymarked-hiking'])
+      expect(saved.mapLayerId).toBe('opentopomap')
+
+      await act(async () => trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(trigger.getAttribute('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(trigger)
+      await act(async () => root.unmount())
+      localStorage.setItem('trailforge-project', JSON.stringify(saved))
+      const restored = createRoot(container)
+      try {
+        await act(async () => restored.render(<App />))
+        await act(async () => button(container, 'Kartenlayer auswählen').click())
+        expect(Array.from(container.querySelectorAll<HTMLInputElement>('.map-layer-panel input[type="checkbox"]'))
+          .map((input) => input.checked)).toEqual([true, true])
+      } finally {
+        await act(async () => restored.unmount())
+      }
+    } finally {
       container.remove()
     }
   })

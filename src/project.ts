@@ -1,6 +1,6 @@
 import { getDisplayedRouteCoordinates, type Coordinate, type MapPoint, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { isPoiIconId } from './poiIcons'
-import { DEFAULT_LAYER_ID, isPersistableLayerId } from './mapLayers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId } from './mapLayers'
 
 const initialRoute: Route = {
   id: 'route-1',
@@ -199,6 +199,13 @@ export function normalizeProject(value: unknown, onLayerFallback?: (message: str
   }
   const savedLayerId = string(data.mapLayerId, 'mapLayerId')
   const mapLayerId = isPersistableLayerId(savedLayerId) ? savedLayerId : DEFAULT_LAYER_ID
+  const savedOverlayIds = optional(data.mapOverlayIds, 'mapOverlayIds', (item, path) =>
+    array(item, path, id),
+  )
+  if (savedOverlayIds && new Set(savedOverlayIds).size !== savedOverlayIds.length) {
+    invalid('mapOverlayIds', 'enthält mehrfach vergebene IDs.')
+  }
+  const mapOverlayIds = savedOverlayIds?.filter(isPersistableOverlayId)
   const project: ProjectFile = {
     version: 1,
     name: string(data.name, 'name'),
@@ -207,12 +214,20 @@ export function normalizeProject(value: unknown, onLayerFallback?: (message: str
     points,
     activeRouteId,
     mapLayerId,
+    ...(mapOverlayIds ? { mapOverlayIds } : {}),
   }
+  const warnings: string[] = []
   if (mapLayerId !== savedLayerId) {
     const message = 'Der gespeicherte Kartenlayer ist nicht verfügbar. OpenStreetMap Carto wird verwendet.'
     console.warn(`Kartenlayer "${savedLayerId}" ist nicht verfügbar; OpenStreetMap Carto wird verwendet.`)
-    onLayerFallback?.(message)
+    warnings.push(message)
   }
+  if (savedOverlayIds && mapOverlayIds && savedOverlayIds.length !== mapOverlayIds.length) {
+    const unavailable = savedOverlayIds.filter((overlayId) => !isPersistableOverlayId(overlayId))
+    console.warn(`Karten-Overlays nicht verfügbar: ${unavailable.join(', ')}.`)
+    warnings.push('Nicht verfügbare Karten-Overlays wurden deaktiviert.')
+  }
+  if (warnings.length) onLayerFallback?.(warnings.join(' '))
   return project
 }
 

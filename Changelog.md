@@ -13,7 +13,7 @@ once released versions are maintained.
 - Added explanatory tooltips to inspector status displays (routing and
   elevation profile state), metric cards, and profile actions. Added direct,
   context-sensitive attribution links for map tile providers (OpenStreetMap
-  Carto, OpenTopoMap) beside the layer dropdown, routing provider (BRouter) in
+  Carto, OpenTopoMap and Waymarked Trails) in the layer tool, routing provider (BRouter) in
   the sidebar and route properties, geocoding provider (Nominatim) in place
   search. Preserved visible Leaflet attribution on the map with system browser
   link opening across desktop and web.
@@ -24,8 +24,13 @@ once released versions are maintained.
   texts. External links open in the system browser in the desktop app. The
   version comes from the Git tag in release builds and is marked `-dev`
   otherwise.
-- Added a themed Kartenlayer dropdown matching the dark UI, replacing the
-  native select with a white popup.
+- Added a map toolbar layer control for OpenStreetMap Carto and OpenTopoMap
+  base maps and independently selectable Waymarked Trails hiking and cycling
+  overlays, with a close button and a general map-overlay heading. Overlay
+  selections persist in project files and unavailable overlays are reported;
+  tile errors identify the affected layer and allow a
+  targeted retry. The desktop webview identifies itself as Trailforge, and
+  provider usage, attribution and tile-cache limitations are documented.
 - Added a native file dialog for GPX export and project saving in the desktop
   app. In the browser, a failing file picker falls back to a normal download.
 - Added a CI workflow that runs lint, unit tests, the web build, and a Tauri

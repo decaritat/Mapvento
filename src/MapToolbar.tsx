@@ -4,6 +4,7 @@ import { ExternalLink } from './ExternalLink'
 import { OSM_COPYRIGHT_URL } from './mapLayers'
 import { GEOCODING_PROVIDER } from './providers'
 import { getDisplayedRouteCoordinates, type Route } from './routeModel'
+import { LayerControl } from './LayerControl'
 
 type MapToolIconName = 'search' | 'pan' | 'route' | 'point' | 'focus'
 function MapToolIcon({ name }: { name: MapToolIconName }) {
@@ -53,7 +54,8 @@ function MapToolIcon({ name }: { name: MapToolIconName }) {
 
 export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSearchOpen, searchPlaces,
   searchInput, searchQuery, setSearchQuery, searchLoading, searchMessage, searchResults,
-  focusSearchResultOnMap, setSearchMessage, toolMode, activateToolMode, activeRoute, focusRoute }: {
+  focusSearchResultOnMap, setSearchMessage, toolMode, activateToolMode, activeRoute, focusRoute,
+  layerId, overlayIds, changeLayer, toggleOverlay }: {
   searchOpen: boolean
   routePropertiesOpen: boolean
   closeSearch: () => void
@@ -71,6 +73,10 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
   activateToolMode: (mode: ToolMode) => void
   activeRoute: Route | undefined
   focusRoute: (route: Route) => void
+  layerId: string
+  overlayIds: string[]
+  changeLayer: (id: string) => void
+  toggleOverlay: (id: string, enabled: boolean) => void
 }) {
   return (
             <div className="map-tools" role="toolbar" aria-label="Kartenwerkzeuge">
@@ -157,6 +163,8 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
                   </section>
                 )}
               </div>
+              <LayerControl layerId={layerId} overlayIds={overlayIds} disabled={routePropertiesOpen}
+                changeLayer={changeLayer} toggleOverlay={toggleOverlay} />
               <button
                 type="button"
                 className={`map-tool-button ${toolMode === 'pan' ? 'active' : ''}`}

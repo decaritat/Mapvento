@@ -1,5 +1,12 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  let mut context = tauri::generate_context!();
+  for window in &mut context.config_mut().app.windows {
+    window.user_agent = Some(format!(
+      "Trailforge/{} (+https://github.com/decaritat/Trailforge)",
+      env!("CARGO_PKG_VERSION")
+    ));
+  }
   tauri::Builder::default()
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_dialog::init())
@@ -14,7 +21,7 @@ pub fn run() {
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
+    .run(context)
     .expect("error while building tauri application");
 }
 

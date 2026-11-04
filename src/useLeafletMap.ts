@@ -5,7 +5,7 @@ import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, To
 import { escapeXml } from './gpx'
 import { projectCoordinate } from './mapCoordinates'
 import { defaultPoiIcon, getPoiIcon, poiIconSvg } from './poiIcons'
-import { layers } from './mapLayers'
+import { layers, overlayLayers, type LayerDefinition } from './mapLayers'
 import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarkers, isValidDistanceMarkerStepKm } from './routeMetrics'
 import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { uid } from './uid'
@@ -19,7 +19,7 @@ type Props = {
   setProject: Dispatch<SetStateAction<ProjectFile>>
   activeRoute: Route | undefined
   layerId: string
-  mapLayerRetry: number
+  mapLayerRetry: { layerId: string; sequence: number } | null
   toolMode: ToolMode
   routePropertiesOpen: boolean
   mapHoveredPoint: ProfilePointDetails | null
@@ -43,7 +43,9 @@ export function useLeafletMap({
 }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
-  const tileLayerRef = useRef<L.TileLayer | null>(null)
+  const tileLayersRef = useRef(new Map<string, { layer: L.TileLayer; dispose: () => void }>())
+  const failedTileLayersRef = useRef(new Map<string, LayerDefinition>())
+  const lastRetryRef = useRef(0)
   const routeLayersRef = useRef<L.Polyline[]>([])
   const distanceMarkersRef = useRef<L.Marker[]>([])
   const profileMarkerRef = useRef<L.CircleMarker | null>(null)
@@ -55,6 +57,9 @@ export function useLeafletMap({
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return
     const map = L.map(mapContainer.current, { zoomControl: true }).setView([51.1657, 10.4515], 7)
+    const tileLayers = tileLayersRef.current
+    const failedTileLayers = failedTileLayersRef.current
+    map.createPane('routeOverlays').style.zIndex = '300'
     const updateMapScale = () => {
       setMapScale({ zoom: map.getZoom(), latitude: map.getCenter().lat })
     }
@@ -82,8 +87,9 @@ export function useLeafletMap({
       map.off('zoomend moveend', updateMapScale)
       profileMarkerRef.current?.remove()
       profileMarkerRef.current = null
-      tileLayerRef.current?.remove()
-      tileLayerRef.current = null
+      tileLayers.forEach(({ dispose }) => dispose())
+      tileLayers.clear()
+      failedTileLayers.clear()
       searchLayerRef.current?.remove()
       searchLayerRef.current = null
       markersRef.current.forEach((marker) => marker.remove())
@@ -94,42 +100,79 @@ export function useLeafletMap({
     }
   }, [])
 
+  const overlayKey = (project.mapOverlayIds ?? []).join(',')
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    const layer = layers.find((item) => item.id === layerId) ?? layers[0]
-    if (layer.requiresKey) {
-      return
-    }
-    const tileLayer = L.tileLayer(layer.tiles, {
-      attribution: layer.attribution,
-      maxZoom: 19,
+    const base = layers.find((item) => item.id === layerId && !item.requiresKey) ?? layers[0]
+    const selected = [
+      base,
+      ...overlayLayers.filter((item) => !item.requiresKey && overlayKey.split(',').includes(item.id)),
+    ]
+    const selectedIds = new Set(selected.map((item) => item.id))
+    const retryId = mapLayerRetry && mapLayerRetry.sequence !== lastRetryRef.current
+      ? mapLayerRetry.layerId
+      : null
+    if (mapLayerRetry) lastRetryRef.current = mapLayerRetry.sequence
+
+    const bannerFor = (definition: LayerDefinition): ErrorBanner => ({
+      title: 'Kartenlayer nicht erreichbar',
+      message: `${definition.provider} – ${definition.label} konnte keine Kartenkacheln laden. Prüfe die Internetverbindung oder deaktiviere den Layer.`,
+      action: 'map-retry',
+      layerId: definition.id,
     })
-    const onTileError = () => {
-      if (tileLayerRef.current === tileLayer) {
-        setErrorBanner({
-          title: 'Kartenlayer nicht erreichbar',
-          message: `${layer.label} konnte keine Kartenkacheln laden. Prüfe die Internetverbindung oder wähle einen anderen Kartenlayer.`,
-          action: 'map-retry',
-        })
+    const clearFailure = (id: string) => {
+      if (!failedTileLayersRef.current.delete(id)) return
+      setErrorBanner((current) => {
+        if (current?.action !== 'map-retry' || current.layerId !== id) return current
+        const next = failedTileLayersRef.current.values().next().value
+        return next ? bannerFor(next) : null
+      })
+    }
+
+    tileLayersRef.current.forEach(({ dispose }, id) => {
+      if (!selectedIds.has(id) || id === retryId) {
+        dispose()
+        tileLayersRef.current.delete(id)
+        clearFailure(id)
       }
-    }
-    const onTileLoad = () => {
-      setErrorBanner((current) =>
-        current?.action === 'map-retry' ? null : current,
-      )
-    }
-    tileLayer.on('tileerror', onTileError)
-    tileLayer.on('load', onTileLoad)
-    tileLayerRef.current = tileLayer
-    tileLayer.addTo(map)
-    return () => {
-      tileLayer.off('tileerror', onTileError)
-      tileLayer.off('load', onTileLoad)
-      tileLayer.removeFrom(map)
-      if (tileLayerRef.current === tileLayer) tileLayerRef.current = null
-    }
-  }, [layerId, mapLayerRetry, setErrorBanner])
+    })
+
+    selected.forEach((definition) => {
+      if (tileLayersRef.current.has(definition.id)) return
+      const tileLayer = L.tileLayer(definition.tiles, {
+        attribution: definition.attribution,
+        maxZoom: 19,
+        maxNativeZoom: definition.maxNativeZoom,
+        pane: definition.id === base.id ? 'tilePane' : 'routeOverlays',
+      })
+      let failed = false
+      const onLoading = () => { failed = false }
+      const onTileError = () => {
+        if (tileLayersRef.current.get(definition.id)?.layer !== tileLayer) return
+        failed = true
+        failedTileLayersRef.current.set(definition.id, definition)
+        setErrorBanner((current) =>
+          current?.action === 'map-retry' ? current : bannerFor(definition),
+        )
+      }
+      const onLoad = () => {
+        if (failed || tileLayersRef.current.get(definition.id)?.layer !== tileLayer) return
+        clearFailure(definition.id)
+      }
+      tileLayer.on('loading', onLoading)
+      tileLayer.on('tileerror', onTileError)
+      tileLayer.on('load', onLoad)
+      const dispose = () => {
+        tileLayer.off('loading', onLoading)
+        tileLayer.off('tileerror', onTileError)
+        tileLayer.off('load', onLoad)
+        tileLayer.removeFrom(map)
+      }
+      tileLayersRef.current.set(definition.id, { layer: tileLayer, dispose })
+      tileLayer.addTo(map)
+    })
+  }, [layerId, overlayKey, mapLayerRetry, setErrorBanner])
 
   useEffect(() => {
     const map = mapRef.current

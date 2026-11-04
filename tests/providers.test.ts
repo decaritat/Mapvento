@@ -6,7 +6,7 @@ import {
   getInspectorRouteStatus,
   LEAFLET_INFO,
 } from '../src/providers'
-import { DEFAULT_LAYER_ID, isPersistableLayerId, layers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
 import { ROUTING_PROVIDER } from '../src/routing'
 import type { Route } from '../src/routeModel'
 import { openExternalUrl } from '../src/externalUrl'
@@ -53,10 +53,25 @@ describe('provider definitions and attributions', () => {
   })
 
   it('has unique layer IDs and a persistable default layer', () => {
-    expect(new Set(layers.map((layer) => layer.id)).size).toBe(layers.length)
+    const allLayers = [...layers, ...overlayLayers]
+    expect(new Set(allLayers.map((layer) => layer.id)).size).toBe(allLayers.length)
     expect(DEFAULT_LAYER_ID).toBe('osm')
     expect(isPersistableLayerId(DEFAULT_LAYER_ID)).toBe(true)
     expect(isPersistableLayerId('unknown-layer')).toBe(false)
+  })
+
+  it('defines attributed hiking and cycling overlays with supported tile zooms', () => {
+    expect(overlayLayers.map((layer) => layer.id)).toEqual(['waymarked-hiking', 'waymarked-cycling'])
+    for (const layer of overlayLayers) {
+      expect(layer.tiles).toMatch(/^https:\/\/tile\.waymarkedtrails\.org\/(hiking|cycling)\/\{z\}\/\{x\}\/\{y\}\.png$/)
+      expect(layer.maxNativeZoom).toBe(18)
+      expect(layer.attribution).toContain('waymarkedtrails.org')
+      expect(layer.attribution).toContain('creativecommons.org/licenses/by-sa/3.0/de/')
+      expect(layer.attribution).toContain(OSM_COPYRIGHT_URL)
+      expect(isPersistableOverlayId(layer.id)).toBe(true)
+      expect(isPersistableLayerId(layer.id)).toBe(false)
+    }
+    expect(isPersistableOverlayId('unknown')).toBe(false)
   })
 
   it('defines routing provider with attribution URL', () => {
@@ -76,6 +91,7 @@ describe('provider definitions and attributions', () => {
     const names = ALL_PROVIDER_ATTRIBUTIONS.map((a) => a.name)
     expect(names).toContain('OpenStreetMap')
     expect(names).toContain('OpenTopoMap')
+    expect(names).toContain('Waymarked Trails')
     expect(names).toContain('Nominatim')
     expect(names).toContain('BRouter')
     expect(names).toContain('Leaflet')
