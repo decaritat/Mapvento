@@ -78,7 +78,7 @@ the highest available tiles enlarged locally.
 | --- | --- | --- |
 | OpenStreetMap Carto | [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) | No published numeric quota. Normal interactive viewing only; no bulk download, prefetch or offline archives. HTTP caching and application identification required. |
 | OpenTopoMap | © OpenTopoMap, CC BY-SA 3.0; © OpenStreetMap contributors, SRTM; [usage and FAQ](https://opentopomap.org/about#faq) | No published numeric quota. Avoid bulk downloads and excessive server load; availability is not guaranteed. |
-| Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The published policy describes use on websites and does not explicitly address native applications. |
+| Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The published policy describes use on websites and does not explicitly address native applications. Therefore we follow the OSM guidelines. |
 
 ### Local tile cache
 
