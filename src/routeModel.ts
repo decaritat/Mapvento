@@ -71,11 +71,6 @@ export function distanceKm(a: Coordinate, b: Coordinate) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
 }
 
-export function elevationAt(coordinate: Coordinate) {
-  const [lon, lat] = coordinate
-  return Math.round(540 + Math.sin(lon * 18) * 34 + Math.cos(lat * 13) * 48)
-}
-
 export function getRouteCoordinates(route: Route): Coordinate[] {
   if (route.nodes.length < 2) return route.nodes.map((node) => node.coordinate)
   const coordinates: Coordinate[] = []
@@ -142,17 +137,6 @@ export function getRouteInsertionIndex(
   }
 
   return insertIndex
-}
-
-export function getDisplayedRouteElevations(route: Route) {
-  const coordinates = getDisplayedRouteCoordinates(route)
-  if (
-    route.elevations?.length === coordinates.length &&
-    route.elevations.every(Number.isFinite)
-  ) {
-    return route.elevations
-  }
-  return coordinates.map(elevationAt)
 }
 
 export function getCumulativeDistances(coordinates: Coordinate[]) {

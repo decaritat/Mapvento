@@ -44,6 +44,16 @@ are encapsulated in `useLeafletMap`; routing and project file operations have
 separate hooks. Component styles are split into ordered CSS files imported by
 `App.css` to preserve the shared cascade.
 
+`src/elevation.ts` defines the synchronous elevation fallback provider used by
+route metrics, profile details, and GPX export. Complete finite elevations
+stored on a route, including imported GPX and BRouter elevations, take
+precedence; otherwise the synthetic provider supplies values for the displayed
+geometry. The default fallback is selected in that module and can also be
+supplied explicitly to the consumers. A future asynchronous DEM provider can
+populate `route.elevations` at the routing or project-update boundary, aligned
+with the current displayed geometry and guarded against stale results;
+consumers then use those values without changing metric calculations.
+
 ## Development
 
 ```text

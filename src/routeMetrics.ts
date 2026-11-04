@@ -1,9 +1,12 @@
 import {
+  defaultElevationProvider,
+  getDisplayedRouteElevations,
+  type ElevationProvider,
+} from './elevation'
+import {
   distanceKm,
-  elevationAt,
   getCumulativeDistances,
   getDisplayedRouteCoordinates,
-  getDisplayedRouteElevations,
   type Coordinate,
   type ProfilePointDetails,
   type Route,
@@ -96,9 +99,10 @@ export function profileDetailsAtIndex(
   route: Route,
   profileIndex: number,
   nodeIndex?: number,
+  fallback: ElevationProvider = defaultElevationProvider,
 ): ProfilePointDetails {
   const geometry = getDisplayedRouteCoordinates(route)
-  const elevations = getDisplayedRouteElevations(route)
+  const elevations = getDisplayedRouteElevations(route, fallback)
   const closestIndex = Math.min(Math.max(0, profileIndex), Math.max(0, geometry.length - 1))
   const coordinate = geometry[closestIndex] ?? route.nodes[0]?.coordinate ?? [0, 0]
   const distances = getCumulativeDistances(geometry)
@@ -115,7 +119,7 @@ export function profileDetailsAtIndex(
     nodeIndex,
     profileFraction: distance / Math.max(1, totalDistance),
     distance,
-    elevation: elevations[closestIndex] ?? elevationAt(coordinate),
+    elevation: elevations[closestIndex] ?? fallback.elevationAt(coordinate),
     elapsedMinutes:
       recordedElapsedMinutesAtIndex(route, closestIndex) ??
       Math.max(0, Math.round((distance / speed) * 60 + ascent / 10)),
@@ -123,7 +127,11 @@ export function profileDetailsAtIndex(
   }
 }
 
-export function profileDetailsAtFraction(route: Route, fraction: number): ProfilePointDetails | null {
+export function profileDetailsAtFraction(
+  route: Route,
+  fraction: number,
+  fallback: ElevationProvider = defaultElevationProvider,
+): ProfilePointDetails | null {
   if (!Number.isFinite(fraction)) return null
   const geometry = getDisplayedRouteCoordinates(route)
   const distances = getCumulativeDistances(geometry)
@@ -135,10 +143,14 @@ export function profileDetailsAtFraction(route: Route, fraction: number): Profil
         : closestIndex,
     0,
   )
-  return profileDetailsAtIndex(route, profileIndex)
+  return profileDetailsAtIndex(route, profileIndex, undefined, fallback)
 }
 
-export function selectedRoutePointDetails(route: Route, nodeId: string) {
+export function selectedRoutePointDetails(
+  route: Route,
+  nodeId: string,
+  fallback: ElevationProvider = defaultElevationProvider,
+) {
   const nodeIndex = route.nodes.findIndex((node) => node.id === nodeId)
   if (nodeIndex < 0) return null
   const node = route.nodes[nodeIndex]
@@ -152,7 +164,7 @@ export function selectedRoutePointDetails(route: Route, nodeId: string) {
       closestIndex = index
     }
   })
-  return profileDetailsAtIndex(route, closestIndex, nodeIndex)
+  return profileDetailsAtIndex(route, closestIndex, nodeIndex, fallback)
 }
 
 function recordedDurationMinutes(route: Route) {
@@ -182,9 +194,9 @@ function recordedElapsedMinutesAtIndex(route: Route, index: number) {
     : null
 }
 
-export function routeMetrics(route: Route) {
+export function routeMetrics(route: Route, fallback: ElevationProvider = defaultElevationProvider) {
   const coordinates = getDisplayedRouteCoordinates(route)
-  const elevations = getDisplayedRouteElevations(route)
+  const elevations = getDisplayedRouteElevations(route, fallback)
   const distances = getCumulativeDistances(coordinates)
   const length = distances.at(-1) ?? 0
   let ascent = 0
