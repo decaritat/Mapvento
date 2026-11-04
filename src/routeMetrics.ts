@@ -3,6 +3,7 @@ import {
   getDisplayedRouteElevations,
   type ElevationProvider,
 } from './elevation'
+import { cumulativeElevationGain } from './elevationGain'
 import {
   distanceKm,
   getCumulativeDistances,
@@ -107,11 +108,7 @@ export function profileDetailsAtIndex(
   const coordinate = geometry[closestIndex] ?? route.nodes[0]?.coordinate ?? [0, 0]
   const distances = getCumulativeDistances(geometry)
   const distance = distances[closestIndex] ?? 0
-  let ascent = 0
-  for (let index = 1; index <= closestIndex; index += 1) {
-    const elevationChange = elevations[index] - elevations[index - 1]
-    if (elevationChange > 0) ascent += elevationChange
-  }
+  const ascent = cumulativeElevationGain(elevations, distances).ascent[closestIndex] ?? 0
   const speed = route.type === 'hiking' ? 4.5 : 15
   const totalDistance = distances.at(-1) ?? 0
   return {
@@ -199,13 +196,9 @@ export function routeMetrics(route: Route, fallback: ElevationProvider = default
   const elevations = getDisplayedRouteElevations(route, fallback)
   const distances = getCumulativeDistances(coordinates)
   const length = distances.at(-1) ?? 0
-  let ascent = 0
-  let descent = 0
-  for (let index = 1; index < coordinates.length; index += 1) {
-    const change = elevations[index] - elevations[index - 1]
-    if (change > 0) ascent += change
-    if (change < 0) descent += Math.abs(change)
-  }
+  const gain = cumulativeElevationGain(elevations, distances)
+  const ascent = gain.ascent.at(-1) ?? 0
+  const descent = gain.descent.at(-1) ?? 0
   const speed = route.type === 'hiking' ? 4.5 : 15
   const durationMinutes =
     recordedDurationMinutes(route) ?? Math.max(1, Math.round((length / speed) * 60 + ascent / 10))
