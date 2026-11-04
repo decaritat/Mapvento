@@ -10,6 +10,10 @@ once released versions are maintained.
 
 ### Added
 
+- Added smoothing (50 m moving average) and a 3 m threshold to ascent and
+  descent calculation so noisy elevation data no longer inflates route
+  statistics.
+
 - Added explanatory tooltips to inspector status displays (routing and
   elevation profile state), metric cards, and profile actions. Added direct,
   context-sensitive attribution links for map tile providers (OpenStreetMap
