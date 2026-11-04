@@ -4,10 +4,9 @@ import {
   GEOCODING_PROVIDER,
   getInspectorElevationStatus,
   getInspectorRouteStatus,
-  layers,
   LEAFLET_INFO,
-  OSM_COPYRIGHT_URL,
 } from '../src/providers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId, layers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
 import { ROUTING_PROVIDER } from '../src/routing'
 import type { Route } from '../src/routeModel'
 import { openExternalUrl } from '../src/externalUrl'
@@ -51,6 +50,13 @@ describe('provider definitions and attributions', () => {
     expect(topoLayer?.attributionUrl).toBe('https://opentopomap.org/about')
     expect(topoLayer?.attribution).toContain('https://opentopomap.org/about')
     expect(topoLayer?.attribution).toContain('https://www.openstreetmap.org/copyright')
+  })
+
+  it('has unique layer IDs and a persistable default layer', () => {
+    expect(new Set(layers.map((layer) => layer.id)).size).toBe(layers.length)
+    expect(DEFAULT_LAYER_ID).toBe('osm')
+    expect(isPersistableLayerId(DEFAULT_LAYER_ID)).toBe(true)
+    expect(isPersistableLayerId('unknown-layer')).toBe(false)
   })
 
   it('defines routing provider with attribution URL', () => {

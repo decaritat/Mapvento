@@ -51,4 +51,36 @@ describe('project loading in the app', () => {
       container.remove()
     }
   })
+
+  it('reports an unavailable layer when restoring and opening a project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const saved = { ...initialProject, name: 'Meine Tour', mapLayerId: 'retired-layer' }
+    localStorage.setItem('trailforge-project', JSON.stringify(saved))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    try {
+      await act(async () => root.render(<App />))
+      const title = container.querySelector<HTMLInputElement>('[aria-label="Projektname"]')
+      expect(title?.value).toBe(saved.name)
+      expect(container.querySelector('.dropdown-trigger')?.textContent).toContain('OpenStreetMap Carto')
+      expect(container.textContent).toContain('Der gespeicherte Kartenlayer ist nicht verfügbar.')
+
+      const input = container.querySelector<HTMLInputElement>('input[accept=".json,.trailforge.json"]')!
+      const opened = { ...saved, name: 'Geöffnete Tour' }
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [{ text: async () => JSON.stringify(opened) }],
+      })
+      await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })))
+      expect(title?.value).toBe(opened.name)
+      expect(container.textContent).toContain('Projekt geöffnet. Der gespeicherte Kartenlayer ist nicht verfügbar.')
+      expect(JSON.parse(localStorage.getItem('trailforge-project')!)).toEqual({ ...opened, mapLayerId: 'osm' })
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
 })

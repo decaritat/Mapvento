@@ -1,6 +1,6 @@
 import { getDisplayedRouteCoordinates, type Coordinate, type MapPoint, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { isPoiIconId } from './poiIcons'
-import { layers } from './providers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId } from './mapLayers'
 
 const initialRoute: Route = {
   id: 'route-1',
@@ -21,7 +21,7 @@ export const initialProject: ProjectFile = {
   routes: [initialRoute],
   points: [],
   activeRouteId: initialRoute.id,
-  mapLayerId: 'osm',
+  mapLayerId: DEFAULT_LAYER_ID,
 }
 
 function invalid(path: string, detail: string): never {
@@ -183,7 +183,7 @@ function point(value: unknown, path: string): MapPoint {
   }
 }
 
-export function normalizeProject(value: unknown): ProjectFile {
+export function normalizeProject(value: unknown, onLayerFallback?: (message: string) => void): ProjectFile {
   const data = object(value, 'Projekt')
   if (data.version !== 1) invalid('version', 'wird nicht unterstützt.')
   const routes = array(data.routes, 'routes', route)
@@ -197,11 +197,9 @@ export function normalizeProject(value: unknown): ProjectFile {
   ) {
     invalid('activeRouteId', 'verweist nicht auf eine vorhandene Route.')
   }
-  const mapLayerId = string(data.mapLayerId, 'mapLayerId')
-  if (!layers.some((layer) => layer.id === mapLayerId && !layer.requiresKey)) {
-    invalid('mapLayerId', 'enthält einen unbekannten Kartenlayer.')
-  }
-  return {
+  const savedLayerId = string(data.mapLayerId, 'mapLayerId')
+  const mapLayerId = isPersistableLayerId(savedLayerId) ? savedLayerId : DEFAULT_LAYER_ID
+  const project: ProjectFile = {
     version: 1,
     name: string(data.name, 'name'),
     description: string(data.description, 'description').slice(0, 180),
@@ -210,13 +208,22 @@ export function normalizeProject(value: unknown): ProjectFile {
     activeRouteId,
     mapLayerId,
   }
+  if (mapLayerId !== savedLayerId) {
+    const message = 'Der gespeicherte Kartenlayer ist nicht verfügbar. OpenStreetMap Carto wird verwendet.'
+    console.warn(`Kartenlayer "${savedLayerId}" ist nicht verfügbar; OpenStreetMap Carto wird verwendet.`)
+    onLayerFallback?.(message)
+  }
+  return project
 }
 
-export function readInitialProject(storage: Pick<Storage, 'getItem'> = localStorage): ProjectFile {
+export function readInitialProject(
+  storage: Pick<Storage, 'getItem'> = localStorage,
+  onLayerFallback?: (message: string) => void,
+): ProjectFile {
   try {
     const saved = storage.getItem('trailforge-project')
     if (!saved) return initialProject
-    return normalizeProject(JSON.parse(saved))
+    return normalizeProject(JSON.parse(saved), onLayerFallback)
   } catch (error) {
     console.warn('Gespeichertes Projekt konnte nicht geladen werden.', error)
     return initialProject

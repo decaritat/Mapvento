@@ -89,7 +89,12 @@ function App() {
   const searchRequestRef = useRef<AbortController | null>(null)
   const lastSearchAtRef = useRef(0)
   const searchCacheRef = useRef(new Map<string, PlaceSearchResult[]>())
-  const [project, setProject] = useState<ProjectFile>(readInitialProject)
+  const [initial] = useState(() => {
+    let warning = ''
+    const project = readInitialProject(localStorage, (message) => { warning = message })
+    return { project, warning }
+  })
+  const [project, setProject] = useState<ProjectFile>(initial.project)
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameDraft, setProjectNameDraft] = useState('')
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState('')
@@ -97,7 +102,7 @@ function App() {
   const [routeCreationDialogOpen, setRouteCreationDialogOpen] = useState(false)
   const [routeCreationMode, setRouteCreationMode] = useState<'new' | 'gpx'>('new')
   const [elevationExpanded, setElevationExpanded] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(initial.warning)
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [mapLayerRetry, setMapLayerRetry] = useState(0)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -107,7 +112,7 @@ function App() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchMessage, setSearchMessage] = useState('')
   const [contextMenu, setContextMenu] = useState<NodeContextMenu | null>(null)
-  const [layerId, setLayerId] = useState(() => readInitialProject().mapLayerId)
+  const [layerId, setLayerId] = useState(initial.project.mapLayerId)
   const [openRouteMenu, setOpenRouteMenu] = useState<{
     routeId: string
     top: number

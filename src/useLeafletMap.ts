@@ -5,7 +5,7 @@ import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, To
 import { escapeXml } from './gpx'
 import { projectCoordinate } from './mapCoordinates'
 import { defaultPoiIcon, getPoiIcon, poiIconSvg } from './poiIcons'
-import { layers } from './providers'
+import { layers } from './mapLayers'
 import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarkers, isValidDistanceMarkerStepKm } from './routeMetrics'
 import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { uid } from './uid'

@@ -137,12 +137,13 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     file
       .text()
       .then((content) => {
-        const normalizedProject = normalizeProject(JSON.parse(content))
+        let warning = ''
+        const normalizedProject = normalizeProject(JSON.parse(content), (message) => { warning = message })
         const mapLayerId = normalizedProject.mapLayerId
         setProject(normalizedProject)
         setLayerId(mapLayerId)
         localStorage.setItem('trailforge-project', JSON.stringify(normalizedProject))
-        setNotice('Projekt geöffnet.')
+        setNotice(warning ? `Projekt geöffnet. ${warning}` : 'Projekt geöffnet.')
       })
       .catch(() => setNotice('Die Projektdatei konnte nicht gelesen werden.'))
   }

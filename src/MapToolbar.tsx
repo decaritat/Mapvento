@@ -1,7 +1,8 @@
 import type { Dispatch, FormEvent, RefObject, SetStateAction } from 'react'
 import type { PlaceSearchResult, ToolMode } from './appTypes'
 import { ExternalLink } from './ExternalLink'
-import { GEOCODING_PROVIDER, OSM_COPYRIGHT_URL } from './providers'
+import { OSM_COPYRIGHT_URL } from './mapLayers'
+import { GEOCODING_PROVIDER } from './providers'
 import { getDisplayedRouteCoordinates, type Route } from './routeModel'
 
 type MapToolIconName = 'search' | 'pan' | 'route' | 'point' | 'focus'

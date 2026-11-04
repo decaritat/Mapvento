@@ -45,7 +45,8 @@ once released versions are maintained.
   elevation-provider fallback, and project validation into independently testable
   modules with Vitest unit coverage. Opening a project validates the complete
   current-version format, rejects invalid files, and safely falls back for invalid
-  local storage.
+  local storage. Map rendering, the layer selector, and project restoration share
+  one layer registry; unavailable saved layer IDs fall back to OpenStreetMap Carto.
   Separated Leaflet integration, file operations, route and point editors,
   route list, toolbar, header, elevation profile and their styles from the
   application coordinator. Added network-independent React and Leaflet

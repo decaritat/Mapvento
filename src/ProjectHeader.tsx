@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { ExternalLink } from './ExternalLink'
 import { openExternalUrl } from './externalUrl'
-import { layers } from './providers'
+import { layers } from './mapLayers'
 
 function LayerDropdown({
   value,
