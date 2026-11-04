@@ -418,7 +418,7 @@ describe('application interactions', () => {
       const trigger = button(container, 'Kartenlayer auswählen')
       await act(async () => trigger.click())
       expect(Array.from(container.querySelectorAll('.map-layer-panel legend')).map((legend) => legend.textContent))
-        .toEqual(['Basiskarte', 'Kartenebenen'])
+        .toEqual(['Basiskarte', 'Kartenebenen', 'Kachelcache'])
       const close = button(container, 'Kartenlayer schließen')
       close.focus()
       await act(async () => close.click())

@@ -103,6 +103,7 @@ function App() {
   const [routeCreationMode, setRouteCreationMode] = useState<'new' | 'gpx'>('new')
   const [elevationExpanded, setElevationExpanded] = useState(false)
   const [notice, setNotice] = useState(initial.warning)
+  const [cacheWarning, setCacheWarning] = useState('')
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -345,10 +346,10 @@ function App() {
     setNotice('Neuer Routenpunkt gesetzt; die Route wird neu berechnet.')
   }, [project.routes, toolMode])
 
-  const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer } = useLeafletMap({
+  const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, mapZoom } = useLeafletMap({
     project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
     mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode, setContextMenu,
-    setErrorBanner, setNotice, setSearchMessage, openPointEditor, updateNode, insertNodeAtCoordinate,
+    setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor, updateNode, insertNodeAtCoordinate,
   })
 
   useEffect(() => () => searchRequestRef.current?.abort(), [])
@@ -905,6 +906,8 @@ function App() {
               focusSearchResultOnMap={focusSearchResultOnMap} setSearchMessage={setSearchMessage}
               toolMode={toolMode} activateToolMode={activateToolMode} activeRoute={activeRoute}
               focusRoute={focusRoute} layerId={layerId} overlayIds={project.mapOverlayIds ?? []}
+              retryLayer={retryMapLayer}
+              project={project} mapZoom={mapZoom}
               changeLayer={(nextLayerId) => {
                 setLayerId(nextLayerId)
                 setProject((current) => ({ ...current, mapLayerId: nextLayerId }))
@@ -918,6 +921,12 @@ function App() {
             {notice && (
               <div className="map-notice" role="status" aria-live="polite">
                 {notice}
+              </div>
+            )}
+            {cacheWarning && (
+              <div className="map-notice map-cache-warning" role="status">
+                {cacheWarning}
+                <button type="button" onClick={() => setCacheWarning('')} aria-label="Cachewarnung schließen">×</button>
               </div>
             )}
             {visibleErrorBanner && (

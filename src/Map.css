@@ -246,6 +246,8 @@
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.28);
   cursor: default;
   font-size: 12px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .map-layer-panel-header {
@@ -304,6 +306,21 @@
 .map-layer-option a {
   color: #315a44;
   font-weight: 700;
+}
+
+.tile-cache-control p {
+  margin: 5px 0;
+}
+
+.tile-cache-provider {
+  display: grid;
+  gap: 3px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(38, 52, 59, 0.18);
+}
+
+.tile-cache-provider button {
+  margin-right: 5px;
 }
 
 .map-search > .map-tool-button {
@@ -482,6 +499,21 @@
   backdrop-filter: blur(10px);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.map-cache-warning {
+  top: 12px;
+  right: 56px;
+  bottom: auto;
+  left: auto;
+}
+
+.map-cache-warning button {
+  margin-left: 8px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 
 .status-banner {
