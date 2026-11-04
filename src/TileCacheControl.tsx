@@ -13,7 +13,8 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom }: {
   mapZoom: number
 }) {
   const [stats, setStats] = useState<TileCacheStats | null>(null)
-  const [error, setError] = useState('')
+  const [statsError, setStatsError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [busy, setBusy] = useState(false)
   const mounted = useRef(false)
 
@@ -27,9 +28,9 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom }: {
       clearTimeout(timer)
       timer = setTimeout(() => {
         tileCache.stats().then((value) => {
-          if (active && current === revision) { setStats(value); setError('') }
+          if (active && current === revision) { setStats(value); setStatsError('') }
         }).catch((reason: unknown) => {
-          if (active && current === revision) setError(`Kachelcache nicht verfügbar: ${String(reason)}`)
+          if (active && current === revision) setStatsError(`Kachelcache nicht verfügbar: ${String(reason)}`)
         })
       }, 100)
     }
@@ -40,47 +41,59 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom }: {
 
   async function perform(action: () => Promise<void>) {
     setBusy(true)
-    try { await action(); if (mounted.current) setError('') }
-    catch (reason) { if (mounted.current) setError(`Kachelcache: ${String(reason)}`) }
+    try { await action(); if (mounted.current) setActionError('') }
+    catch (reason) { if (mounted.current) setActionError(`Kachelcache: ${String(reason)}`) }
     finally { if (mounted.current) setBusy(false) }
   }
 
+  const cachedLayers = [...new Set([...layerIds, ...Object.keys(stats?.layers ?? {})])].map((id) => ({
+    id,
+    definition: [...layers, ...overlayLayers].find((item) => item.id === id),
+  }))
+  const providers = [...new Set(cachedLayers.map(({ definition }) => definition?.provider ?? 'Unbekannter Anbieter'))]
+
   return (
-    <fieldset className="tile-cache-control">
-      <legend>Kachelcache</legend>
-      {error && <p role="alert">{error}</p>}
+    <section className="tile-cache-control" aria-labelledby="tile-cache-title">
+      <h3 id="tile-cache-title">Kachelcache</h3>
+      {statsError && <p className="cache-error" role="alert">{statsError}</p>}
+      {actionError && <p className="cache-error" role="alert">{actionError}</p>}
+      {!stats && !statsError && <p role="status">Cacheinformationen werden geladen …</p>}
       {stats && (
         <>
-          <p>{formatSize(stats.bytes)} von {formatSize(TILE_CACHE_LIMIT)} · {stats.count} Kacheln</p>
-          <p>Nur besuchte Ausschnitte; keine vollständige Gebietsabdeckung. Der Cache wird projektübergreifend geteilt.</p>
-          {[...new Set([...layerIds, ...Object.keys(stats.layers)])].map((id) => {
-            const definition = [...layers, ...overlayLayers].find((item) => item.id === id)
-            if (!definition) return null
-            const entry = stats.layers[id]
-            const zoom = Math.min(mapZoom, definition.maxNativeZoom)
-            const coverage = projectCoverage(project, zoom, entry?.tiles ?? [])
-            return (
-              <div className="tile-cache-provider" key={id}>
-                <strong>{definition.provider} – {definition.label}{layerIds.includes(id) ? '' : ' (nicht aktiv)'}</strong>
-                <span>{entry?.count ?? 0} Kacheln · {formatSize(entry?.bytes ?? 0)} · {entry?.stale ?? 0} veraltet
-                  {entry?.zooms.length ? ` · Zoom ${[...entry.zooms].sort((a, b) => a - b).join(', ')}` : ''}</span>
-                <span>{coverage
-                  ? `Projekt-Rechteck bei Zoom ${zoom}: ${coverage.cached}/${coverage.total}, davon ${coverage.stale} veraltet`
-                  : 'Projektabdeckung: keine Routen- oder Punktkoordinaten'}</span>
-                <div>
-                  <button type="button" disabled={busy || !entry?.count} onClick={() => void perform(async () => {
-                    await tileCache.revalidate(id)
-                    retry(id)
-                  })}>Aktualisieren</button>
-                  <button type="button" disabled={busy || !entry?.count} onClick={() => void perform(() => tileCache.clear(id))}>Löschen</button>
-                </div>
-              </div>
-            )
-          })}
-          <button type="button" disabled={busy || !stats.count}
+          <p className="cache-summary"><strong>{formatSize(stats.bytes)}</strong> von {formatSize(TILE_CACHE_LIMIT)} · {stats.count} Kacheln</p>
+          <p className="cache-hint">Nur besuchte Ausschnitte; keine vollständige Gebietsabdeckung. Der Cache wird projektübergreifend geteilt.</p>
+          {providers.map((provider) => (
+            <section className="tile-cache-provider" key={provider} aria-label={provider}>
+              <h4>{provider}</h4>
+              {cachedLayers.filter(({ definition }) => (definition?.provider ?? 'Unbekannter Anbieter') === provider).map(({ id, definition }) => {
+                const entry = stats.layers[id]
+                const label = definition?.label ?? id
+                const active = layerIds.includes(id)
+                const zoom = Math.min(mapZoom, definition?.maxNativeZoom ?? mapZoom)
+                const coverage = projectCoverage(project, zoom, entry?.tiles ?? [])
+                return (
+                  <div className="tile-cache-layer" key={id}>
+                    <strong>{label} <span className={`cache-layer-state ${active ? 'active' : ''}`}>{active ? 'Aktiv' : 'Nicht aktiv'}</span></strong>
+                    <span>{entry?.count ?? 0} Kacheln · {formatSize(entry?.bytes ?? 0)} · {entry?.stale ?? 0} veraltet
+                      {entry?.zooms.length ? ` · Zoom ${[...entry.zooms].sort((a, b) => a - b).join(', ')}` : ' · Keine Zoomstufen'}</span>
+                    {coverage && <span>Projekt-Rechteck bei Zoom {zoom}: {coverage.cached}/{coverage.total}, davon {coverage.stale} veraltet</span>}
+                    <div className="cache-actions">
+                      <button type="button" aria-label={`${label} aktualisieren`} disabled={busy || !entry?.count} onClick={() => void perform(async () => {
+                        await tileCache.revalidate(id)
+                        retry(id)
+                      })}>Aktualisieren</button>
+                      <button type="button" aria-label={`${label} löschen`} disabled={busy || !entry?.count}
+                        onClick={() => void perform(() => tileCache.clear(id))}>Löschen</button>
+                    </div>
+                  </div>
+                )
+              })}
+            </section>
+          ))}
+          <button className="cache-clear" type="button" disabled={busy || !stats.count}
             onClick={() => void perform(() => tileCache.clear())}>Gesamten Kachelcache löschen</button>
         </>
       )}
-    </fieldset>
+    </section>
   )
 }

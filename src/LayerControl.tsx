@@ -1,18 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { ExternalLink } from './ExternalLink'
 import { layers, overlayLayers } from './mapLayers'
-import { TileCacheControl } from './TileCacheControl'
-import type { ProjectFile } from './routeModel'
 
-export function LayerControl({ layerId, overlayIds, disabled, changeLayer, toggleOverlay, retryLayer, project, mapZoom }: {
+export function LayerControl({ layerId, overlayIds, disabled, changeLayer, toggleOverlay }: {
   layerId: string
   overlayIds: string[]
   disabled: boolean
   changeLayer: (id: string) => void
   toggleOverlay: (id: string, enabled: boolean) => void
-  retryLayer: (id: string) => void
-  project: ProjectFile
-  mapZoom: number
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -94,7 +89,6 @@ export function LayerControl({ layerId, overlayIds, disabled, changeLayer, toggl
               </div>
             ))}
           </fieldset>
-          <TileCacheControl layerIds={[layerId, ...overlayIds]} retry={retryLayer} project={project} mapZoom={mapZoom} />
         </section>
       )}
     </div>

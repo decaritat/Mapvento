@@ -27,6 +27,10 @@ describe('project loading in the app', () => {
 
       const input = container.querySelector<HTMLInputElement>('input[accept=".json,.trailforge.json"]')
       expect(input).not.toBeNull()
+      const openPicker = vi.spyOn(input!, 'click').mockImplementation(() => {})
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!.click())
+      await act(async () => container.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())
+      expect(openPicker).toHaveBeenCalledOnce()
       Object.defineProperty(input!, 'files', {
         configurable: true,
         value: [{ text: async () => invalid }],

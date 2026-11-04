@@ -12,6 +12,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 import AboutDialog from './AboutDialog'
+import { CacheDialog } from './CacheDialog'
 import { ProjectHeader } from './ProjectHeader'
 import { RouteList } from './RouteList'
 import { RouteEditor } from './RouteEditor'
@@ -107,6 +108,7 @@ function App() {
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [cacheOpen, setCacheOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([])
@@ -714,12 +716,16 @@ function App() {
   return (
     <div
       className="app-shell"
-      inert={routePropertiesOpen || aboutOpen || routeCreationDialogOpen}
+      inert={routePropertiesOpen || aboutOpen || cacheOpen || routeCreationDialogOpen}
       onClick={() => contextMenu && setContextMenu(null)}
     >
 
-      <ProjectHeader projectInput={projectInput} saveProject={saveProject} importProject={importProject}
-        openAbout={() => setAboutOpen(true)} />
+      <ProjectHeader projectInput={projectInput} openProject={() => projectInput.current?.click()}
+        saveProject={saveProject} importProject={importProject}
+        openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)}
+        desktop={isTauri()} exitApp={() => {
+          void invoke('exit_app').catch((error: unknown) => setNotice(`Beenden fehlgeschlagen: ${String(error)}`))
+        }} />
 
       <main className="workspace">
         <aside className="sidebar">
@@ -906,8 +912,6 @@ function App() {
               focusSearchResultOnMap={focusSearchResultOnMap} setSearchMessage={setSearchMessage}
               toolMode={toolMode} activateToolMode={activateToolMode} activeRoute={activeRoute}
               focusRoute={focusRoute} layerId={layerId} overlayIds={project.mapOverlayIds ?? []}
-              retryLayer={retryMapLayer}
-              project={project} mapZoom={mapZoom}
               changeLayer={(nextLayerId) => {
                 setLayerId(nextLayerId)
                 setProject((current) => ({ ...current, mapLayerId: nextLayerId }))
@@ -977,6 +981,9 @@ function App() {
         </section>
       </main>
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {cacheOpen && <CacheDialog onClose={() => setCacheOpen(false)}
+        layerIds={[layerId, ...(project.mapOverlayIds ?? [])]} retry={retryMapLayer}
+        project={project} mapZoom={mapZoom} />}
     </div>
   )
 }

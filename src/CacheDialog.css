@@ -1,0 +1,130 @@
+.cache-backdrop {
+  position: fixed;
+  z-index: 1400;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(5, 9, 12, 0.6);
+}
+
+.cache-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(820px, 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+
+.cache-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cache-dialog-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.cache-dialog-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cache-dialog-close {
+  align-self: flex-start;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+}
+
+.cache-dialog-body {
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  padding: 0 22px 22px;
+}
+
+.tile-cache-control h3 {
+  margin: 20px 0 8px;
+  font-size: 16px;
+}
+
+.cache-summary,
+.cache-hint,
+.cache-error {
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.cache-hint,
+.tile-cache-layer > span {
+  color: var(--muted);
+}
+
+.cache-error {
+  color: var(--orange);
+}
+
+.tile-cache-provider {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.tile-cache-provider h4 {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--panel-raised);
+  font-size: 13px;
+}
+
+.tile-cache-layer {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.cache-layer-state {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.cache-layer-state.active {
+  color: var(--green);
+}
+
+.cache-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cache-actions button,
+.cache-clear {
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--panel-raised);
+}
+
+.cache-actions button:disabled,
+.cache-clear:disabled {
+  color: var(--faint);
+}
+
+.cache-clear {
+  margin-top: 16px;
+}

@@ -21,7 +21,7 @@ once released versions are maintained.
   the sidebar and route properties, geocoding provider (Nominatim) in place
   search. Preserved visible Leaflet attribution on the map with system browser
   link opening across desktop and web.
-- Added an About dialog (Info button) showing the Trailforge version, links to
+- Added an About dialog (Info in the header menu) showing the Trailforge version, links to
   the GitHub project, documentation, changelog, and license, data and service
   attributions (OpenStreetMap, OpenTopoMap, Nominatim, BRouter, Leaflet), and a
   filterable list of npm and Rust third-party components with their license
@@ -33,7 +33,11 @@ once released versions are maintained.
   overlays, with a close button and a general map-overlay heading. Overlay
   selections persist in project files and unavailable overlays are reported;
   tile errors identify the affected layer and allow a
-  targeted retry. The desktop webview identifies itself as Trailforge, and
+  targeted retry. A keyboard-accessible header menu provides project opening
+  and saving, cache management, Info, and desktop exit; settings are disabled
+  until implemented. The cache dialog groups active and inactive layers by
+  provider with usage, freshness, available project coverage details and actions.
+  The desktop webview identifies itself as Trailforge, and
   provider usage and attribution are documented. Visited base and overlay
   tiles are stored in a bounded persistent cache with provider-specific
   refresh and deletion, expiry and project-rectangle coverage indicators; no
