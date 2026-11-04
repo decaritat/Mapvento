@@ -319,6 +319,9 @@ describe('application interactions', () => {
       await act(async () => info.click())
       const dialog = document.querySelector<HTMLElement>('.about-dialog')!
       expect(document.activeElement).toBe(dialog)
+      await vi.waitFor(() =>
+        expect(dialog.querySelector('input[type="search"]')).not.toBeNull(),
+      )
       const focusable = dialog.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input, select, summary, [tabindex="0"]',
       )
