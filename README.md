@@ -2,7 +2,7 @@
 
 Trailforge is a locally installable open-source application for planning hikes and cycling tours. It is intended as a clear alternative to online outdoor platforms for tour planning and navigation: routes are created, edited, analyzed, and exported as GPX files on an OpenStreetMap-based map.
 
-Trailforge is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online by default; dedicated offline and tile-cache support is planned for a later stage.
+Trailforge is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online; previously viewed map tiles are cached locally, but complete offline areas are not provided.
 
 ## Current status
 
@@ -18,6 +18,8 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
   its routing inputs or retrying replaces the affected calculation.
 - Visible map-layer errors with a consistent retry banner when tile providers
   are unavailable; the banner can be dismissed with its close button
+- A persistent, size-limited cache for visited base and overlay tiles, with
+  layer-specific refresh, removal, and project coverage information
 - Route waypoints created by clicking, deleted through the context menu or Delete key, and inserted by dragging onto the route
 - Route name, description, type, and color
 - Elevation profile with distance, elevation, and time information
@@ -76,7 +78,54 @@ the highest available tiles enlarged locally.
 | --- | --- | --- |
 | OpenStreetMap Carto | [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) | No published numeric quota. Normal interactive viewing only; no bulk download, prefetch or offline archives. HTTP caching and application identification required. |
 | OpenTopoMap | © OpenTopoMap, CC BY-SA 3.0; © OpenStreetMap contributors, SRTM; [usage and FAQ](https://opentopomap.org/about#faq) | No published numeric quota. Avoid bulk downloads and excessive server load; availability is not guaranteed. |
-| Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The provider's public policy does not explicitly address native applications; we follow the OSM guidelines. |
+| Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The published policy describes use on websites and does not explicitly address native applications. Therefore we follow the OSM guidelines. |
+
+### Local tile cache
+
+The layer tool shows the application tile cache, its 100 MiB image-data limit,
+provider counts, zoom levels and expired entries. It reports coverage of the
+rectangle enclosing the current project's route geometry and points at the
+current map zoom (limited to each provider's native zoom). This is not a
+guarantee that the actual route or any offline region is complete. Empty
+projects have no coverage estimate. The cache is shared between projects and
+is not included in project files. Least-recently-used entries are evicted
+when the limit is reached.
+
+Only tiles requested for interactive display are stored; Trailforge does not
+prefetch tiles or download offline areas. Refresh marks one layer's entries
+for revalidation and immediately redraws that layer if active. Other entries
+are revalidated only when subsequently viewed. Deleting a layer or the entire
+application cache does not clear the browser or webview's separate HTTP cache.
+Expired tiles are not displayed if revalidation fails. Cache failures are
+reported and the browser's normal HTTP image loading is used if persistent
+storage is unavailable.
+
+IndexedDB provides the bounded application cache in supported browser and
+Tauri webviews. Browser-managed storage can still be evicted, cleared by the
+user or unavailable due to platform settings. Cache-Control and Expires are
+honoured, including no-store and no-cache; where freshness information is
+unavailable, the fallback is seven days. The browser/webview HTTP cache handles
+conditional ETag/Last-Modified requests; these providers do not generally
+expose ETag or permit custom conditional headers cross-origin. The explicit
+refresh action requests revalidation; ordinary browsing does not bypass HTTP
+caches. If a max-age response lacks enough exposed timing information to
+determine its remaining freshness, it is revalidated rather than assumed fresh.
+Browser and webview storage behaviour may differ across platforms.
+Waymarked Trails' published policy requires a correct referrer and discusses
+use on websites, but does not explicitly state terms for native applications.
+
+The cache is specific to tile imagery and separate from project data. Future
+Overpass data caching should use a separate provider-aware namespace and its
+own request keys, response validation, freshness and storage limits; it must
+not assume tile coordinates or reuse tile-provider policies.
+
+For future offline-map work, [OpenAndroMaps](https://www.openandromaps.org/en/)
+offers Mapsforge vector maps rather than Leaflet raster tiles;
+[Geofabrik](https://download.geofabrik.de/) provides regional OSM data
+extracts rather than rendered tiles; and
+[osmhike-tileserver](https://github.com/bmgru/osmhike-tileserver) is a
+self-hosted Linux/Docker rendering stack. Each would require separate format,
+licensing, update and resource evaluation before integration.
 
 ## Development
 

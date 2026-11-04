@@ -30,7 +30,10 @@ once released versions are maintained.
   selections persist in project files and unavailable overlays are reported;
   tile errors identify the affected layer and allow a
   targeted retry. The desktop webview identifies itself as Trailforge, and
-  provider usage, attribution and tile-cache limitations are documented.
+  provider usage and attribution are documented. Visited base and overlay
+  tiles are stored in a bounded persistent cache with provider-specific
+  refresh and deletion, expiry and project-rectangle coverage indicators; no
+  offline area downloads are offered.
 - Added a native file dialog for GPX export and project saving in the desktop
   app. In the browser, a failing file picker falls back to a normal download.
 - Added a CI workflow that runs lint, unit tests, the web build, and a Tauri

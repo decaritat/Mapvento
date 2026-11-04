@@ -3,7 +3,7 @@ import type { PlaceSearchResult, ToolMode } from './appTypes'
 import { ExternalLink } from './ExternalLink'
 import { OSM_COPYRIGHT_URL } from './mapLayers'
 import { GEOCODING_PROVIDER } from './providers'
-import { getDisplayedRouteCoordinates, type Route } from './routeModel'
+import { getDisplayedRouteCoordinates, type ProjectFile, type Route } from './routeModel'
 import { LayerControl } from './LayerControl'
 
 type MapToolIconName = 'search' | 'pan' | 'route' | 'point' | 'focus'
@@ -55,7 +55,7 @@ function MapToolIcon({ name }: { name: MapToolIconName }) {
 export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSearchOpen, searchPlaces,
   searchInput, searchQuery, setSearchQuery, searchLoading, searchMessage, searchResults,
   focusSearchResultOnMap, setSearchMessage, toolMode, activateToolMode, activeRoute, focusRoute,
-  layerId, overlayIds, changeLayer, toggleOverlay }: {
+  layerId, overlayIds, changeLayer, toggleOverlay, retryLayer, project, mapZoom }: {
   searchOpen: boolean
   routePropertiesOpen: boolean
   closeSearch: () => void
@@ -77,6 +77,9 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
   overlayIds: string[]
   changeLayer: (id: string) => void
   toggleOverlay: (id: string, enabled: boolean) => void
+  retryLayer: (id: string) => void
+  project: ProjectFile
+  mapZoom: number
 }) {
   return (
             <div className="map-tools" role="toolbar" aria-label="Kartenwerkzeuge">
@@ -164,7 +167,8 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
                 )}
               </div>
               <LayerControl layerId={layerId} overlayIds={overlayIds} disabled={routePropertiesOpen}
-                changeLayer={changeLayer} toggleOverlay={toggleOverlay} />
+                changeLayer={changeLayer} toggleOverlay={toggleOverlay} retryLayer={retryLayer}
+                project={project} mapZoom={mapZoom} />
               <button
                 type="button"
                 className={`map-tool-button ${toolMode === 'pan' ? 'active' : ''}`}

@@ -9,6 +9,7 @@ import { layers, overlayLayers, type LayerDefinition } from './mapLayers'
 import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarkers, isValidDistanceMarkerStepKm } from './routeMetrics'
 import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { uid } from './uid'
+import { CachedTileLayer } from './cachedTileLayer'
 
 const activeRouteLineWeight = 4
 const inactiveRouteLineWeight = 3
@@ -29,6 +30,7 @@ type Props = {
   setContextMenu: Dispatch<SetStateAction<NodeContextMenu | null>>
   setErrorBanner: Dispatch<SetStateAction<ErrorBanner | null>>
   setNotice: Dispatch<SetStateAction<string>>
+  setCacheWarning: Dispatch<SetStateAction<string>>
   setSearchMessage: Dispatch<SetStateAction<string>>
   openPointEditor: (point: MapPoint, isNew: boolean, clientX: number, clientY: number) => void
   updateNode: (routeId: string, nodeId: string, coordinate: Coordinate) => void
@@ -38,7 +40,7 @@ type Props = {
 export function useLeafletMap({
   project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
   mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode,
-  setContextMenu, setErrorBanner, setNotice, setSearchMessage, openPointEditor,
+  setContextMenu, setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor,
   updateNode, insertNodeAtCoordinate,
 }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -110,6 +112,9 @@ export function useLeafletMap({
       ...overlayLayers.filter((item) => !item.requiresKey && overlayKey.split(',').includes(item.id)),
     ]
     const selectedIds = new Set(selected.map((item) => item.id))
+    if (!globalThis.indexedDB) {
+      setCacheWarning('Kachelcache nicht verfügbar. Der HTTP-Cache des Browsers wird verwendet.')
+    }
     const retryId = mapLayerRetry && mapLayerRetry.sequence !== lastRetryRef.current
       ? mapLayerRetry.layerId
       : null
@@ -140,12 +145,15 @@ export function useLeafletMap({
 
     selected.forEach((definition) => {
       if (tileLayersRef.current.has(definition.id)) return
-      const tileLayer = L.tileLayer(definition.tiles, {
+      const tileOptions: L.TileLayerOptions = {
         attribution: definition.attribution,
         maxZoom: 19,
         maxNativeZoom: definition.maxNativeZoom,
         pane: definition.id === base.id ? 'tilePane' : 'routeOverlays',
-      })
+      }
+      const tileLayer = globalThis.indexedDB
+        ? new CachedTileLayer(definition.tiles, tileOptions, definition.id, setCacheWarning)
+        : L.tileLayer(definition.tiles, tileOptions)
       let failed = false
       const onLoading = () => { failed = false }
       const onTileError = () => {
@@ -172,7 +180,7 @@ export function useLeafletMap({
       tileLayersRef.current.set(definition.id, { layer: tileLayer, dispose })
       tileLayer.addTo(map)
     })
-  }, [layerId, overlayKey, mapLayerRetry, setErrorBanner])
+  }, [layerId, overlayKey, mapLayerRetry, setErrorBanner, setCacheWarning])
 
   useEffect(() => {
     const map = mapRef.current
@@ -626,5 +634,5 @@ export function useLeafletMap({
     searchLayerRef.current = null
   }
 
-  return { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer }
+  return { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, mapZoom: mapScale.zoom }
 }
