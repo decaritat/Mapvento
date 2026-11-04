@@ -53,6 +53,16 @@ separate hooks. Component styles are split into ordered CSS files imported by
 The map, layer tool, and project validation use the same registry; layers
 requiring an API key cannot be restored from a project.
 
+`src/elevation.ts` defines the synchronous elevation fallback provider used by
+route metrics, profile details, and GPX export. Complete finite elevations
+stored on a route, including imported GPX and BRouter elevations, take
+precedence; otherwise the synthetic provider supplies values for the displayed
+geometry. The default fallback is selected in that module and can also be
+supplied explicitly to the consumers. A future asynchronous DEM provider can
+populate `route.elevations` at the routing or project-update boundary, aligned
+with the current displayed geometry and guarded against stale results;
+consumers then use those values without changing metric calculations.
+
 ### Map providers and tile usage
 
 The layer tool selects one base map and any combination of overlays. Overlays
@@ -67,32 +77,6 @@ the highest available tiles enlarged locally.
 | OpenStreetMap Carto | [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL; [tile usage policy](https://operations.osmfoundation.org/policies/tiles/) | No published numeric quota. Normal interactive viewing only; no bulk download, prefetch or offline archives. HTTP caching and application identification required. |
 | OpenTopoMap | © OpenTopoMap, CC BY-SA 3.0; © OpenStreetMap contributors, SRTM; [usage and FAQ](https://opentopomap.org/about#faq) | No published numeric quota. Avoid bulk downloads and excessive server load; availability is not guaranteed. |
 | Waymarked Trails hiking/cycling | © Waymarked Trails, CC BY-SA 3.0 DE; © OpenStreetMap contributors, ODbL; [legal and usage terms](https://hiking.waymarkedtrails.org/#help-legal) | No published numeric quota. Moderate access, cache tiles as often as possible, correct referrer; mass downloads strongly discouraged. The provider's public policy does not explicitly address native applications; we follow the OSM guidelines. |
-
-The app does not implement a dedicated tile cache: Leaflet requests image tiles
-normally and relies on the browser/WebView HTTP cache. Persistence, capacity and
-expiry behavior are platform-dependent and have not been verified across the
-desktop targets; offline use is not promised. For phase 2, verify both desktop
-webviews' caching and provider permissions, then implement a bounded,
-provider-aware persistent cache where needed, respecting HTTP freshness and
-conditional requests. Cache only tiles actually viewed, and do not implement
-prefetch or offline downloads unless the provider explicitly permits them.
-
-Thunderforest Transport requires an [API key](https://www.thunderforest.com/docs/apikeys/)
-and account-specific [quotas](https://www.thunderforest.com/pricing/); it is not
-configured. The public ÖPNV-Karte tile endpoint is listed by the
-[OSM raster provider catalog](https://wiki.openstreetmap.org/wiki/Raster_tile_providers),
-but its third-party app usage conditions have not been verified, so it is not
-included either.
-
-`src/elevation.ts` defines the synchronous elevation fallback provider used by
-route metrics, profile details, and GPX export. Complete finite elevations
-stored on a route, including imported GPX and BRouter elevations, take
-precedence; otherwise the synthetic provider supplies values for the displayed
-geometry. The default fallback is selected in that module and can also be
-supplied explicitly to the consumers. A future asynchronous DEM provider can
-populate `route.elevations` at the routing or project-update boundary, aligned
-with the current displayed geometry and guarded against stale results;
-consumers then use those values without changing metric calculations.
 
 ## Development
 
