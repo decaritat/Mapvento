@@ -61,7 +61,12 @@ npm install
 npm run dev
 npm run build
 npm run lint
+npm test
 ```
+
+The Vitest suite exercises React and Leaflet interactions in jsdom. It uses
+inline tile images and explicit routing and search responses; unexpected
+network requests fail the tests.
 
 The Tauri desktop shell requires Rust and the platform-specific prerequisites for Tauri 2:
 
