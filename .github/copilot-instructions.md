@@ -18,6 +18,35 @@ Trailforge is a locally installable, cross-platform open-source application for 
 - File operations: browser- and Tauri-compatible file APIs with clean cancellation behavior and a download fallback.
 - Styling: continue using the existing React/CSS structure and established UI patterns.
 
+### Architecture and maintainability
+
+- Keep `App` as the composition and application-coordination layer. Put
+  independently changeable UI areas, domain logic, and side-effect
+  orchestration in focused components, hooks, or modules with clear typed
+  inputs and outputs.
+- Keep domain and persistence logic independent of React and Leaflet. Confine
+  Leaflet objects and lifecycle management to the map integration; do not pass
+  Leaflet objects into general UI components.
+- Put external services and replaceable capabilities behind small typed
+  provider or adapter boundaries. Keep provider-specific behavior out of
+  domain models, and keep each capability's configuration in one source of
+  truth shared by persistence and UI.
+- Treat asynchronous work as an explicit lifecycle: identify requests by the
+  inputs that determine their result, cancel them when those inputs change or
+  their owner unmounts, and prevent stale results from overwriting newer
+  state. Unrelated metadata changes must not cancel valid work. Represent
+  loading, success, fallback, cancellation, and failure states deliberately.
+- Treat imported and persisted data as `unknown` at the boundary. Validate it
+  before using it as a domain type; preserve the required versioning and
+  backward-compatible migration behavior, then validate the migrated current
+  format. Do not use unchecked type assertions or silently discard invalid
+  data. Invalid local persistence must recover safely, while invalid user
+  imports must show a useful error.
+- Prefer existing module boundaries and the simplest abstraction that makes
+  responsibilities clearer or behavior independently testable. Avoid
+  speculative frameworks, duplicate registries, and growing a central
+  component with unrelated responsibilities.
+
 ## Development rules
 
 - Keep changes small, understandable, and limited to the requirement.
@@ -61,3 +90,15 @@ Before completing a change, verify the affected functionality. The following are
 5. GPX and project import and export, including names and descriptions.
 6. Readability and clear identification of read-only imports.
 7. Build and lint capability without TypeScript or lint errors.
+8. Validate project and GPX data at import boundaries; cover malformed input,
+   supported-version migration, and safe recovery from invalid persisted data.
+9. Keep routing and other asynchronous provider work cancellable, retryable,
+   and protected against stale results; test input changes, retries, and
+   cleanup behavior.
+10. Keep map behavior behind the Leaflet integration and test user-visible
+    interactions without real network services, tile servers, or provider
+    calls.
+11. Add focused tests for changed behavior at the appropriate level: pure unit
+    tests for domain logic and interaction tests for UI or side-effect
+    orchestration. Prefer assertions about observable behavior and lifecycle
+    outcomes over whole-application snapshots.
