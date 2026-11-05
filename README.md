@@ -20,7 +20,10 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
   are unavailable; the banner can be dismissed with its close button
 - A persistent, size-limited cache for visited base and overlay tiles, with
   layer-specific refresh, removal, and project coverage information
-- Route waypoints created by clicking, deleted through the context menu or Delete key, and inserted by dragging onto the route
+- Route waypoints created by clicking, deleted through the context menu or Delete
+  key, and inserted by clicking or dragging the route. A drag keeps the two
+  neighboring waypoints of the routed segment where it started, even when the
+  pointer moves closer to another segment.
 - Route name, description, type, and color
 - Elevation profile with distance, elevation, and time information
 - Distance, ascent, descent, duration, highest-point, and lowest-point metrics

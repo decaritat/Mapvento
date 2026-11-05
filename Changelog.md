@@ -115,7 +115,9 @@ once released versions are maintained.
   independent preset/custom colors, and route type.
 - Routing through the configured routing provider with a direct fallback.
 - Route waypoint editing, including selection, deletion, and insertion with a
-  live drag preview showing the new point and affected neighboring segments.
+  live drag preview that keeps the original routed segment's neighboring points
+  fixed throughout the drag. Route clicks insert one point without triggering a
+  second map click, and dragging a route does not drag map or overlay tiles.
 - Elevation profile and route statistics for the active route.
 - GPX export for editable routes, and saving and opening project files.
 - Interactive map points and POIs with symbols from OpenStreetMap Carto (CC0)

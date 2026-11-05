@@ -98,18 +98,18 @@ export function getDisplayedRouteCoordinates(route: Route): Coordinate[] {
 export function getRouteInsertionIndex(
   nodes: RouteNode[],
   coordinate: Coordinate,
+  geometry: Coordinate[] = nodes.map((node) => node.coordinate),
 ): number | null {
   if (nodes.length < 2) return null
+  if (geometry.length < 2) geometry = nodes.map((node) => node.coordinate)
 
-  let insertIndex = nodes.length
-  let closestDistance = Number.POSITIVE_INFINITY
-  for (let index = 1; index < nodes.length; index += 1) {
-    const from = nodes[index - 1].coordinate
-    const to = nodes[index].coordinate
+  function project(point: Coordinate, segment: number, minimumFraction = 0) {
+    const from = geometry[segment]
+    const to = geometry[segment + 1]
     const latitudeScale =
-      Math.cos((((from[1] + to[1] + coordinate[1]) / 3) * Math.PI) / 180) || 1
-    const pointX = coordinate[0] * latitudeScale
-    const pointY = coordinate[1]
+      Math.cos((((from[1] + to[1] + point[1]) / 3) * Math.PI) / 180) || 1
+    const pointX = point[0] * latitudeScale
+    const pointY = point[1]
     const fromX = from[0] * latitudeScale
     const fromY = from[1]
     const toX = to[0] * latitudeScale
@@ -119,25 +119,65 @@ export function getRouteInsertionIndex(
     const segmentLengthSquared = deltaX * deltaX + deltaY * deltaY
     const projection =
       segmentLengthSquared === 0
-        ? 0
+        ? minimumFraction
         : Math.min(
             1,
             Math.max(
-              0,
+              minimumFraction,
               ((pointX - fromX) * deltaX + (pointY - fromY) * deltaY) /
                 segmentLengthSquared,
             ),
           )
     const closestX = fromX + projection * deltaX
     const closestY = fromY + projection * deltaY
-    const distance = (pointX - closestX) ** 2 + (pointY - closestY) ** 2
-    if (distance < closestDistance) {
-      closestDistance = distance
-      insertIndex = index
+    return {
+      position: segment + projection,
+      distance: (pointX - closestX) ** 2 + (pointY - closestY) ** 2,
     }
   }
 
-  return insertIndex
+  const segmentCount = geometry.length - 1
+  let clicked = project(coordinate, 0)
+  for (let segment = 1; segment < segmentCount; segment += 1) {
+    const candidate = project(coordinate, segment)
+    if (candidate.distance < clicked.distance) clicked = candidate
+  }
+
+  // Match intermediate waypoints to the routed geometry in route order, even
+  // when the geometry loops back near a later waypoint.
+  type Match = { position: number; cost: number; precedingNodes: number }
+  let previous: Match[] = []
+  for (let nodeIndex = 1; nodeIndex < nodes.length - 1; nodeIndex += 1) {
+    const current: Match[] = []
+    let bestEarlier: Match | undefined
+    for (let segment = 0; segment < segmentCount; segment += 1) {
+      if (segment > 0) {
+        const earlier = previous[segment - 1]
+        if (earlier && (!bestEarlier || earlier.cost < bestEarlier.cost)) bestEarlier = earlier
+      }
+      const projection = project(nodes[nodeIndex].coordinate, segment)
+      const sameSegment = previous[segment]
+      const makeMatch = (candidate: typeof projection, previousMatch?: Match): Match => ({
+        position: candidate.position,
+        cost: (previousMatch?.cost ?? 0) + candidate.distance,
+        precedingNodes: (previousMatch?.precedingNodes ?? 0) + (candidate.position <= clicked.position ? 1 : 0),
+      })
+      if (nodeIndex === 1 || bestEarlier) {
+        current[segment] = makeMatch(projection, bestEarlier)
+      }
+      if (sameSegment) {
+        const constrained = project(nodes[nodeIndex].coordinate, segment, sameSegment.position - segment)
+        const match = makeMatch(constrained, sameSegment)
+        if (!current[segment] || match.cost < current[segment].cost) current[segment] = match
+      }
+    }
+    previous = current
+  }
+  const best = previous.reduce<Match | undefined>(
+    (closest, match) => !closest || match.cost < closest.cost ? match : closest,
+    undefined,
+  )
+  return 1 + (best?.precedingNodes ?? 0)
 }
 
 export function getCumulativeDistances(coordinates: Coordinate[]) {

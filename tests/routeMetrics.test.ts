@@ -48,6 +48,45 @@ describe('route geometry and metrics', () => {
     expect(getRouteInsertionIndex([route.nodes[0]], [0.005, 0])).toBeNull()
   })
 
+  it('identifies the waypoint segment from the displayed routed geometry', () => {
+    const nodes: Route['nodes'] = [
+      { id: 'one', coordinate: [0, 0] },
+      { id: 'two', coordinate: [1, 0] },
+      { id: 'three', coordinate: [2, 0] },
+      { id: 'four', coordinate: [3, 0] },
+    ]
+    const geometry: Route['geometry'] = [[0, 0], [2.5, 2], [1, 0], [2, 0], [3, 0]]
+
+    expect(getRouteInsertionIndex(nodes, [1.25, 1], geometry)).toBe(1)
+    expect(getRouteInsertionIndex(nodes, [1.5, 0], geometry)).toBe(2)
+    expect(getRouteInsertionIndex(nodes, [2.5, 0], geometry)).toBe(3)
+  })
+
+  it('matches snapped waypoints in route order when the geometry revisits a waypoint', () => {
+    const nodes: Route['nodes'] = [
+      { id: 'one', coordinate: [0, 0] },
+      { id: 'two', coordinate: [1, 1.01] },
+      { id: 'three', coordinate: [2, 0.01] },
+      { id: 'four', coordinate: [3, 0] },
+    ]
+    const geometry: Route['geometry'] = [[0, 0], [2, 0], [1, 0.2], [1, 1], [2, 0], [3, 0]]
+
+    expect(getRouteInsertionIndex(nodes, [1.5, 0.5], geometry)).toBe(2)
+    expect(getRouteInsertionIndex(nodes, [2.5, 0], geometry)).toBe(3)
+  })
+
+  it('handles multiple and coincident waypoints on a single geometry segment', () => {
+    const nodes: Route['nodes'] = [
+      { id: 'one', coordinate: [0, 0] },
+      { id: 'two', coordinate: [0.8, 0] },
+      { id: 'three', coordinate: [0.2, 0] },
+      { id: 'four', coordinate: [1, 0] },
+    ]
+
+    expect(getRouteInsertionIndex(nodes, [0.9, 0], [[0, 0], [1, 0]])).toBe(3)
+    expect(getRouteInsertionIndex(nodes, [0, 0], [[0, 0], [0, 0]])).toBe(3)
+  })
+
   it('uses the routed geometry and accumulates segment distances', () => {
     const route = createRoute()
     const coordinates = getDisplayedRouteCoordinates(route)

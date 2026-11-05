@@ -34,7 +34,7 @@ type Props = {
   setSearchMessage: Dispatch<SetStateAction<string>>
   openPointEditor: (point: MapPoint, isNew: boolean, clientX: number, clientY: number) => void
   updateNode: (routeId: string, nodeId: string, coordinate: Coordinate) => void
-  insertNodeAtCoordinate: (routeId: string, coordinate: Coordinate) => void
+  insertNodeAtCoordinate: (routeId: string, coordinate: Coordinate, neighbors: [string, string]) => void
 }
 
 export function useLeafletMap({
@@ -53,7 +53,9 @@ export function useLeafletMap({
   const profileMarkerRef = useRef<L.CircleMarker | null>(null)
   const markersRef = useRef<L.Layer[]>([])
   const searchLayerRef = useRef<L.Layer | null>(null)
+  const activeDragCleanupRef = useRef<(() => void) | null>(null)
   const suppressNextRouteClickRef = useRef(false)
+  const suppressClickTimerRef = useRef<number | null>(null)
   const [mapScale, setMapScale] = useState({ zoom: 7, latitude: 51.1657 })
 
   useEffect(() => {
@@ -82,10 +84,19 @@ export function useLeafletMap({
     }
     northArrow.addTo(map)
     mapRef.current = map
+    const clearSuppressedClick = () => {
+      suppressNextRouteClickRef.current = false
+      if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
+      suppressClickTimerRef.current = null
+    }
+    map.getContainer().addEventListener('mousedown', clearSuppressedClick, true)
     updateMapScale()
     const resizeTimer = window.setTimeout(() => map.invalidateSize(), 0)
     return () => {
       window.clearTimeout(resizeTimer)
+      activeDragCleanupRef.current?.()
+      clearSuppressedClick()
+      map.getContainer().removeEventListener('mousedown', clearSuppressedClick, true)
       map.off('zoomend moveend', updateMapScale)
       profileMarkerRef.current?.remove()
       profileMarkerRef.current = null
@@ -208,20 +219,30 @@ export function useLeafletMap({
         opacity: active ? 0.95 : 0.6,
         weight: lineWeight,
       }).addTo(map)
+      const neighborsAt = (latlng: L.LatLng): [RouteNode, RouteNode] | null => {
+        const index = getRouteInsertionIndex(route.nodes, projectCoordinate(latlng), getDisplayedRouteCoordinates(route))
+        return index === null ? null : [route.nodes[index - 1], route.nodes[index]]
+      }
       let cleanupDrag: (() => void) | null = null
       const onMouseDown = (event: L.LeafletMouseEvent) => {
         if (
+          event.originalEvent.button !== 0 ||
           routePropertiesOpen ||
           toolMode !== 'route' ||
           route.id !== project.activeRouteId ||
           !route.editable
         ) return
-        event.originalEvent.stopPropagation()
+        if (activeDragCleanupRef.current) return
+        const neighboringNodes = neighborsAt(event.latlng)
+        if (!neighboringNodes) return
+        L.DomEvent.stopPropagation(event)
         let moved = false
         let previewMarker: L.CircleMarker | null = null
         let previewGuides: L.Polyline[] = []
         const draggingWasEnabled = map.dragging.enabled()
         map.dragging.disable()
+        const preventNativeDrag = (dragEvent: DragEvent) => dragEvent.preventDefault()
+        window.addEventListener('dragstart', preventNativeDrag)
         const onMouseMove = (moveEvent: MouseEvent) => {
           if (
             Math.hypot(
@@ -250,15 +271,6 @@ export function useLeafletMap({
             previewMarker.setLatLng(cursorPoint)
           }
 
-          const insertIndex = getRouteInsertionIndex(route.nodes, [
-            cursorPoint.lng,
-            cursorPoint.lat,
-          ])
-          if (insertIndex === null) return
-          const neighboringNodes = [
-            route.nodes[insertIndex - 1],
-            route.nodes[insertIndex],
-          ]
           if (previewGuides.length === 0) {
             previewGuides = neighboringNodes.map((node) =>
               L.polyline([cursorPoint, [node.coordinate[1], node.coordinate[0]]], {
@@ -294,22 +306,35 @@ export function useLeafletMap({
           const releasePoint = map.containerPointToLatLng(
             L.point(upEvent.clientX - rect.left, upEvent.clientY - rect.top),
           )
-          suppressNextRouteClickRef.current = true
-          window.setTimeout(() => {
-            suppressNextRouteClickRef.current = false
-          }, 350)
-          insertNodeAtCoordinate(route.id, projectCoordinate(releasePoint))
+          insertNodeAtCoordinate(route.id, projectCoordinate(releasePoint), [
+            neighboringNodes[0].id,
+            neighboringNodes[1].id,
+          ])
         }
         cleanupDrag = () => {
           document.removeEventListener('mousemove', onMouseMove)
           document.removeEventListener('mouseup', onMouseUp)
+          window.removeEventListener('blur', onCancel)
+          window.removeEventListener('dragstart', preventNativeDrag)
           previewMarker?.removeFrom(map)
           previewGuides.forEach((guide) => guide.removeFrom(map))
+          if (moved) {
+            suppressNextRouteClickRef.current = true
+            if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
+            suppressClickTimerRef.current = window.setTimeout(() => {
+              suppressNextRouteClickRef.current = false
+              suppressClickTimerRef.current = null
+            }, 350)
+          }
           if (draggingWasEnabled) map.dragging.enable()
+          activeDragCleanupRef.current = null
           cleanupDrag = null
         }
+        activeDragCleanupRef.current = cleanupDrag
+        const onCancel = () => cleanupDrag?.()
         document.addEventListener('mousemove', onMouseMove)
         document.addEventListener('mouseup', onMouseUp)
+        window.addEventListener('blur', onCancel)
       }
       line.on('click', (event: L.LeafletMouseEvent) => {
         if (
@@ -318,12 +343,17 @@ export function useLeafletMap({
           route.id !== project.activeRouteId ||
           !route.editable
         ) return
-        event.originalEvent.stopPropagation()
+        L.DomEvent.stopPropagation(event)
         if (suppressNextRouteClickRef.current) {
           suppressNextRouteClickRef.current = false
           return
         }
-        insertNodeAtCoordinate(route.id, projectCoordinate(event.latlng))
+        const neighboringNodes = neighborsAt(event.latlng)
+        if (!neighboringNodes) return
+        insertNodeAtCoordinate(route.id, projectCoordinate(event.latlng), [
+          neighboringNodes[0].id,
+          neighboringNodes[1].id,
+        ])
       })
       line.on('mousedown', onMouseDown)
       routeLayersRef.current.push(outline, line)
@@ -508,6 +538,10 @@ export function useLeafletMap({
     const map = mapRef.current
     if (!map) return
     const onClick = (event: L.LeafletMouseEvent) => {
+      if (suppressNextRouteClickRef.current) {
+        suppressNextRouteClickRef.current = false
+        return
+      }
       if (routePropertiesOpen) return
       if (contextMenu) setContextMenu(null)
       if (toolMode === 'point') {
