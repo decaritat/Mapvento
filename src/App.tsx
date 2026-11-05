@@ -27,7 +27,6 @@ import {
   routingProfileLabel,
 } from './routing'
 import {
-  getRouteInsertionIndex,
   type Coordinate,
   type MapPoint,
   type ProfilePointDetails,
@@ -311,29 +310,18 @@ function App() {
     setNotice('Routenpunkt verschoben; die angrenzenden Segmente wurden neu berechnet.')
   }, [project.routes, toolMode])
 
-  const insertNodeAtCoordinate = useCallback((routeId: string, coordinate: Coordinate) => {
+  const insertNodeAtCoordinate = useCallback((routeId: string, coordinate: Coordinate, neighbors: [string, string]) => {
     const route = project.routes.find((item) => item.id === routeId)
     if (toolMode !== 'route' || !route?.editable) return
     setProject((current) => ({
       ...current,
       routes: current.routes.map((route) => {
-        if (route.id !== routeId) return route
+        if (route.id !== routeId || !route.editable || current.activeRouteId !== routeId) return route
+        const insertIndex = route.nodes.findIndex((node, index) =>
+          index > 0 && node.id === neighbors[1] && route.nodes[index - 1].id === neighbors[0],
+        )
+        if (insertIndex < 0) return route
         const node: RouteNode = { id: uid('node'), coordinate }
-        if (route.nodes.length < 2) {
-          return {
-            ...route,
-            nodes: [...route.nodes, node],
-            geometry: undefined,
-            elevations: undefined,
-            timestamps: undefined,
-            routingState: 'idle',
-            routingError: undefined,
-          }
-        }
-
-        const insertIndex =
-          getRouteInsertionIndex(route.nodes, coordinate) ?? route.nodes.length
-
         return {
           ...route,
           nodes: [...route.nodes.slice(0, insertIndex), node, ...route.nodes.slice(insertIndex)],

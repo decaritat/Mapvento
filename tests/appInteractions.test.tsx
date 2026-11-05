@@ -131,6 +131,135 @@ describe('application interactions', () => {
     }
   })
 
+  it('keeps the original routed segment throughout a drag and suppresses the release click', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      mapOverlayIds: ['waymarked-hiking'],
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [
+          { id: 'one', coordinate: [0, 0] },
+          { id: 'two', coordinate: [1, 0] },
+          { id: 'three', coordinate: [2, 0] },
+          { id: 'four', coordinate: [3, 0] },
+        ],
+        geometry: [[0, 0], [2.5, 2], [1, 0], [2, 0], [3, 0]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('showSaveFilePicker', vi.fn().mockResolvedValue({
+      createWritable: async () => ({ write, close: async () => {} }),
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      vi.spyOn(map.getContainer(), 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 500, bottom: 500, width: 500, height: 500, x: 0, y: 0,
+        toJSON: () => ({}),
+      })
+      vi.spyOn(map, 'containerPointToLatLng').mockImplementation((point: L.Point) =>
+        L.latLng(0, point.x / 100),
+      )
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      await act(async () => line!.fire('mousedown', {
+        latlng: L.latLng(1, 1.25),
+        originalEvent: new MouseEvent('mousedown', { clientX: 125, clientY: 100 }),
+      }))
+      expect(map.dragging.enabled()).toBe(false)
+      const image = document.createElement('img')
+      map.getPane('routeOverlays')!.append(image)
+      const dragStart = new Event('dragstart', { bubbles: true, cancelable: true })
+      image.dispatchEvent(dragStart)
+      expect(dragStart.defaultPrevented).toBe(true)
+
+      await act(async () => document.dispatchEvent(new MouseEvent('mousemove', { clientX: 280, clientY: 100 })))
+      const guides: L.Polyline[] = []
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.dashArray === '4 6') guides.push(layer)
+      })
+      expect(guides).toHaveLength(2)
+      expect(guides.map((guide) => (guide.getLatLngs() as L.LatLng[])[1].lng)).toEqual([0, 1])
+
+      await act(async () => document.dispatchEvent(new MouseEvent('mouseup', { clientX: 280, clientY: 100 })))
+      expect(map.dragging.enabled()).toBe(true)
+      const afterDrag = new Event('dragstart', { bubbles: true, cancelable: true })
+      image.dispatchEvent(afterDrag)
+      expect(afterDrag.defaultPrevented).toBe(false)
+      await act(async () => map.fire('click', {
+        latlng: L.latLng(0, 2.8),
+        originalEvent: new MouseEvent('click'),
+      }))
+      expect(container.querySelectorAll('.route-node')).toHaveLength(5)
+      await headerAction(container, 'Projekt speichern')
+      const project = JSON.parse(write.mock.calls[0][0])
+      const coordinates = project.routes[0].nodes.map((node: { coordinate: number[] }) => node.coordinate)
+      expect(coordinates[1][0]).toBeCloseTo(2.8)
+      expect(coordinates[1][1]).toBe(0)
+      expect([coordinates[0], ...coordinates.slice(2)]).toEqual([[0, 0], [1, 0], [2, 0], [3, 0]])
+      await act(async () => {
+        map.getContainer().dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+        map.fire('click', {
+          latlng: L.latLng(0, 4),
+          originalEvent: new MouseEvent('click'),
+        })
+      })
+      expect(container.querySelectorAll('.route-node')).toHaveLength(6)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('handles a route-line DOM click once without also appending a map waypoint', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      mapOverlayIds: ['waymarked-hiking'],
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      const path = line!.getElement()
+      expect(path).toBeDefined()
+      await act(async () => {
+        path!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+        path!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
+        path!.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }))
+      })
+      expect(container.querySelectorAll('.route-node')).toHaveLength(3)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it('restores map dragging when a line drag is interrupted by opening the editor', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     localStorage.setItem('trailforge-project', JSON.stringify({
@@ -159,11 +288,120 @@ describe('application interactions', () => {
         originalEvent: new MouseEvent('mousedown', { clientX: 100, clientY: 100 }),
       }))
       expect(map.dragging.enabled()).toBe(false)
+      const image = document.createElement('img')
+      map.getPane('routeOverlays')!.append(image)
+      await act(async () => document.dispatchEvent(new MouseEvent('mousemove', { clientX: 120, clientY: 120 })))
+      const duringDrag = new Event('dragstart', { bubbles: true, cancelable: true })
+      image.dispatchEvent(duringDrag)
+      expect(duringDrag.defaultPrevented).toBe(true)
       await act(async () => button(container, `Aktionen für ${initialProject.routes[0].name}`).click())
       const properties = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
         .find((item) => item.textContent?.includes('Eigenschaften'))!
       await act(async () => properties.click())
       expect(map.dragging.enabled()).toBe(true)
+      const afterCancel = new Event('dragstart', { bubbles: true, cancelable: true })
+      image.dispatchEvent(afterCancel)
+      expect(afterCancel.defaultPrevented).toBe(false)
+      await act(async () => document.dispatchEvent(new MouseEvent('mouseup', { clientX: 120, clientY: 120 })))
+      expect(container.querySelectorAll('.route-node')).toHaveLength(2)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('cancels a line drag on window blur and cleans up an active drag on unmount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    let unmounted = false
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      const startDrag = () => line!.fire('mousedown', {
+        latlng: L.latLng(52.5, 13.5),
+        originalEvent: new MouseEvent('mousedown', { clientX: 100, clientY: 100 }),
+      })
+      await act(async () => {
+        startDrag()
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 120, clientY: 120 }))
+        window.dispatchEvent(new Event('blur'))
+      })
+      expect(map.dragging.enabled()).toBe(true)
+      await act(async () => document.dispatchEvent(new MouseEvent('mouseup', { clientX: 120, clientY: 120 })))
+      expect(container.querySelectorAll('.route-node')).toHaveLength(2)
+      await act(async () => {
+        startDrag()
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 120, clientY: 120 }))
+        root.unmount()
+      })
+      unmounted = true
+      expect(map.dragging.enabled()).toBe(false)
+      const dragStart = new Event('dragstart', { cancelable: true })
+      window.dispatchEvent(dragStart)
+      expect(dragStart.defaultPrevented).toBe(false)
+    } finally {
+      if (!unmounted) await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not insert a waypoint when a drag ends outside the map', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      vi.spyOn(map.getContainer(), 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200, x: 0, y: 0,
+        toJSON: () => ({}),
+      })
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      await act(async () => line!.fire('mousedown', {
+        latlng: L.latLng(52.5, 13.5),
+        originalEvent: new MouseEvent('mousedown', { button: 2, clientX: 100, clientY: 100 }),
+      }))
+      expect(map.dragging.enabled()).toBe(true)
+      await act(async () => {
+        line!.fire('mousedown', {
+          latlng: L.latLng(52.5, 13.5),
+          originalEvent: new MouseEvent('mousedown', { clientX: 100, clientY: 100 }),
+        })
+        document.dispatchEvent(new MouseEvent('mousemove', { clientX: 210, clientY: 100 }))
+        document.dispatchEvent(new MouseEvent('mouseup', { clientX: 210, clientY: 100 }))
+      })
+      expect(map.dragging.enabled()).toBe(true)
+      expect(container.querySelectorAll('.route-node')).toHaveLength(2)
     } finally {
       await act(async () => root.unmount())
       container.remove()
