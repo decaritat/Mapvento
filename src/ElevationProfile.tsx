@@ -1,5 +1,4 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react'
-import { getInspectorElevationStatus, getInspectorRouteStatus } from './providers'
 import { formatDistanceAxis, formatDuration, getDistanceScale, getElevationScale, profileDetailsAtFraction, routeMetrics, type ElevationScale } from './routeMetrics'
 import type { ProfilePointDetails, Route } from './routeModel'
 
@@ -74,8 +73,6 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
   setElevationExpanded: Dispatch<SetStateAction<boolean>>
 }) {
   const activeMetrics = useMemo(() => activeRoute ? routeMetrics(activeRoute) : null, [activeRoute])
-  const inspectorRouteStatus = getInspectorRouteStatus(activeRoute)
-  const inspectorElevationStatus = getInspectorElevationStatus(activeRoute, activeMetrics?.elevations.length ?? 0)
   const activeElevationScale = getElevationScale(activeMetrics?.elevations ?? [])
   const activeDistanceScale = getDistanceScale(activeMetrics?.length ?? 0)
   return (
@@ -100,26 +97,11 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                   <span className="eyebrow">Aktive Route</span>
                   <strong className="inspector-route-name">{activeRoute?.name ?? 'Keine Route'}</strong>
                 </div>
-                <div className="inspector-actions">
-                  <span
-                    className={`inspector-route-status ${
-                      inspectorRouteStatus.isError ? 'error' : ''
-                    }`}
-                    title={inspectorRouteStatus.tooltip}
-                    tabIndex={0}
-                  >
-                    {inspectorRouteStatus.text}
+                {activeRoute?.routingState === 'loading' && (
+                  <span className="inspector-routing-loading" role="status">
+                    Route wird berechnet …
                   </span>
-                  <span
-                    className={`inspector-elevation-status ${
-                      inspectorElevationStatus.active ? '' : 'inactive'
-                    }`}
-                    title={inspectorElevationStatus.tooltip}
-                    tabIndex={0}
-                  >
-                    {inspectorElevationStatus.text}
-                  </span>
-                </div>
+                )}
               </div>
               {!elevationExpanded && (
                 <div className="compact-inspector-content">
@@ -210,15 +192,6 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
               <div className="elevation-card">
                 <div className="elevation-header">
                   <span className="eyebrow">Höhenprofil</span>
-                  <span
-                    className={`elevation-profile-status ${
-                      inspectorElevationStatus.active ? '' : 'inactive'
-                    }`}
-                    title={inspectorElevationStatus.tooltip}
-                    tabIndex={0}
-                  >
-                    {inspectorElevationStatus.text}
-                  </span>
                 </div>
                 <div className={`profile-chart-area ${profilePointDetails ? 'has-selection' : ''}`}>
                   <svg

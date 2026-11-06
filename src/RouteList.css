@@ -93,18 +93,17 @@
 }
 
 .route-card-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
+  display: block;
+  min-width: 0;
   color: var(--text);
   font-size: 13px;
   font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .lock-badge {
+  display: inline-block;
+  margin-left: 6px;
   padding: 2px 5px;
   border: 1px solid rgba(255, 184, 108, 0.28);
   border-radius: 4px;
@@ -113,6 +112,7 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .route-card-meta,

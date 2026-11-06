@@ -2,33 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   ALL_PROVIDER_ATTRIBUTIONS,
   GEOCODING_PROVIDER,
-  getInspectorElevationStatus,
-  getInspectorRouteStatus,
   LEAFLET_INFO,
 } from '../src/providers'
 import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
 import { ROUTING_PROVIDER } from '../src/routing'
-import type { Route } from '../src/routeModel'
 import { openExternalUrl } from '../src/externalUrl'
-
-function createDummyRoute(overrides: Partial<Route> = {}): Route {
-  return {
-    id: 'route-test',
-    name: 'Test Route',
-    description: '',
-    type: 'hiking',
-    editable: true,
-    nodes: [
-      { id: 'node-1', coordinate: [13.4, 52.5] },
-      { id: 'node-2', coordinate: [13.5, 52.6] },
-    ],
-    routingState: 'ready',
-    showDistanceMarkers: false,
-    distanceMarkerMode: 'auto',
-    distanceMarkerStepKm: 1,
-    ...overrides,
-  }
-}
 
 describe('provider definitions and attributions', () => {
   it('defines valid OpenStreetMap copyright URL', () => {
@@ -101,77 +79,6 @@ describe('provider definitions and attributions', () => {
       expect(attr.text).toBeTruthy()
       expect(attr.url).toMatch(/^https?:\/\//)
     }
-  })
-})
-
-describe('inspector route status and tooltips', () => {
-  it('returns appropriate text and tooltip when no route is active', () => {
-    const status = getInspectorRouteStatus(undefined)
-    expect(status.text).toBe('Keine aktive Route')
-    expect(status.tooltip).toContain('Wähle eine Route')
-    expect(status.isError).toBeFalsy()
-  })
-
-  it('returns appropriate text and tooltip when routing is loading', () => {
-    const route = createDummyRoute({ routingState: 'loading' })
-    const status = getInspectorRouteStatus(route)
-    expect(status.text).toBe('Route wird berechnet …')
-    expect(status.tooltip).toContain('BRouter')
-  })
-
-  it('returns error styling, text, and tooltip when in fallback routing', () => {
-    const route = createDummyRoute({ routingState: 'fallback' })
-    const status = getInspectorRouteStatus(route)
-    expect(status.text).toBe('Direkter Fallback')
-    expect(status.tooltip).toContain('Luftlinie')
-    expect(status.isError).toBe(true)
-  })
-
-  it('indicates when fewer than 2 points are present', () => {
-    const route = createDummyRoute({ nodes: [{ id: 'n1', coordinate: [13.4, 52.5] }] })
-    const status = getInspectorRouteStatus(route)
-    expect(status.text).toBe('Mindestens zwei Punkte erforderlich')
-    expect(status.tooltip).toContain('mindestens zwei Punkte')
-  })
-
-  it('indicates when routing is idle', () => {
-    const route = createDummyRoute({ routingState: 'idle' })
-    const status = getInspectorRouteStatus(route)
-    expect(status.text).toBe('Routing wird vorbereitet …')
-    expect(status.tooltip).toContain('vorbereitet')
-  })
-
-  it('indicates when routing is active', () => {
-    const route = createDummyRoute({ routingState: 'ready' })
-    const status = getInspectorRouteStatus(route)
-    expect(status.text).toBe('Routing aktiv')
-    expect(status.tooltip).toContain('BRouter')
-    expect(status.tooltip).toContain('erfolgreich')
-  })
-})
-
-describe('inspector elevation status and tooltips', () => {
-  it('returns inactive status when no route is active', () => {
-    const status = getInspectorElevationStatus(undefined, 0)
-    expect(status.text).toBe('Kein Höhenprofil')
-    expect(status.active).toBe(false)
-    expect(status.tooltip).toContain('Keine Route aktiv')
-  })
-
-  it('returns active status when elevations exist', () => {
-    const route = createDummyRoute()
-    const status = getInspectorElevationStatus(route, 25)
-    expect(status.text).toBe('Höhenprofil aktiv')
-    expect(status.active).toBe(true)
-    expect(status.tooltip).toContain('Höhenprofil aktiv')
-  })
-
-  it('returns missing data status when elevations are empty', () => {
-    const route = createDummyRoute()
-    const status = getInspectorElevationStatus(route, 0)
-    expect(status.text).toBe('Keine Höhendaten')
-    expect(status.active).toBe(false)
-    expect(status.tooltip).toContain('keine Höhendaten')
   })
 })
 

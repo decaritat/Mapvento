@@ -73,7 +73,7 @@ describe('routing and route properties in the app', () => {
           await finishRequest()
           await act(async () => save!.click())
         }
-        expect(container.textContent).toContain('Routing aktiv')
+        expect(container.textContent).not.toContain('Routing aktiv')
         expect(container.textContent).not.toContain('Route wird berechnet')
         expect(fetchMock).toHaveBeenCalledOnce()
       } finally {

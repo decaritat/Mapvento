@@ -20,12 +20,8 @@ import { RouteCreationDialog } from './RouteCreationDialog'
 import { PointEditor } from './PointEditor'
 import { MapToolbar } from './MapToolbar'
 import { ElevationProfile } from './ElevationProfile'
-import { ExternalLink } from './ExternalLink'
 import { openExternalUrl } from './externalUrl'
-import {
-  ROUTING_PROVIDER,
-  routingProfileLabel,
-} from './routing'
+import { ROUTING_PROVIDER } from './routing'
 import {
   type Coordinate,
   type MapPoint,
@@ -702,11 +698,23 @@ function App() {
   }
 
   return (
-    <div
-      className="app-shell"
-      inert={routePropertiesOpen || aboutOpen || cacheOpen || routeCreationDialogOpen}
-      onClick={() => contextMenu && setContextMenu(null)}
-    >
+    <>
+      <input
+        ref={importInput}
+        className="hidden-input"
+        type="file"
+        accept=".gpx,application/gpx+xml"
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ''
+          if (file) importGpx(file)
+        }}
+      />
+      <div
+        className="app-shell"
+        inert={routePropertiesOpen || aboutOpen || cacheOpen || routeCreationDialogOpen}
+        onClick={() => contextMenu && setContextMenu(null)}
+      >
 
       <ProjectHeader projectInput={projectInput} openProject={() => projectInput.current?.click()}
         saveProject={saveProject} importProject={importProject}
@@ -721,21 +729,26 @@ function App() {
             <div>
               <span className="eyebrow">Projekt</span>
               <div className="project-title-row">
-                <input
-                  className="project-name"
-                  value={editingProjectName ? projectNameDraft : project.name}
-                  disabled={!editingProjectName}
-                  onChange={(event) => setProjectNameDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && editingProjectName) {
-                      event.preventDefault()
-                      saveProjectName()
-                    } else if (event.key === 'Escape' && editingProjectName) {
-                      cancelProjectNameEdit()
-                    }
-                  }}
-                  aria-label="Projektname"
-                />
+                {editingProjectName ? (
+                  <input
+                    className="project-name"
+                    value={projectNameDraft}
+                    onChange={(event) => setProjectNameDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        saveProjectName()
+                      } else if (event.key === 'Escape') {
+                        cancelProjectNameEdit()
+                      }
+                    }}
+                    aria-label="Projektname"
+                  />
+                ) : (
+                  <div className="project-name-display" aria-label="Projektname">
+                    {project.name}
+                  </div>
+                )}
                 {!editingProjectName && (
                   <button
                     className="project-name-edit"
@@ -842,50 +855,6 @@ function App() {
               document.body,
             )}
 
-          <div className="sidebar-bottom">
-            <input
-              ref={importInput}
-              className="hidden-input"
-              type="file"
-              accept=".gpx,application/gpx+xml"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0]
-                event.currentTarget.value = ''
-                if (file) importGpx(file)
-              }}
-            />
-            <div className="provider-status">
-              <span
-                className={`status-dot ${
-                  project.routes.some((route) => route.routingState === 'fallback')
-                    ? 'error'
-                    : project.routes.some((route) => route.routingState === 'loading')
-                      ? 'loading'
-                      : ''
-                }`}
-              />
-              <ExternalLink
-                url={ROUTING_PROVIDER.attributionUrl}
-                className="provider-name-link"
-                title={`${ROUTING_PROVIDER.label} Attribution und Projekt öffnen`}
-              >
-                {ROUTING_PROVIDER.label}
-              </ExternalLink>
-              <span>
-                {project.routes.some((route) => route.routingState === 'fallback')
-                  ? 'nicht erreichbar'
-                  : project.routes.some((route) => route.routingState === 'loading')
-                    ? 'wird verwendet'
-                    : 'bereit'}
-              </span>
-              <span
-                className="status-info"
-                title={`Profile: ${routingProfileLabel('hiking')} · ${routingProfileLabel('cycling')}`}
-              >
-                i
-              </span>
-            </div>
-          </div>
         </aside>
 
         <section className="content-column">
@@ -972,7 +941,8 @@ function App() {
       {cacheOpen && <CacheDialog onClose={() => setCacheOpen(false)}
         layerIds={[layerId, ...(project.mapOverlayIds ?? [])]} retry={retryMapLayer}
         project={project} mapZoom={mapZoom} />}
-    </div>
+      </div>
+    </>
   )
 }
 

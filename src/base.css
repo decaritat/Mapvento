@@ -32,6 +32,7 @@
   background: rgba(13, 19, 24, 0.9);
   backdrop-filter: blur(12px);
   z-index: 1210;
+  user-select: none;
 }
 
 .brand,
@@ -39,8 +40,7 @@
 .brand > div,
 .sidebar-heading,
 .inspector-title-row,
-.elevation-header,
-.provider-status {
+.elevation-header {
   display: flex;
   align-items: center;
 }
@@ -51,10 +51,13 @@
 
 .brand-mark {
   display: block;
+  pointer-events: none;
   width: 34px;
   height: 34px;
   border-radius: 10px;
   object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .brand > div {
@@ -262,24 +265,35 @@ textarea:focus {
   font-weight: 700;
 }
 
+.project-name-display {
+  flex: 0 1 190px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 2px 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .project-title-row {
   display: flex;
-  align-items: center;
+  width: 100%;
+  align-items: flex-start;
   gap: 5px;
+}
+
+.sidebar-heading > div {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .project-name[readonly] {
   cursor: default;
 }
 
-.project-name:disabled,
 .project-description:disabled {
   cursor: default;
   opacity: 1;
-}
-
-.project-name:disabled {
-  -webkit-text-fill-color: var(--text);
 }
 
 .project-description:disabled {

@@ -8,6 +8,10 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+### Changed
+
+- Disabled text selection and image dragging in the application header.
+
 ### Added
 
 - Added discreet route-node markers for editable routes: compact intermediate
@@ -23,13 +27,12 @@ once released versions are maintained.
   descent calculation so noisy elevation data no longer inflates route
   statistics.
 
-- Added explanatory tooltips to inspector status displays (routing and
-  elevation profile state), metric cards, and profile actions. Added direct,
-  context-sensitive attribution links for map tile providers (OpenStreetMap
-  Carto, OpenTopoMap and Waymarked Trails) in the layer tool, routing provider (BRouter) in
-  the sidebar and route properties, geocoding provider (Nominatim) in place
-  search. Preserved visible Leaflet attribution on the map with system browser
-  link opening across desktop and web.
+- Added a route-calculation loading indicator, explanatory tooltips to metric
+  cards and profile actions. Added direct context-sensitive attribution links
+  for map tile providers (OpenStreetMap Carto, OpenTopoMap and Waymarked Trails)
+  in the layer tool, routing provider (BRouter) in route properties, and
+  geocoding provider (Nominatim) in place search. Preserved visible Leaflet
+  attribution on the map with system browser link opening across desktop and web.
 - Added an About dialog (Info in the header menu) showing the Trailforge version, links to
   the GitHub project, documentation, changelog, and license, data and service
   attributions (OpenStreetMap, OpenTopoMap, Nominatim, BRouter, Leaflet), and a
@@ -65,8 +68,9 @@ once released versions are maintained.
   `vX.Y.Z` tags create a draft GitHub Release whose notes come from the matching
   `Changelog.md` section; any `vX.Y.Z-<suffix>` tag is published to GitHub
   Packages only.
-- Added an editable project title and description, plus accessible route-card
-  actions for properties, GPX export, and confirmed route removal.
+- Added an editable project title and description with wrapped long titles,
+  wrapping for long route names, plus accessible route-card actions for
+  properties, GPX export, and confirmed route removal.
 - Extracted route geometry, metrics, elevation-profile calculations, GPX handling,
   elevation-provider fallback, and project validation into independently testable
   modules with Vitest unit coverage. Opening a project validates the complete
