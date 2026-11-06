@@ -72,6 +72,207 @@ describe('application interactions', () => {
     }
   })
 
+  it('distinguishes route start, end, and intermediate nodes and exposes keyboard focus', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      const addNode = async (longitude: number) => {
+        await act(async () => map.fire('click', {
+          latlng: L.latLng(52, longitude),
+          originalEvent: new MouseEvent('click', { clientX: 100, clientY: 100 }),
+        }))
+      }
+
+      await addNode(13)
+      expect(container.querySelector('.route-node.start')).not.toBeNull()
+      expect(container.querySelector('.route-node.end')).toBeNull()
+
+      await addNode(14)
+      expect(container.querySelector('.route-node.start')).not.toBeNull()
+      expect(container.querySelector('.route-node.end')).not.toBeNull()
+      expect(container.querySelector('.route-node.waypoint')).toBeNull()
+
+      await addNode(15)
+      const nodes = container.querySelectorAll<HTMLElement>('.route-node')
+      expect(nodes).toHaveLength(3)
+      expect(container.querySelector('.route-node-number')?.textContent).toBe('1')
+      const marker = container.querySelector<HTMLElement>('.route-node.end')!
+      const markerElement = marker.closest<HTMLElement>('.leaflet-marker-icon')!
+      await act(async () => markerElement.focus())
+      expect(container.querySelector('.route-node.end.selected')).not.toBeNull()
+      expect(markerElement.getAttribute('tabindex')).toBe('0')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('selects a route point on the first mouse click and shows it in the elevation profile', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        elevations: [100, 200],
+        routingState: 'ready',
+      }],
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
+      const marker = () => container.querySelector<HTMLElement>('.route-node.end')!.closest<HTMLElement>('.leaflet-marker-icon')!
+      const clickMarker = async () => {
+        const element = marker()
+        await act(async () => element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 })))
+        await act(async () => element.focus())
+        await act(async () => element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 })))
+        await act(async () => element.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 })))
+      }
+
+      await clickMarker()
+      expect(container.querySelector('.route-node.end.selected')).not.toBeNull()
+      expect(container.querySelector('.profile-chart-area.has-selection')).not.toBeNull()
+      expect(container.querySelector('.profile-chart-area line[stroke="#ffb86c"]')).not.toBeNull()
+      await act(async () => button(container, 'Höhenprofil schließen').focus())
+      expect(container.querySelector('.route-node.end.selected')).not.toBeNull()
+      expect(container.querySelector('.profile-chart-area.has-selection')).not.toBeNull()
+
+      await clickMarker()
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+      expect(container.querySelector('.profile-chart-area.has-selection')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('shows a non-interactive insertion cursor while hovering an editable route line', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      expect(line).toBeDefined()
+
+      const getInsertionCursor = () => {
+        let cursor: L.CircleMarker | undefined
+        map.eachLayer((layer: L.Layer) => {
+          if (layer instanceof L.CircleMarker && layer.options.className === 'route-insertion-cursor') {
+            cursor = layer
+          }
+        })
+        return cursor
+      }
+      await act(async () => line!.fire('mousemove', { latlng: L.latLng(52.4, 13.4) }))
+      const cursor = getInsertionCursor()
+      expect(cursor).toBeDefined()
+      expect(cursor!.options.interactive).toBe(false)
+      expect(cursor!.options.radius).toBe(3)
+      expect(cursor!.getLatLng().equals(L.latLng(52.4, 13.4))).toBe(true)
+
+      await act(async () => line!.fire('mousemove', { latlng: L.latLng(52.6, 13.6) }))
+      expect(cursor!.getLatLng().equals(L.latLng(52.6, 13.6))).toBe(true)
+      await act(async () => line!.fire('mouseout'))
+      expect(map.hasLayer(cursor!)).toBe(false)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('clears route-node focus when the map moves, a node is added, Escape is pressed, a tool changes, or the node is clicked again', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    localStorage.setItem('trailforge-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]],
+        routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      const focusEndNode = async () => {
+        const node = container.querySelector<HTMLElement>('.route-node.end')!
+        const marker = node.closest<HTMLElement>('.leaflet-marker-icon')!
+        await act(async () => marker.focus())
+        expect(container.querySelector('.route-node.end.selected')).not.toBeNull()
+        return marker
+      }
+
+      await focusEndNode()
+      await act(async () => map.fire('dragstart'))
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+      expect(document.activeElement?.closest('.route-node-wrapper')).toBeNull()
+
+      await focusEndNode()
+      await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+
+      await focusEndNode()
+      const selectedMarker = container.querySelector<HTMLElement>('.route-node.end')!.closest<HTMLElement>('.leaflet-marker-icon')!
+      let leafletMarker: L.Marker | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Marker && layer.getElement() === selectedMarker) leafletMarker = layer
+      })
+      expect(leafletMarker).toBeDefined()
+      await act(async () => leafletMarker!.fire('click', { originalEvent: new MouseEvent('click') }))
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+
+      await focusEndNode()
+      await act(async () => map.fire('click', {
+        latlng: L.latLng(52.5, 14.5),
+        originalEvent: new MouseEvent('click', { clientX: 100, clientY: 100 }),
+      }))
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+
+      await focusEndNode()
+      await act(async () => button(container, 'Karte verschieben, schreibgeschützt').click())
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+      expect(document.activeElement?.closest('.route-node-wrapper')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it('inserts and drags route nodes while preserving the map editing workflow', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))

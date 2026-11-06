@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import L from 'leaflet'
 import type { GeoJsonObject } from 'geojson'
 import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, ToolMode } from './appTypes'
@@ -52,11 +52,28 @@ export function useLeafletMap({
   const distanceMarkersRef = useRef<L.Marker[]>([])
   const profileMarkerRef = useRef<L.CircleMarker | null>(null)
   const markersRef = useRef<L.Layer[]>([])
+  const routeNodeMarkersRef = useRef(new Map<string, { marker: L.Marker; routeId: string; nodeId: string }>())
+  const focusedRouteNodeRef = useRef<string | null>(null)
+  const selectedNodeRef = useRef(selectedNode)
+  const pointerDownRouteNodeRef = useRef<string | null>(null)
   const searchLayerRef = useRef<L.Layer | null>(null)
   const activeDragCleanupRef = useRef<(() => void) | null>(null)
   const suppressNextRouteClickRef = useRef(false)
   const suppressClickTimerRef = useRef<number | null>(null)
   const [mapScale, setMapScale] = useState({ zoom: 7, latitude: 51.1657 })
+
+  const clearRouteNodeFocus = useCallback(() => {
+    focusedRouteNodeRef.current = null
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLElement && activeElement.closest('.route-node-wrapper')) {
+      activeElement.blur()
+    }
+    setSelectedNode(null)
+  }, [setSelectedNode])
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNode
+  }, [selectedNode])
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return
@@ -89,7 +106,25 @@ export function useLeafletMap({
       if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
       suppressClickTimerRef.current = null
     }
+    const onFocusIn = (event: FocusEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('.route-node-wrapper')) {
+        focusedRouteNodeRef.current = null
+      }
+    }
+    const onMouseUp = () => { pointerDownRouteNodeRef.current = null }
+    const onMapDragStart = () => clearRouteNodeFocus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || (!focusedRouteNodeRef.current && !selectedNodeRef.current)) return
+      event.preventDefault()
+      event.stopPropagation()
+      clearRouteNodeFocus()
+    }
     map.getContainer().addEventListener('mousedown', clearSuppressedClick, true)
+    map.on('dragstart', onMapDragStart)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('mouseup', onMouseUp)
+    window.addEventListener('blur', onMouseUp)
     updateMapScale()
     const resizeTimer = window.setTimeout(() => map.invalidateSize(), 0)
     return () => {
@@ -97,6 +132,11 @@ export function useLeafletMap({
       activeDragCleanupRef.current?.()
       clearSuppressedClick()
       map.getContainer().removeEventListener('mousedown', clearSuppressedClick, true)
+      map.off('dragstart', onMapDragStart)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('blur', onMouseUp)
       map.off('zoomend moveend', updateMapScale)
       profileMarkerRef.current?.remove()
       profileMarkerRef.current = null
@@ -111,7 +151,11 @@ export function useLeafletMap({
       map.remove()
       mapRef.current = null
     }
-  }, [])
+  }, [clearRouteNodeFocus])
+
+  useEffect(() => {
+    if (toolMode !== 'route') clearRouteNodeFocus()
+  }, [clearRouteNodeFocus, toolMode])
 
   const overlayKey = (project.mapOverlayIds ?? []).join(',')
   useEffect(() => {
@@ -223,6 +267,36 @@ export function useLeafletMap({
         const index = getRouteInsertionIndex(route.nodes, projectCoordinate(latlng), getDisplayedRouteCoordinates(route))
         return index === null ? null : [route.nodes[index - 1], route.nodes[index]]
       }
+      let insertionCursor: L.CircleMarker | null = null
+      const onMouseMove = (event: L.LeafletMouseEvent) => {
+        if (
+          routePropertiesOpen ||
+          toolMode !== 'route' ||
+          route.id !== project.activeRouteId ||
+          !route.editable
+        ) {
+          insertionCursor?.removeFrom(map)
+          insertionCursor = null
+          return
+        }
+        if (!insertionCursor) {
+          insertionCursor = L.circleMarker(event.latlng, {
+            className: 'route-insertion-cursor',
+            color: '#ffffff',
+            fillColor: '#111820',
+            fillOpacity: 1,
+            interactive: false,
+            radius: 3,
+            weight: 1.5,
+          }).addTo(map)
+        } else {
+          insertionCursor.setLatLng(event.latlng)
+        }
+      }
+      const onMouseOut = () => {
+        insertionCursor?.removeFrom(map)
+        insertionCursor = null
+      }
       let cleanupDrag: (() => void) | null = null
       const onMouseDown = (event: L.LeafletMouseEvent) => {
         if (
@@ -306,6 +380,7 @@ export function useLeafletMap({
           const releasePoint = map.containerPointToLatLng(
             L.point(upEvent.clientX - rect.left, upEvent.clientY - rect.top),
           )
+          clearRouteNodeFocus()
           insertNodeAtCoordinate(route.id, projectCoordinate(releasePoint), [
             neighboringNodes[0].id,
             neighboringNodes[1].id,
@@ -350,15 +425,21 @@ export function useLeafletMap({
         }
         const neighboringNodes = neighborsAt(event.latlng)
         if (!neighboringNodes) return
+        clearRouteNodeFocus()
         insertNodeAtCoordinate(route.id, projectCoordinate(event.latlng), [
           neighboringNodes[0].id,
           neighboringNodes[1].id,
         ])
       })
+      line.on('mousemove', onMouseMove)
+      line.on('mouseout', onMouseOut)
       line.on('mousedown', onMouseDown)
       routeLayersRef.current.push(outline, line)
       dragCleanups.push(() => {
         cleanupDrag?.()
+        line.off('mousemove', onMouseMove)
+        line.off('mouseout', onMouseOut)
+        onMouseOut()
         line.off('mousedown', onMouseDown)
       })
     })
@@ -367,7 +448,7 @@ export function useLeafletMap({
       routeLayersRef.current.forEach((layer) => layer.removeFrom(map))
       routeLayersRef.current = []
     }
-  }, [insertNodeAtCoordinate, project.activeRouteId, project.routes, routePropertiesOpen, toolMode])
+  }, [insertNodeAtCoordinate, project.activeRouteId, project.routes, routePropertiesOpen, toolMode, clearRouteNodeFocus])
 
   useEffect(() => {
     const map = mapRef.current
@@ -457,32 +538,64 @@ export function useLeafletMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
+    const routeNodeMarkers = routeNodeMarkersRef.current
     markersRef.current.forEach((marker) => marker.removeFrom(map))
     markersRef.current = []
+    routeNodeMarkers.clear()
     project.routes.forEach((route) => {
       if (!route.editable) return
       route.nodes.forEach((node, index) => {
+        const start = index === 0
+        const end = index === route.nodes.length - 1 && route.nodes.length > 1
+        const positionClass = start ? 'start' : end ? 'end' : 'waypoint'
+        const nodeKey = `${route.id}\u0000${node.id}`
         const marker = L.marker([node.coordinate[1], node.coordinate[0]], {
+          alt: `${start ? 'Start' : end ? 'Ziel' : `Zwischenpunkt ${index + 1}`}, Routenpunkt ${index + 1}`,
           draggable:
             !routePropertiesOpen &&
             toolMode === 'route' &&
             route.editable &&
             route.id === project.activeRouteId,
+          keyboard: true,
           icon: L.divIcon({
             className: `route-node-wrapper ${route.id === project.activeRouteId ? 'active' : ''}`,
-            html: `<span class="route-node ${
-              selectedNode?.routeId === route.id && selectedNode.nodeId === node.id ? 'selected' : ''
-            }">${index + 1}</span>`,
-            iconSize: [23, 23],
-            iconAnchor: [11, 11],
+            html: `<span class="route-node ${positionClass}"><span class="route-node-symbol"></span><span class="route-node-number">${index + 1}</span></span>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
           }),
+          title: `${start ? 'Start' : end ? 'Ziel' : `Zwischenpunkt ${index + 1}`} – Routenpunkt ${index + 1}`,
         }).addTo(map)
+        routeNodeMarkers.set(nodeKey, { marker, routeId: route.id, nodeId: node.id })
         marker.on('click', (event: L.LeafletMouseEvent) => {
           if (routePropertiesOpen) return
           event.originalEvent.stopPropagation()
-          setSelectedNode({ routeId: route.id, nodeId: node.id })
+          const currentSelection = selectedNodeRef.current
+          if (currentSelection?.routeId === route.id && currentSelection.nodeId === node.id) {
+            clearRouteNodeFocus()
+          } else {
+            setSelectedNode({ routeId: route.id, nodeId: node.id })
+          }
           setProject((current) => ({ ...current, activeRouteId: route.id }))
           setNotice(`Routenpunkt ${index + 1} ausgewählt.`)
+        })
+        const onFocus = () => {
+          if (routePropertiesOpen) return
+          focusedRouteNodeRef.current = nodeKey
+          if (pointerDownRouteNodeRef.current === nodeKey) return
+          setSelectedNode({ routeId: route.id, nodeId: node.id })
+          setProject((current) =>
+            current.activeRouteId === route.id ? current : { ...current, activeRouteId: route.id },
+          )
+        }
+        const markerElement = marker.getElement()
+        const onMouseDown = (event: MouseEvent) => {
+          if (event.button === 0) pointerDownRouteNodeRef.current = nodeKey
+        }
+        markerElement?.addEventListener('mousedown', onMouseDown, true)
+        markerElement?.addEventListener('focus', onFocus)
+        marker.once('remove', () => {
+          markerElement?.removeEventListener('mousedown', onMouseDown, true)
+          markerElement?.removeEventListener('focus', onFocus)
         })
         marker.on('contextmenu', (event: L.LeafletMouseEvent) => {
           if (routePropertiesOpen) return
@@ -531,8 +644,25 @@ export function useLeafletMap({
     return () => {
       markersRef.current.forEach((marker) => marker.removeFrom(map))
       markersRef.current = []
+      routeNodeMarkers.clear()
     }
-  }, [project.activeRouteId, project.points, project.routes, routePropertiesOpen, selectedNode, toolMode, updateNode, openPointEditor, setProject, setSelectedNode, setContextMenu, setNotice])
+  }, [project.activeRouteId, project.points, project.routes, routePropertiesOpen, toolMode, updateNode, openPointEditor, setProject, setSelectedNode, setContextMenu, setNotice, clearRouteNodeFocus])
+
+  const selectedRouteId = selectedNode?.routeId
+  const selectedNodeId = selectedNode?.nodeId
+  useEffect(() => {
+    const routeNodeMarkers = routeNodeMarkersRef.current
+    routeNodeMarkers.forEach(({ marker, routeId, nodeId }) => {
+      marker.getElement()?.querySelector('.route-node')?.classList.toggle(
+        'selected',
+        selectedRouteId === routeId && selectedNodeId === nodeId,
+      )
+    })
+    if (!focusedRouteNodeRef.current) return
+    const focusedMarker = routeNodeMarkers.get(focusedRouteNodeRef.current)?.marker
+    if (focusedMarker) focusedMarker.getElement()?.focus()
+    else focusedRouteNodeRef.current = null
+  }, [selectedRouteId, selectedNodeId, project.activeRouteId, project.routes, project.points])
 
   useEffect(() => {
     const map = mapRef.current
@@ -570,6 +700,7 @@ export function useLeafletMap({
         id: uid('node'),
         coordinate: projectCoordinate(event.latlng),
       }
+      clearRouteNodeFocus()
       setProject((current) => ({
         ...current,
         routes: current.routes.map((route) =>
@@ -592,7 +723,7 @@ export function useLeafletMap({
     return () => {
       map.off('click', onClick)
     }
-  }, [activeRoute, contextMenu, routePropertiesOpen, toolMode, openPointEditor, setContextMenu, setProject, setNotice])
+  }, [activeRoute, contextMenu, routePropertiesOpen, toolMode, openPointEditor, setContextMenu, setProject, setNotice, clearRouteNodeFocus])
 
   function focusRouteOnMap(route: Route) {
     const coordinates = getDisplayedRouteCoordinates(route)
