@@ -10,6 +10,7 @@ import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarker
 import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { uid } from './uid'
 import { CachedTileLayer } from './cachedTileLayer'
+import { distanceInUnit, type StartSettings, type Units } from './settings'
 
 const activeRouteLineWeight = 4
 const inactiveRouteLineWeight = 3
@@ -20,6 +21,8 @@ type Props = {
   setProject: Dispatch<SetStateAction<ProjectFile>>
   activeRoute: Route | undefined
   layerId: string
+  start: StartSettings
+  units: Units
   mapLayerRetry: { layerId: string; sequence: number } | null
   toolMode: ToolMode
   routePropertiesOpen: boolean
@@ -38,13 +41,14 @@ type Props = {
 }
 
 export function useLeafletMap({
-  project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
+  project, setProject, activeRoute, layerId, start, units, mapLayerRetry, toolMode, routePropertiesOpen,
   mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode,
   setContextMenu, setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor,
   updateNode, insertNodeAtCoordinate,
 }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const initialView = useRef(start)
   const tileLayersRef = useRef(new Map<string, { layer: L.TileLayer; dispose: () => void }>())
   const failedTileLayersRef = useRef(new Map<string, LayerDefinition>())
   const lastRetryRef = useRef(0)
@@ -77,7 +81,7 @@ export function useLeafletMap({
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return
-    const map = L.map(mapContainer.current, { zoomControl: true }).setView([51.1657, 10.4515], 7)
+    const map = L.map(mapContainer.current, { zoomControl: true }).setView([initialView.current.latitude, initialView.current.longitude], initialView.current.zoom)
     const tileLayers = tileLayersRef.current
     const failedTileLayers = failedTileLayersRef.current
     map.createPane('routeOverlays').style.zIndex = '300'
@@ -85,9 +89,6 @@ export function useLeafletMap({
       setMapScale({ zoom: map.getZoom(), latitude: map.getCenter().lat })
     }
     map.on('zoomend moveend', updateMapScale)
-    L.control
-      .scale({ position: 'topright', metric: true, imperial: false, maxWidth: 120 })
-      .addTo(map)
     const northArrow = new L.Control({ position: 'topright' })
     northArrow.onAdd = () => {
       const container = L.DomUtil.create('div', 'north-arrow-control')
@@ -152,6 +153,13 @@ export function useLeafletMap({
       mapRef.current = null
     }
   }, [clearRouteNodeFocus])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const scale = L.control.scale({ position: 'topright', metric: units.distance === 'km', imperial: units.distance === 'mi', maxWidth: 120 }).addTo(map)
+    return () => { scale.remove() }
+  }, [units.distance])
 
   useEffect(() => {
     if (toolMode !== 'route') clearRouteNodeFocus()
@@ -466,7 +474,8 @@ export function useLeafletMap({
       if (!isValidDistanceMarkerStepKm(stepKm)) return
 
       getDistanceMarkers(route, stepKm).forEach(({ coordinate, distance }) => {
-        const label = `${formatDistanceAxis(distance)} km`
+        const displayedDistance = distanceInUnit(distance, units.distance)
+        const label = `${displayedDistance < 1 ? displayedDistance.toFixed(2).replace(/\.?0+$/, '') : formatDistanceAxis(displayedDistance)} ${units.distance}`
         const marker = L.marker([coordinate[1], coordinate[0]], {
           icon: L.divIcon({
             className: `distance-marker-wrapper ${route.id === project.activeRouteId ? 'active' : ''}`,
@@ -487,7 +496,7 @@ export function useLeafletMap({
       distanceMarkersRef.current.forEach((marker) => marker.removeFrom(map))
       distanceMarkersRef.current = []
     }
-  }, [mapScale, project.activeRouteId, project.routes])
+  }, [mapScale, project.activeRouteId, project.routes, units.distance])
 
   useEffect(() => {
     const map = mapRef.current
@@ -799,5 +808,16 @@ export function useLeafletMap({
     searchLayerRef.current = null
   }
 
-  return { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, mapZoom: mapScale.zoom }
+  const getMapView = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return null
+    const center = map.getCenter().wrap()
+    return {
+      latitude: Math.max(-85.05112878, Math.min(85.05112878, center.lat)),
+      longitude: center.lng,
+      zoom: Math.min(19, Math.max(0, map.getZoom())),
+    }
+  }, [])
+
+  return { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, getMapView, mapZoom: mapScale.zoom }
 }

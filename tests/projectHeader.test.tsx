@@ -17,7 +17,7 @@ describe('header menu', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<ProjectHeader projectInput={createRef()} openProject={vi.fn()} saveProject={save}
-        importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} exitApp={vi.fn()} desktop={false} />))
+        importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} openSettings={vi.fn()} exitApp={vi.fn()} desktop={false} />))
       const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!
       expect(container.textContent).not.toContain('Projekt speichern')
       await act(async () => trigger.click())
@@ -26,13 +26,13 @@ describe('header menu', () => {
       expect(items.map((item) => item.textContent)).toEqual([
         'Projekt öffnen', 'Projekt speichern', 'Einstellungen', 'Cache verwalten', 'Info',
       ])
-      expect(items[2].disabled).toBe(true)
+      expect(items[2].disabled).toBe(false)
       expect(document.activeElement).toBe(items[0])
       await act(async () => items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(items[1])
       await act(async () => items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })))
-      expect(document.activeElement).toBe(items[3])
-      await act(async () => items[3].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(items[2])
+      await act(async () => items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
       expect(container.querySelector('[role="menu"]')).toBeNull()
       expect(document.activeElement).toBe(trigger)
       await act(async () => trigger.click())
@@ -64,7 +64,7 @@ describe('header menu', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<ProjectHeader projectInput={createRef()} openProject={openProject} saveProject={vi.fn()}
-        importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} exitApp={exit} desktop />))
+        importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} openSettings={vi.fn()} exitApp={exit} desktop />))
       const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!
       await act(async () => trigger.click())
       await act(async () => container.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())

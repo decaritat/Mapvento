@@ -114,7 +114,7 @@ export function profileDetailsAtIndex(
   return {
     routeId: route.id,
     nodeIndex,
-    profileFraction: distance / Math.max(1, totalDistance),
+    profileFraction: totalDistance > 0 ? distance / totalDistance : 0,
     distance,
     elevation: elevations[closestIndex] ?? fallback.elevationAt(coordinate),
     elapsedMinutes:

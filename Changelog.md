@@ -14,6 +14,14 @@ once released versions are maintained.
 
 ### Added
 
+- Added an application settings dialog with independently resettable start
+  map, overlay and fixed-view defaults and distance, elevation and duration
+  units with example-based duration formats, a compact grouped start position
+  whose fields can be filled from the current map view, compact
+  label-and-value rows, category descriptions and a visually separated reset
+  action. Unit choices update the map scale and distance markers, route
+  statistics, and elevation profile without changing stored route data.
+
 - Added discreet route-node markers for editable routes: compact intermediate
   points that enlarge on hover or selection and show their number inside,
   smaller distinct start and checkered finish symbols, visible keyboard focus,
@@ -46,8 +54,7 @@ once released versions are maintained.
   selections persist in project files and unavailable overlays are reported;
   tile errors identify the affected layer and allow a
   targeted retry. A keyboard-accessible header menu provides project opening
-  and saving, cache management, Info, and desktop exit; settings are disabled
-  until implemented. The cache dialog groups active and inactive layers by
+  and saving, settings, cache management, Info, and desktop exit. The cache dialog groups active and inactive layers by
   provider with usage, freshness, available project coverage details and actions.
   The desktop webview identifies itself as Trailforge, and
   provider usage and attribution are documented. Visited base and overlay

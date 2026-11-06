@@ -20,6 +20,8 @@ import { RouteCreationDialog } from './RouteCreationDialog'
 import { PointEditor } from './PointEditor'
 import { MapToolbar } from './MapToolbar'
 import { ElevationProfile } from './ElevationProfile'
+import { SettingsDialog } from './SettingsDialog'
+import { distanceInUnit, readSettings, SETTINGS_KEY, type Settings } from './settings'
 import { openExternalUrl } from './externalUrl'
 import { ROUTING_PROVIDER } from './routing'
 import {
@@ -88,9 +90,16 @@ function App() {
   const [initial] = useState(() => {
     let warning = ''
     const project = readInitialProject(localStorage, (message) => { warning = message })
-    return { project, warning }
+    const stored = readSettings(localStorage)
+    return {
+      project: stored.saved ? { ...project, mapLayerId: stored.settings.start.layerId, mapOverlayIds: stored.settings.start.overlayIds } : project,
+      settings: stored.settings,
+      warning: [warning, stored.warning].filter(Boolean).join(' '),
+    }
   })
   const [project, setProject] = useState<ProjectFile>(initial.project)
+  const [settings, setSettings] = useState(initial.settings)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameDraft, setProjectNameDraft] = useState('')
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState('')
@@ -332,8 +341,9 @@ function App() {
     setNotice('Neuer Routenpunkt gesetzt; die Route wird neu berechnet.')
   }, [project.routes, toolMode])
 
-  const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, mapZoom } = useLeafletMap({
+  const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, getMapView, mapZoom } = useLeafletMap({
     project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
+    start: initial.settings.start, units: settings.units,
     mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode, setContextMenu,
     setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor, updateNode, insertNodeAtCoordinate,
   })
@@ -559,7 +569,7 @@ function App() {
       !isValidDistanceMarkerStepKm(routeEditor.draft.distanceMarkerStepKm)
     ) {
       setNotice(
-        `Die manuelle Schrittweite muss zwischen ${DISTANCE_MARKER_MIN_STEP_KM} und ${DISTANCE_MARKER_MAX_STEP_KM} km liegen.`,
+        `Die manuelle Schrittweite muss zwischen ${distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, settings.units.distance).toFixed(settings.units.distance === 'km' ? 1 : 6)} und ${distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, settings.units.distance).toFixed(settings.units.distance === 'km' ? 0 : 6)} ${settings.units.distance} liegen.`,
       )
       return
     }
@@ -697,6 +707,17 @@ function App() {
     clearSearchLayer()
   }
 
+  function saveSettings(next: Settings): string | null {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+      setSettings(next)
+      return null
+    } catch (error) {
+      console.error('Einstellungen konnten nicht gespeichert werden.', error)
+      return 'Einstellungen konnten nicht gespeichert werden.'
+    }
+  }
+
   return (
     <>
       <input
@@ -712,13 +733,13 @@ function App() {
       />
       <div
         className="app-shell"
-        inert={routePropertiesOpen || aboutOpen || cacheOpen || routeCreationDialogOpen}
+        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen}
         onClick={() => contextMenu && setContextMenu(null)}
       >
 
       <ProjectHeader projectInput={projectInput} openProject={() => projectInput.current?.click()}
         saveProject={saveProject} importProject={importProject}
-        openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)}
+        openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)} openSettings={() => setSettingsOpen(true)}
         desktop={isTauri()} exitApp={() => {
           void invoke('exit_app').catch((error: unknown) => setNotice(`Beenden fehlgeschlagen: ${String(error)}`))
         }} />
@@ -817,7 +838,7 @@ function App() {
             </button>
           </div>
 
-          <RouteList project={project} openRouteMenu={openRouteMenu} setOpenRouteMenu={setOpenRouteMenu}
+          <RouteList project={project} units={settings.units} openRouteMenu={openRouteMenu} setOpenRouteMenu={setOpenRouteMenu}
             routeMenuRef={routeMenuRef} routeMenuPopoverRef={routeMenuPopoverRef}
             routeMenuButtonRef={routeMenuButtonRef} routeCardRefs={routeCardRefs}
             focusRoute={focusRoute} openRouteActions={openRouteActions}
@@ -826,7 +847,7 @@ function App() {
             createPortal(
               <>
                 <div className="route-editor-backdrop" aria-hidden="true" />
-                <RouteEditor route={routeEditor.draft} top={routeEditor.top} left={routeEditor.left}
+                <RouteEditor route={routeEditor.draft} units={settings.units} top={routeEditor.top} left={routeEditor.left}
                   routeEditorRef={routeEditorRef} updateRouteDraft={updateRouteDraft}
                   saveRouteProperties={saveRouteProperties} close={() => setRouteEditor(null)} />
               </>,
@@ -934,10 +955,11 @@ function App() {
 
           <ElevationProfile activeRoute={activeRoute} profilePointDetails={profilePointDetails}
             setHoveredProfilePoint={setHoveredProfilePoint} elevationExpanded={elevationExpanded}
-            setElevationExpanded={setElevationExpanded} />
+            setElevationExpanded={setElevationExpanded} units={settings.units} />
         </section>
       </main>
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {settingsOpen && <SettingsDialog settings={settings} getMapView={getMapView} onSave={saveSettings} onClose={() => setSettingsOpen(false)} />}
       {cacheOpen && <CacheDialog onClose={() => setCacheOpen(false)}
         layerIds={[layerId, ...(project.mapOverlayIds ?? [])]} retry={retryMapLayer}
         project={project} mapZoom={mapZoom} />}
