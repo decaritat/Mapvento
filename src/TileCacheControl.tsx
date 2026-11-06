@@ -3,14 +3,16 @@ import { layers, overlayLayers } from './mapLayers'
 import { TILE_CACHE_LIMIT, tileCache, type TileCacheStats } from './tileCache'
 import { projectCoverage } from './tileCoverage'
 import type { ProjectFile } from './routeModel'
+import { TileDiagnosticsControl } from './TileDiagnosticsControl'
 
 const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MiB`
 
-export function TileCacheControl({ layerIds, retry, project, mapZoom }: {
+export function TileCacheControl({ layerIds, retry, project, mapZoom, diagnosticsEnabled }: {
   layerIds: string[]
   retry: (id: string) => void
   project: ProjectFile
   mapZoom: number
+  diagnosticsEnabled: boolean
 }) {
   const [stats, setStats] = useState<TileCacheStats | null>(null)
   const [statsError, setStatsError] = useState('')
@@ -94,6 +96,7 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom }: {
             onClick={() => void perform(() => tileCache.clear())}>Gesamten Kachelcache löschen</button>
         </>
       )}
+      {diagnosticsEnabled && <TileDiagnosticsControl />}
     </section>
   )
 }

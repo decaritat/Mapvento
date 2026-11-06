@@ -108,7 +108,14 @@ current map zoom (limited to each provider's native zoom). This is not a
 guarantee that the actual route or any offline region is complete. Empty
 projects have no coverage estimate. The cache is shared between projects and
 is not included in project files. Least-recently-used entries are evicted
-when the limit is reached.
+when the limit is reached. The cache keeps its total size in IndexedDB and
+uses an access-time index for eviction, avoiding a full metadata scan on
+every tile write. To avoid a write transaction on every cache hit, the
+last-access timestamp of a tile is updated at most once every 30 seconds. LRU
+ordering is therefore approximate within that interval: a more recently viewed
+tile may be evicted before another tile accessed within the same interval.
+Existing caches are upgraded in place on first use; while
+an older application window keeps the cache open, the upgrade may be blocked.
 
 Only tiles requested for interactive display are stored; Trailforge does not
 prefetch tiles or download offline areas. Refresh marks one layer's entries
@@ -132,6 +139,69 @@ determine its remaining freshness, it is revalidated rather than assumed fresh.
 Browser and webview storage behaviour may differ across platforms.
 Waymarked Trails' published policy requires a correct referrer and discusses
 use on websites, but does not explicitly state terms for native applications.
+
+### Comparing browser and desktop tile performance
+
+The opt-in diagnostic is available in **Einstellungen → Entwicklung**. Enable
+**Cache-Diagnose** to show its controls under **Cache verwalten**; recording
+still starts only when explicitly requested. Disabling the option stops any
+active recording and discards its in-memory log. The recording and log logic
+is in `src/tileDiagnostics.ts`; instrumentation is in
+`src/tileCache.ts`, and the controls and import/export are in
+`src/TileDiagnosticsControl.tsx`.
+
+To run it from a checkout, install Node.js and the
+[Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/) (including
+Rust and the platform build tools), then run `npm ci` once:
+
+- **Browser:** run `npm run dev`, then open the local address printed by Vite
+  in your browser. Leave the terminal running.
+- **Desktop webview:** in a separate terminal run `npm run desktop:dev`.
+  This builds and opens the Tauri application. Leave the terminal running.
+  To create an installer instead, run `npm run desktop:build`.
+
+Use the same Trailforge revision, screen/window size, network, base layer and
+overlay selection in both. Choose the same map area and starting zoom; avoid
+other activity during the measurements. The browser and desktop have separate
+application and HTTP caches. For a cold **application-cache** comparison,
+clear the application tile cache in each via **Gesamten Kachelcache löschen**,
+then restart each application at the same starting view. This does **not** clear
+the separate HTTP cache. For a warm comparison, first perform the same map
+movement in each, then record the same movement again. Compare cold and warm
+measurements separately. Tiles already displayed when recording begins do not
+count until they are requested again.
+
+1. In the first application, open **Cache verwalten**, select **Messung starten**,
+   close the dialog and perform the agreed sequence of pans and zoom changes.
+2. Wait until visible tiles have finished loading, reopen the dialog and select
+   **Messung stoppen**, then **Diagnose speichern**. In the browser the file
+   picker or downloads directory is used; on desktop select a location in the
+   native save dialog.
+3. Repeat the same sequence in the other application and save its JSON file.
+   The dialog can load one file with **Messung laden** and the other with
+   **Vergleichsmessung laden** to display their summaries together in the
+   same dialog.
+4. Attach **both JSON files** to the conversation when requesting analysis.
+   Include which run was cold or warm, the operating system and a brief
+   description of the steps. Do not send project files, screenshots of private
+   locations or other personal data unless needed and deliberately shared.
+
+Recording is off by default, held only in memory until explicitly saved, and
+lost on closing the application. Starting a new recording replaces the previous
+one. Logs contain times, application version, browser/desktop environment,
+layer IDs, zooms, cache outcomes, HTTP response status and durations, but no
+tile coordinates, URLs or project data. Review the JSON before sharing.
+Only completed application-cache tile loads are included; the count still in
+flight at stop and any events dropped after the 20,000-event limit are reported.
+The summaries show mean elapsed times for measured IndexedDB operations,
+including waiting for queued transactions, and fetch/body processing.
+Only actual access-update attempts contribute to their mean duration; newer
+logs also report how many updates were attempted. A fetch
+may be served by the webview's HTTP cache: these logs cannot determine whether
+it caused network traffic or how long rendering or decoding took. Direct image
+loads used when IndexedDB is unavailable or fails are not counted as fetches;
+storage errors in the cache path are recorded. Developer tools or a network
+trace would be needed to distinguish real network transfers.
 
 The cache is specific to tile imagery and separate from project data. Future
 Overpass data caching should use a separate provider-aware namespace and its

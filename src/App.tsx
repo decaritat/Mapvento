@@ -22,6 +22,7 @@ import { MapToolbar } from './MapToolbar'
 import { ElevationProfile } from './ElevationProfile'
 import { SettingsDialog } from './SettingsDialog'
 import { distanceInUnit, readSettings, SETTINGS_KEY, type Settings } from './settings'
+import { tileDiagnostics } from './tileDiagnostics'
 import { openExternalUrl } from './externalUrl'
 import { ROUTING_PROVIDER } from './routing'
 import {
@@ -710,6 +711,9 @@ function App() {
   function saveSettings(next: Settings): string | null {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+      if (settings.developer.cacheDiagnostics && !next.developer.cacheDiagnostics) {
+        tileDiagnostics.clear()
+      }
       setSettings(next)
       return null
     } catch (error) {
@@ -962,7 +966,8 @@ function App() {
       {settingsOpen && <SettingsDialog settings={settings} getMapView={getMapView} onSave={saveSettings} onClose={() => setSettingsOpen(false)} />}
       {cacheOpen && <CacheDialog onClose={() => setCacheOpen(false)}
         layerIds={[layerId, ...(project.mapOverlayIds ?? [])]} retry={retryMapLayer}
-        project={project} mapZoom={mapZoom} />}
+        project={project} mapZoom={mapZoom}
+        diagnosticsEnabled={settings.developer.cacheDiagnostics} />}
       </div>
     </>
   )

@@ -12,7 +12,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
   onSave: (settings: Settings) => string | null
   onClose: () => void
 }) {
-  const [category, setCategory] = useState<'start' | 'units'>('start')
+  const [category, setCategory] = useState<'start' | 'units' | 'developer'>('start')
   const [draft, setDraft] = useState(settings)
   const [latitude, setLatitude] = useState(String(settings.start.latitude))
   const [longitude, setLongitude] = useState(String(settings.start.longitude))
@@ -66,6 +66,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
             <nav aria-label="Einstellungskategorien">
               <button type="button" aria-current={category === 'start' ? 'page' : undefined} onClick={() => setCategory('start')}>Start</button>
               <button type="button" aria-current={category === 'units' ? 'page' : undefined} onClick={() => setCategory('units')}>Einheiten</button>
+              <button type="button" aria-current={category === 'developer' ? 'page' : undefined} onClick={() => setCategory('developer')}>Entwicklung</button>
             </nav>
             <section className="settings-fields">
               {category === 'start' ? <>
@@ -89,7 +90,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                   </div>
                   <button type="button" onClick={() => { const view = getMapView(); if (view) { setView(view); setError('') } else setError('Die Kartenansicht ist nicht verfügbar.') }}>Aktuelle Kartenposition übernehmen</button>
                 </div>
-              </> : <>
+              </> : category === 'units' ? <>
                 <h3>Einheiten</h3>
                 <p>Wähle die Anzeigeeinheiten für Karte, Höhenprofil und Routenstatistiken.</p>
                 <label>Distanz<select value={draft.units.distance} onChange={(event) => setDraft({ ...draft, units: { ...draft.units, distance: event.target.value === 'mi' ? 'mi' : 'km' } })}><option value="km">Kilometer (km)</option><option value="mi">Meilen (mi)</option></select></label>
@@ -98,11 +99,26 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                   const value = event.target.value
                   if (isDurationFormat(value)) setDraft({ ...draft, units: { ...draft.units, duration: value } })
                 }}>{durationFormats.map((format) => <option key={format.value} value={format.value}>{format.label} ({durationInUnit(402, format.value)})</option>)}</select></label>
+              </> : <>
+                <h3>Entwicklung</h3>
+                <p>Optionen für die Diagnose und Analyse der Anwendung.</p>
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={draft.developer.cacheDiagnostics}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      developer: { ...draft.developer, cacheDiagnostics: event.target.checked },
+                    })}
+                  />
+                  Cache-Diagnose
+                </label>
               </>}
               <div className="settings-reset">
                 <button type="button" onClick={() => {
                   if (category === 'start') { setDraft({ ...draft, start: DEFAULT_SETTINGS.start }); setView(DEFAULT_SETTINGS.start) }
-                  else setDraft({ ...draft, units: DEFAULT_SETTINGS.units })
+                  else if (category === 'units') setDraft({ ...draft, units: DEFAULT_SETTINGS.units })
+                  else setDraft({ ...draft, developer: DEFAULT_SETTINGS.developer })
                   setError('')
                 }}>Standardeinstellungen wiederherstellen</button>
               </div>

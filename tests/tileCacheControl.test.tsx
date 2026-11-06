@@ -28,11 +28,13 @@ describe('tile cache controls', () => {
     const root = createRoot(container)
     try {
       await act(async () => {
-        root.render(<TileCacheControl layerIds={['osm']} retry={retry} project={initialProject} mapZoom={7} />)
+        root.render(<TileCacheControl layerIds={['osm']} retry={retry} project={initialProject} mapZoom={7}
+          diagnosticsEnabled={false} />)
         await new Promise((resolve) => setTimeout(resolve, 150))
       })
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
       expect(container.textContent).toContain('Waymarked Trails')
+      expect(container.textContent).not.toContain('Cache-Diagnose')
       expect(container.textContent).toContain('Wanderwege Nicht aktiv')
       expect(container.textContent).not.toContain('Projektabdeckung')
       expect(container.textContent).not.toContain('Projekt-Rechteck')
@@ -68,7 +70,7 @@ describe('tile cache controls', () => {
     try {
       await act(async () => root.render(<TileCacheControl layerIds={['osm']} retry={vi.fn()}
         project={{ ...initialProject, points: [{ id: 'p', name: 'P', description: '', coordinate: [13, 52], source: 'manual' }] }}
-        mapZoom={7} />))
+        mapZoom={7} diagnosticsEnabled={false} />))
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
       expect(container.textContent).toContain('1.0 MiB von 100.0 MiB')
       expect(container.textContent).toContain('Projekt-Rechteck bei Zoom 7: 1/1, davon 1 veraltet')

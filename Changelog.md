@@ -58,9 +58,14 @@ once released versions are maintained.
   provider with usage, freshness, available project coverage details and actions.
   The desktop webview identifies itself as Trailforge, and
   provider usage and attribution are documented. Visited base and overlay
-  tiles are stored in a bounded persistent cache with provider-specific
-  refresh and deletion, expiry and project-rectangle coverage indicators; no
-  offline area downloads are offered.
+  tiles are stored in a bounded persistent cache with indexed least-recently-used
+  eviction, transactional size accounting and throttled access-time updates
+  for cache hits, provider-specific
+  refresh and deletion, expiry and project-rectangle coverage indicators; an
+  exportable cache diagnostic can be enabled in the development settings and
+  records cache outcomes, fetch calls and IndexedDB timings for browser/desktop
+  comparison. Disabling it stops recording and discards its in-memory log.
+  No offline area downloads are offered.
 - Added a native file dialog for GPX export and project saving in the desktop
   app. In the browser, a failing file picker falls back to a normal download.
 - Added a CI workflow that runs lint, unit tests, the web build, and a Tauri
