@@ -10,6 +10,15 @@ once released versions are maintained.
 
 ### Added
 
+- Added discreet route-node markers for editable routes: compact intermediate
+  points that enlarge on hover or selection and show their number inside,
+  smaller distinct start and checkered finish symbols, visible keyboard focus,
+  subdued inactive-route markers, and a small black cursor dot over the active
+  editable route to indicate draggable point insertion. Route-point focus clears
+  when the map is moved, a point is added, Escape is pressed, another tool is
+  selected, or the focused point is clicked again. Read-only imports remain
+  unchanged.
+
 - Added smoothing (50 m moving average) and a 3 m threshold to ascent and
   descent calculation so noisy elevation data no longer inflates route
   statistics.

@@ -184,6 +184,8 @@
 
 .route-node-wrapper {
   z-index: 500;
+  display: grid;
+  place-items: center;
 }
 
 .distance-marker-wrapper {
@@ -605,32 +607,111 @@
   opacity: 0.45;
 }
 
-.route-node,
 .point-marker {
   border-radius: 50%;
   box-shadow: 0 2px 9px rgba(0, 0, 0, 0.36);
 }
 
 .route-node {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 23px;
-  height: 23px;
-  border: 2px solid #0d1318;
-  color: #0d1318;
-  background: var(--green);
-  font-size: 9px;
-  font-weight: 800;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #111820;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
+  transition: box-shadow 120ms ease, outline-color 120ms ease;
 }
 
 .route-node-wrapper:not(.active) .route-node {
-  opacity: 0.68;
-  filter: grayscale(0.45);
+  opacity: 0.78;
+}
+
+.route-node.start,
+.route-node.end {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #111820;
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+.route-node.start .route-node-symbol {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #111820;
+  transition: transform 120ms ease;
+}
+
+.route-node.end .route-node-symbol {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: conic-gradient(#111820 25%, #ffffff 0 50%, #111820 0 75%, #ffffff 0) 0 0 / 8px 8px;
+  transition: transform 120ms ease;
+}
+
+.route-node-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  color: #111820;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 100ms ease, transform 100ms ease, font-size 100ms ease;
+}
+
+.route-node-wrapper:hover .route-node-number,
+.route-node.selected .route-node-number,
+.leaflet-marker-icon:focus-visible .route-node-number {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.route-node-wrapper:hover .route-node,
+.route-node.selected,
+.leaflet-marker-icon:focus-visible .route-node {
+  opacity: 1;
+  width: 17px;
+  height: 17px;
+}
+
+.route-node-wrapper:hover .route-node.start,
+.route-node-wrapper:hover .route-node.end,
+.route-node.start.selected,
+.route-node.end.selected,
+.leaflet-marker-icon:focus-visible .route-node.start,
+.leaflet-marker-icon:focus-visible .route-node.end {
+  width: 20px;
+  height: 20px;
+}
+
+.route-node-wrapper:hover .route-node.start .route-node-symbol,
+.route-node-wrapper:hover .route-node.end .route-node-symbol,
+.route-node.start.selected .route-node-symbol,
+.route-node.end.selected .route-node-symbol,
+.leaflet-marker-icon:focus-visible .route-node.start .route-node-symbol,
+.leaflet-marker-icon:focus-visible .route-node.end .route-node-symbol {
+  transform: scale(0.85);
+}
+
+.route-node.selected,
+.leaflet-marker-icon:focus-visible .route-node {
+  outline: 2px solid #f3a64a;
+  outline-offset: 3px;
 }
 
 .route-node.selected {
-  border-color: var(--orange);
-  box-shadow: 0 0 0 3px rgba(255, 184, 108, 0.3), 0 2px 9px rgba(0, 0, 0, 0.36);
+  opacity: 1;
 }
 
 .point-marker {
