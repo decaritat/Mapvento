@@ -16,7 +16,7 @@ type SavePickerWindow = Window & {
   }>
 }
 
-async function saveTextFile(filename: string, content: string, type: string) {
+export async function saveTextFile(filename: string, content: string, type: string) {
   if (isTauri()) {
     try {
       const saved = await invoke<boolean>('save_text_file', { filename, content })

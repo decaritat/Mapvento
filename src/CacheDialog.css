@@ -128,3 +128,28 @@
 .cache-clear {
   margin-top: 16px;
 }
+
+.tile-diagnostics {
+  margin-top: 22px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.diagnostic-imports,
+.diagnostic-summary {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.diagnostic-imports label {
+  display: grid;
+  gap: 4px;
+}
+
+.diagnostic-summary {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

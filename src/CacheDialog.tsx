@@ -4,12 +4,13 @@ import { TileCacheControl } from './TileCacheControl'
 import type { ProjectFile } from './routeModel'
 import './CacheDialog.css'
 
-export function CacheDialog({ onClose, layerIds, retry, project, mapZoom }: {
+export function CacheDialog({ onClose, layerIds, retry, project, mapZoom, diagnosticsEnabled }: {
   onClose: () => void
   layerIds: string[]
   retry: (id: string) => void
   project: ProjectFile
   mapZoom: number
+  diagnosticsEnabled: boolean
 }) {
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -29,9 +30,9 @@ export function CacheDialog({ onClose, layerIds, retry, project, mapZoom }: {
       return
     }
     if (event.key !== 'Tab' || !dialogRef.current) return
-    const buttons = dialogRef.current.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
-    const first = buttons[0]
-    const last = buttons[buttons.length - 1]
+    const controls = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')
+    const first = controls[0]
+    const last = controls[controls.length - 1]
     if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
       event.preventDefault()
       last?.focus()
@@ -53,7 +54,8 @@ export function CacheDialog({ onClose, layerIds, retry, project, mapZoom }: {
           <button type="button" className="icon-button cache-dialog-close" onClick={onClose} aria-label="Schließen">×</button>
         </header>
         <div className="cache-dialog-body">
-          <TileCacheControl layerIds={layerIds} retry={retry} project={project} mapZoom={mapZoom} />
+          <TileCacheControl layerIds={layerIds} retry={retry} project={project} mapZoom={mapZoom}
+            diagnosticsEnabled={diagnosticsEnabled} />
         </div>
       </div>
     </div>,

@@ -7,6 +7,7 @@ import { initialProject } from '../src/project'
 import { DEFAULT_SETTINGS, distanceInUnit, durationInUnit, elevationInUnit, parseSettings, readSettings, SETTINGS_KEY } from '../src/settings'
 import { profileDetailsAtIndex, routeMetrics } from '../src/routeMetrics'
 import { RouteEditor } from '../src/RouteEditor'
+import { tileDiagnostics } from '../src/tileDiagnostics'
 
 function button(root: ParentNode, text: string) {
   const found = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find((item) => item.textContent?.trim() === text)
@@ -51,11 +52,14 @@ describe('settings and units', () => {
     expect(durationInUnit(60, 'clock')).toBe('1:00')
     expect(durationInUnit(1501, 'clock')).toBe('25:01')
     expect(parseSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS)
+    const oldSettings = { version: 1, start: DEFAULT_SETTINGS.start, units: DEFAULT_SETTINGS.units }
+    expect(parseSettings(oldSettings).developer.cacheDiagnostics).toBe(false)
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, start: { ...DEFAULT_SETTINGS.start, latitude: 90 } })).toThrow()
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, start: { ...DEFAULT_SETTINGS.start, overlayIds: ['invalid'] } })).toThrow()
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, distance: 'invalid' } })).toThrow()
     expect(parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, duration: 'clock' } }).units.duration).toBe('clock')
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, duration: 'invalid' } })).toThrow()
+    expect(() => parseSettings({ ...DEFAULT_SETTINGS, developer: { cacheDiagnostics: 'yes' } })).toThrow()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
     localStorage.setItem(SETTINGS_KEY, '{bad')
     expect(readSettings(localStorage)).toMatchObject({ settings: DEFAULT_SETTINGS, saved: false })
@@ -234,5 +238,55 @@ describe('settings and units', () => {
       expect(document.querySelector('[role="dialog"]')).not.toBeNull()
       expect(document.querySelector('[role="alert"]')?.textContent).toContain('konnten nicht gespeichert')
     } finally { await act(async () => root.unmount()); container.remove() }
+  })
+
+  it('gates cache diagnostics behind the opt-in development setting and clears recording when disabled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    const openCache = async () => {
+      await click(container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!)
+      await click(button(container, 'Cache verwalten'))
+    }
+    const closeCache = async () => click(document.querySelector<HTMLButtonElement>('[aria-label="Schließen"]')!)
+    try {
+      await act(async () => root.render(<App />))
+      expect(readSettings(localStorage).settings.developer.cacheDiagnostics).toBe(false)
+      await openCache()
+      expect(document.body.textContent).not.toContain('Cache-Diagnose')
+      await closeCache()
+
+      await openSettings(container)
+      await click(button(document, 'Entwicklung'))
+      const checkbox = Array.from(document.querySelectorAll('label'))
+        .find((label) => label.textContent?.includes('Cache-Diagnose'))
+        ?.querySelector<HTMLInputElement>('input')
+      expect(checkbox?.checked).toBe(false)
+      await click(checkbox!)
+      await click(button(document, 'Übernehmen'))
+      expect(readSettings(localStorage).settings.developer.cacheDiagnostics).toBe(true)
+
+      await openCache()
+      expect(document.body.textContent).toContain('Cache-Diagnose')
+      await click(button(document, 'Messung starten'))
+      expect(tileDiagnostics.isRecording()).toBe(true)
+      await closeCache()
+      await openSettings(container)
+      await click(button(document, 'Entwicklung'))
+      const enabledCheckbox = Array.from(document.querySelectorAll('label'))
+        .find((label) => label.textContent?.includes('Cache-Diagnose'))
+        ?.querySelector<HTMLInputElement>('input')
+      await click(enabledCheckbox!)
+      await click(button(document, 'Übernehmen'))
+      expect(tileDiagnostics.isRecording()).toBe(false)
+      expect(tileDiagnostics.lastLog()).toBeNull()
+      await openCache()
+      expect(document.body.textContent).not.toContain('Cache-Diagnose')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+      tileDiagnostics.clear()
+    }
   })
 })
