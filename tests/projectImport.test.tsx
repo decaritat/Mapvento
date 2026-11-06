@@ -22,8 +22,8 @@ describe('project loading in the app', () => {
 
     try {
       await act(async () => root.render(<App />))
-      const title = container.querySelector<HTMLInputElement>('[aria-label="Projektname"]')
-      expect(title?.value).toBe(initialProject.name)
+      const title = container.querySelector<HTMLElement>('[aria-label="Projektname"]')
+      expect(title?.textContent).toBe(initialProject.name)
 
       const input = container.querySelector<HTMLInputElement>('input[accept=".json,.trailforge.json"]')
       expect(input).not.toBeNull()
@@ -38,7 +38,7 @@ describe('project loading in the app', () => {
       await act(async () => input!.dispatchEvent(new Event('change', { bubbles: true })))
 
       expect(container.textContent).toContain('Die Projektdatei konnte nicht gelesen werden.')
-      expect(title?.value).toBe(initialProject.name)
+      expect(title?.textContent).toBe(initialProject.name)
       expect(localStorage.getItem('trailforge-project')).toBe(invalid)
 
       const valid = { ...initialProject, name: 'Geöffnetes Projekt', mapLayerId: 'opentopomap' }
@@ -47,7 +47,7 @@ describe('project loading in the app', () => {
         value: [{ text: async () => JSON.stringify(valid) }],
       })
       await act(async () => input!.dispatchEvent(new Event('change', { bubbles: true })))
-      expect(title?.value).toBe(valid.name)
+      expect(title?.textContent).toBe(valid.name)
       expect(container.textContent).toContain('Projekt geöffnet.')
       expect(JSON.parse(localStorage.getItem('trailforge-project')!)).toEqual(valid)
     } finally {
@@ -59,7 +59,11 @@ describe('project loading in the app', () => {
   it('reports an unavailable layer when restoring and opening a project', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const saved = { ...initialProject, name: 'Meine Tour', mapLayerId: 'retired-layer' }
+    const saved = {
+      ...initialProject,
+      name: 'EineTourMitEinemSehrLangenProjektNamenOhneLeerzeichen',
+      mapLayerId: 'retired-layer',
+    }
     localStorage.setItem('trailforge-project', JSON.stringify(saved))
     const container = document.createElement('div')
     document.body.append(container)
@@ -67,8 +71,8 @@ describe('project loading in the app', () => {
 
     try {
       await act(async () => root.render(<App />))
-      const title = container.querySelector<HTMLInputElement>('[aria-label="Projektname"]')
-      expect(title?.value).toBe(saved.name)
+      const title = container.querySelector<HTMLElement>('[aria-label="Projektname"]')
+      expect(title?.textContent).toBe(saved.name)
       await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Kartenlayer auswählen"]')!.click())
       expect(container.querySelector<HTMLInputElement>('input[value="osm"]')?.checked).toBe(true)
       expect(container.textContent).toContain('Der gespeicherte Kartenlayer ist nicht verfügbar.')
@@ -80,7 +84,7 @@ describe('project loading in the app', () => {
         value: [{ text: async () => JSON.stringify(opened) }],
       })
       await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })))
-      expect(title?.value).toBe(opened.name)
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe(opened.name)
       expect(container.textContent).toContain('Projekt geöffnet. Der gespeicherte Kartenlayer ist nicht verfügbar.')
       expect(JSON.parse(localStorage.getItem('trailforge-project')!)).toEqual({ ...opened, mapLayerId: 'osm' })
     } finally {
