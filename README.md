@@ -27,8 +27,8 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 - Route name, description, type, and color
 - Elevation profile with distance, elevation, and time information
 - Distance, ascent, descent, duration, highest-point, and lowest-point metrics
-- A keyboard-accessible header menu for opening and saving projects, managing
-  caches, viewing application information, and exiting the desktop app
+- A keyboard-accessible header menu for opening and saving projects, configuring
+  settings, managing caches, viewing application information, and exiting the desktop app
 - GPX export for editable routes and read-only GPX import; imported routes can
   change color and distance markers while geometry, name, and description stay
   locked; available GPX route types are shown read-only, timestamps/elevations
@@ -48,6 +48,20 @@ files are not migrated. An unavailable map-layer ID falls back to OpenStreetMap
 Carto with a visible notice and a console warning; unavailable overlays are
 disabled with a notice. Invalid locally stored
 projects fall back to a new project.
+
+The **Einstellungen** dialog stores application-wide preferences separately
+from project files. Start settings select the base map, overlays, and a fixed
+center and zoom, either entered manually or copied from the current view.
+Once saved, they apply on the next launch; opening a project afterwards uses
+the layers from that project. Before any settings are saved, the existing
+project's layers are restored as before. Distance (km or mi), elevation
+(m or ft), and duration display (hours and minutes, hh:mm, minutes, or decimal
+hours) are independently configurable and apply
+immediately to the map scale, distance labels, statistics, and profile.
+The map scale uses Leaflet's metric or imperial subdivisions. Stored route
+measurements, GPX exports, and internally stored manual distance-marker
+intervals remain in their original metric units. Each settings category can be reset separately;
+changes take effect only after choosing **Übernehmen**.
 
 The React app coordinates project state and composes the route list, editors,
 map toolbar and elevation profile. Leaflet map creation, layers and map events

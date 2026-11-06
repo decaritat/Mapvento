@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 
-export function ProjectHeader({ projectInput, openProject, saveProject, importProject, openCache, openAbout, exitApp, desktop }: {
+export function ProjectHeader({ projectInput, openProject, saveProject, importProject, openCache, openAbout, openSettings, exitApp, desktop }: {
   projectInput: RefObject<HTMLInputElement | null>
   openProject: () => void
   saveProject: () => void
   importProject: (file: File) => void
   openCache: () => void
   openAbout: () => void
+  openSettings: () => void
   exitApp: () => void
   desktop: boolean
 }) {
@@ -18,7 +19,7 @@ export function ProjectHeader({ projectInput, openProject, saveProject, importPr
   const items = [
     { label: 'Projekt öffnen', action: openProject, available: true },
     { label: 'Projekt speichern', action: saveProject, available: true },
-    { label: 'Einstellungen', action: () => {}, available: false },
+    { label: 'Einstellungen', action: openSettings, available: true },
     { label: 'Cache verwalten', action: openCache, available: true },
     { label: 'Info', action: openAbout, available: true },
     ...(desktop ? [{ label: 'Beenden', action: exitApp, available: true }] : []),

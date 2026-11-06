@@ -3,6 +3,7 @@ import { ExternalLink } from './ExternalLink'
 import { ROUTING_PROVIDER, routingProfileLabel } from './routing'
 import { DISTANCE_MARKER_MIN_STEP_KM, DISTANCE_MARKER_MAX_STEP_KM, isValidDistanceMarkerStepKm } from './routeMetrics'
 import type { Route, RouteType } from './routeModel'
+import { distanceInKm, distanceInUnit, type Units } from './settings'
 
 const routeColors = [
   '#7ee787',
@@ -20,7 +21,8 @@ function getCustomRouteColor(route: Route) {
   return undefined
 }
 
-export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft, saveRouteProperties, close }: {
+export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft, saveRouteProperties, close, units }: {
+  units: Units
   route: Route
   routeEditorRef: RefObject<HTMLElement | null>
   top: number
@@ -168,7 +170,7 @@ export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft
               className="distance-marker-info"
               role="img"
               aria-label="Informationen zu Abstandsmarkern"
-              title="Zeigt Kilometerangaben entlang der Route an."
+              title="Zeigt Entfernungsangaben entlang der Route an."
             >
               i
             </span>
@@ -205,25 +207,25 @@ export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft
               <input
                 className="distance-marker-step-input"
                 type="number"
-                min={DISTANCE_MARKER_MIN_STEP_KM}
-                max={DISTANCE_MARKER_MAX_STEP_KM}
-                step="0.1"
-                value={manualDistanceMarkerStep}
+                min={distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, units.distance)}
+                max={distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, units.distance)}
+                step="any"
+                value={Number(distanceInUnit(manualDistanceMarkerStep, units.distance).toFixed(6))}
                 onChange={(event) =>
                   updateRouteDraft({
                     distanceMarkerStepKm:
-                      event.target.value === '' ? undefined : Number(event.target.value),
+                      event.target.value === '' ? undefined : distanceInKm(Number(event.target.value), units.distance),
                   })
                 }
                 disabled={!showDistanceMarkers || distanceMarkerMode !== 'manual'}
                 aria-invalid={manualDistanceMarkerInvalid}
-                aria-label="Manuelle Schrittweite in Kilometern"
+                aria-label={`Manuelle Schrittweite in ${units.distance === 'km' ? 'Kilometern' : 'Meilen'}`}
               />
-              <span>km</span>
+              <span>{units.distance}</span>
             </label>
             {manualDistanceMarkerInvalid && (
               <span className="field-error" role="alert">
-                Wert zwischen {DISTANCE_MARKER_MIN_STEP_KM} und {DISTANCE_MARKER_MAX_STEP_KM} km
+                Wert zwischen {distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, units.distance).toFixed(units.distance === 'km' ? 1 : 6)} und {distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, units.distance).toFixed(units.distance === 'km' ? 0 : 6)} {units.distance}
                 eingeben.
               </span>
             )}

@@ -1,6 +1,7 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react'
-import { formatDistanceAxis, formatDuration, getDistanceScale, getElevationScale, profileDetailsAtFraction, routeMetrics, type ElevationScale } from './routeMetrics'
+import { formatDistanceAxis, getDistanceScale, getElevationScale, profileDetailsAtFraction, routeMetrics, type ElevationScale } from './routeMetrics'
 import type { ProfilePointDetails, Route } from './routeModel'
+import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from './settings'
 
 const profileViewBox = { width: 560, height: 190, plotLeft: 42, plotRight: 10, plotTop: 12, plotBottom: 34 }
 
@@ -41,7 +42,7 @@ function buildElevationPath(
   const line = elevations
     .map((elevation, index) => {
       const distance = distances[index] ?? (index / Math.max(1, elevations.length - 1)) * distanceMax
-      const x = plotLeft + (distance / Math.max(1, distanceMax)) * plotWidth
+      const x = plotLeft + (distance / distanceMax) * plotWidth
       const y = plotTop + ((scale.max - elevation) / Math.max(1, scale.max - scale.min)) * plotHeight
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
     })
@@ -65,7 +66,8 @@ function elevationProfileY(
 
 
 export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredProfilePoint,
-  elevationExpanded, setElevationExpanded }: {
+  elevationExpanded, setElevationExpanded, units }: {
+  units: Units
   activeRoute: Route | undefined
   profilePointDetails: ProfilePointDetails | null
   setHoveredProfilePoint: Dispatch<SetStateAction<ProfilePointDetails | null>>
@@ -73,8 +75,10 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
   setElevationExpanded: Dispatch<SetStateAction<boolean>>
 }) {
   const activeMetrics = useMemo(() => activeRoute ? routeMetrics(activeRoute) : null, [activeRoute])
-  const activeElevationScale = getElevationScale(activeMetrics?.elevations ?? [])
-  const activeDistanceScale = getDistanceScale(activeMetrics?.length ?? 0)
+  const elevations = (activeMetrics?.elevations ?? []).map((value) => elevationInUnit(value, units.elevation))
+  const distances = (activeMetrics?.distances ?? []).map((value) => distanceInUnit(value, units.distance))
+  const activeElevationScale = getElevationScale(elevations)
+  const activeDistanceScale = getDistanceScale(distanceInUnit(activeMetrics?.length ?? 0, units.distance))
   return (
           <section
             className={`inspector ${elevationExpanded ? 'expanded' : 'compact'}`}
@@ -107,22 +111,22 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                 <div className="compact-inspector-content">
                   <div className="compact-metric-grid">
                     <span title="Distanz: Gesamtlänge der aktiven Route">
-                      <strong>{activeMetrics?.length.toFixed(1) ?? '0.0'}</strong> km
+                      <strong>{distanceInUnit(activeMetrics?.length ?? 0, units.distance).toFixed(1)}</strong> {units.distance}
                     </span>
                     <span title="Dauer: Geschätzte Geh- bzw. Fahrzeit basierend auf Streckenlänge und Höhenmetern">
-                      <strong>{activeMetrics ? formatDuration(activeMetrics.durationMinutes) : '–'}</strong>
+                      <strong>{activeMetrics ? durationInUnit(activeMetrics.durationMinutes, units.duration) : '–'}</strong>
                     </span>
                     <span title="Aufstieg: Summe aller positiven Höhenmeter entlang der Route">
-                      <strong>{Math.round(activeMetrics?.ascent ?? 0)}</strong> m Aufstieg
+                      <strong>{Math.round(elevationInUnit(activeMetrics?.ascent ?? 0, units.elevation))}</strong> {units.elevation} Aufstieg
                     </span>
                     <span title="Abstieg: Summe aller negativen Höhenmeter entlang der Route">
-                      <strong>{Math.round(activeMetrics?.descent ?? 0)}</strong> m Abstieg
+                      <strong>{Math.round(elevationInUnit(activeMetrics?.descent ?? 0, units.elevation))}</strong> {units.elevation} Abstieg
                     </span>
                     <span title="Höchster Punkt: Maximale Höhe über dem Meeresspiegel">
-                      <strong>{activeMetrics?.high ?? 0}</strong> m höchster
+                      <strong>{Math.round(elevationInUnit(activeMetrics?.high ?? 0, units.elevation))}</strong> {units.elevation} höchster
                     </span>
                     <span title="Niedrigster Punkt: Minimale Höhe über dem Meeresspiegel">
-                      <strong>{activeMetrics?.low ?? 0}</strong> m niedrigster
+                      <strong>{Math.round(elevationInUnit(activeMetrics?.low ?? 0, units.elevation))}</strong> {units.elevation} niedrigster
                     </span>
                   </div>
                   <button
@@ -140,8 +144,8 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     >
                       <path
                         d={buildElevationPath(
-                          activeMetrics?.elevations ?? [],
-                          activeMetrics?.distances ?? [],
+                          elevations,
+                          distances,
                           activeDistanceScale.max,
                           activeElevationScale,
                           260,
@@ -163,27 +167,27 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                 <div className="metric-grid">
                   <div className="metric" title="Distanz: Gesamtlänge der aktiven Route">
                     <span className="metric-label">Distanz</span>
-                    <strong>{activeMetrics?.length.toFixed(1) ?? '0.0'} <small>km</small></strong>
+                    <strong>{distanceInUnit(activeMetrics?.length ?? 0, units.distance).toFixed(1)} <small>{units.distance}</small></strong>
                   </div>
                   <div className="metric" title="Dauer: Geschätzte Geh- bzw. Fahrzeit basierend auf Streckenlänge und Höhenmetern">
                     <span className="metric-label">Dauer</span>
-                    <strong>{activeMetrics ? formatDuration(activeMetrics.durationMinutes) : '–'}</strong>
+                    <strong>{activeMetrics ? durationInUnit(activeMetrics.durationMinutes, units.duration) : '–'}</strong>
                   </div>
                   <div className="metric" title="Aufstieg: Summe aller positiven Höhenmeter entlang der Route">
                     <span className="metric-label">Aufstieg</span>
-                    <strong>{Math.round(activeMetrics?.ascent ?? 0)} <small>m</small></strong>
+                    <strong>{Math.round(elevationInUnit(activeMetrics?.ascent ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Abstieg: Summe aller negativen Höhenmeter entlang der Route">
                     <span className="metric-label">Abstieg</span>
-                    <strong>{Math.round(activeMetrics?.descent ?? 0)} <small>m</small></strong>
+                    <strong>{Math.round(elevationInUnit(activeMetrics?.descent ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Höchster Punkt: Maximale Höhe über dem Meeresspiegel">
                     <span className="metric-label">Höchster Punkt</span>
-                    <strong>{activeMetrics?.high ?? 0} <small>m</small></strong>
+                    <strong>{Math.round(elevationInUnit(activeMetrics?.high ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Niedrigster Punkt: Minimale Höhe über dem Meeresspiegel">
                     <span className="metric-label">Niedrigster Punkt</span>
-                    <strong>{activeMetrics?.low ?? 0} <small>m</small></strong>
+                    <strong>{Math.round(elevationInUnit(activeMetrics?.low ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
                   </div>
                 </div>
               )}
@@ -226,7 +230,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         const value = activeElevationScale.min + index * activeElevationScale.step
                         const y = elevationProfileY(
                         value,
-                        activeMetrics?.elevations ?? [],
+                        elevations,
                         activeElevationScale,
                         profileViewBox.height,
                         profileViewBox.plotTop,
@@ -240,8 +244,8 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                       })}
                     <path
                       d={buildElevationPath(
-                        activeMetrics?.elevations ?? [],
-                        activeMetrics?.distances ?? [],
+                        elevations,
+                        distances,
                         activeDistanceScale.max,
                         activeElevationScale,
                         profileViewBox.width,
@@ -258,7 +262,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     {activeDistanceScale.ticks.map((distance) => {
                       const x =
                         profileViewBox.plotLeft +
-                        (distance / Math.max(1, activeDistanceScale.max)) *
+                        (distance / activeDistanceScale.max) *
                           (profileViewBox.width -
                             profileViewBox.plotLeft -
                             profileViewBox.plotRight)
@@ -305,8 +309,8 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                                 profileViewBox.plotRight)
                           }
                           cy={elevationProfileY(
-                            profilePointDetails.elevation,
-                            activeMetrics?.elevations ?? [],
+                            elevationInUnit(profilePointDetails.elevation, units.elevation),
+                            elevations,
                             activeElevationScale,
                             profileViewBox.height,
                             profileViewBox.plotTop,
@@ -328,7 +332,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                       const value = activeElevationScale.min + index * activeElevationScale.step
                       const y = elevationProfileY(
                         value,
-                        activeMetrics?.elevations ?? [],
+                        elevations,
                         activeElevationScale,
                         profileViewBox.height,
                         profileViewBox.plotTop,
@@ -350,7 +354,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     {activeDistanceScale.ticks.map((distance, index) => {
                       const x =
                         profileViewBox.plotLeft +
-                        (distance / Math.max(1, activeDistanceScale.max)) *
+                        (distance / activeDistanceScale.max) *
                           (profileViewBox.width -
                             profileViewBox.plotLeft -
                             profileViewBox.plotRight)
@@ -367,7 +371,9 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                             top: `${(174 / profileViewBox.height) * 100}%`,
                           }}
                         >
-                          {formatDistanceAxis(distance)}
+                          {activeDistanceScale.step < 0.1
+                            ? distance.toFixed(Math.min(6, Math.max(1, Math.ceil(-Math.log10(activeDistanceScale.step))))).replace(/\.?0+$/, '')
+                            : formatDistanceAxis(distance)}
                         </span>
                       )
                     })}
@@ -378,7 +384,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         top: `${(187 / profileViewBox.height) * 100}%`,
                       }}
                     >
-                      Entfernung (km)
+                      Entfernung ({units.distance})
                     </span>
                     <span
                       className="elevation-axis-title-overlay elevation-axis-title-y"
@@ -387,7 +393,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         top: `${(92 / profileViewBox.height) * 100}%`,
                       }}
                     >
-                      Höhe (m)
+                      Höhe ({units.elevation})
                     </span>
                   </div>
                   {profilePointDetails && (
@@ -407,9 +413,9 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         }%`,
                       }}
                     >
-                      <span>{profilePointDetails.elevation} m Höhe</span>
-                      <span>{profilePointDetails.distance.toFixed(2)} km ab Start</span>
-                      <span>{formatDuration(profilePointDetails.elapsedMinutes)} ab Start</span>
+                      <span>{Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} {units.elevation} Höhe</span>
+                      <span>{distanceInUnit(profilePointDetails.distance, units.distance).toFixed(2)} {units.distance} ab Start</span>
+                      <span>{durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start</span>
                     </div>
                   )}
                 </div>

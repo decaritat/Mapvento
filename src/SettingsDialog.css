@@ -1,0 +1,108 @@
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(5, 9, 12, 0.6);
+}
+.settings-dialog {
+  width: min(680px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.settings-dialog header, .settings-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.settings-dialog header { border-bottom: 1px solid var(--border); }
+.settings-dialog h2, .settings-dialog h3 { margin: 0; }
+.settings-dialog footer { justify-content: flex-end; border-top: 1px solid var(--border); }
+.settings-body { display: grid; grid-template-columns: 150px 1fr; min-height: 300px; }
+.settings-body nav { padding: 16px; border-right: 1px solid var(--border); }
+.settings-body nav button { display: block; width: 100%; text-align: left; margin-bottom: 6px; }
+.settings-body nav button[aria-current] { color: var(--green); }
+.settings-fields { display: grid; min-width: 0; align-content: start; gap: 12px; padding: 20px; }
+.settings-fields p { margin: 0 0 4px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.settings-fields label:not(.settings-checkbox), .settings-overlay-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 130px) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+.settings-fields select { width: 100%; }
+.settings-overlays { display: grid; gap: 6px; }
+.settings-checkbox { display: flex; gap: 8px; align-items: center; }
+.settings-fields button { justify-self: start; }
+.settings-position {
+  display: grid;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.settings-position h4 { margin: 0 0 2px; font-size: 13px; }
+.settings-position-values {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(70px, 0.6fr);
+  gap: 10px;
+}
+.settings-fields .settings-position-values label {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 5px;
+  font-size: 12px;
+}
+.settings-position-values input { min-width: 0; }
+.settings-dialog .settings-position button { font-size: 12px; }
+.settings-dialog button:not(.icon-button) {
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--panel);
+  color: inherit;
+  cursor: pointer;
+}
+.settings-dialog input[type="number"] {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: inherit;
+}
+.settings-reset {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.settings-dialog .settings-reset button {
+  padding: 4px 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: left;
+}
+.settings-dialog .settings-reset button:hover,
+.settings-dialog .settings-reset button:focus-visible { color: var(--green); }
+.settings-error { color: #ff9a9a; margin: 0 20px 12px; }
+@media (max-width: 500px) {
+  .settings-body { grid-template-columns: 1fr; }
+  .settings-body nav { display: flex; gap: 8px; border-right: 0; border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 360px) {
+  .settings-fields label:not(.settings-checkbox), .settings-overlay-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .settings-position-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

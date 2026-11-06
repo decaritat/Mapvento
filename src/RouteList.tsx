@@ -1,12 +1,14 @@
 import { createPortal } from 'react-dom'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { formatDuration, routeMetrics } from './routeMetrics'
+import { routeMetrics } from './routeMetrics'
+import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from './settings'
 import type { ProjectFile, Route } from './routeModel'
 
 type RouteMenu = { routeId: string; top: number; left: number }
 export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuRef, routeMenuPopoverRef,
   routeMenuButtonRef, routeCardRefs, focusRoute, openRouteActions, showRouteProperties, exportRoute,
-  confirmDeleteRoute }: {
+  confirmDeleteRoute, units }: {
+  units: Units
   project: ProjectFile
   openRouteMenu: RouteMenu | null
   setOpenRouteMenu: Dispatch<SetStateAction<RouteMenu | null>>
@@ -64,10 +66,10 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                             </span>
                           )}
                         <span className="route-card-stats">
-                          <span>{metrics.length.toFixed(1)} km</span>
-                          <span>{formatDuration(metrics.durationMinutes)}</span>
-                          <span>↗ {Math.round(metrics.ascent)} m</span>
-                          <span>↘ {Math.round(metrics.descent)} m</span>
+                          <span>{distanceInUnit(metrics.length, units.distance).toFixed(1)} {units.distance}</span>
+                          <span>{durationInUnit(metrics.durationMinutes, units.duration)}</span>
+                          <span>↗ {Math.round(elevationInUnit(metrics.ascent, units.elevation))} {units.elevation}</span>
+                          <span>↘ {Math.round(elevationInUnit(metrics.descent, units.elevation))} {units.elevation}</span>
                         </span>
                       </span>
                     </button>
