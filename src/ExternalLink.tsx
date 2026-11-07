@@ -1,6 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react'
-import { isTauri } from '@tauri-apps/api/core'
-import { openExternalUrl } from './externalUrl'
+import type { ReactNode } from 'react'
 
 export function ExternalLink({
   url,
@@ -15,11 +13,6 @@ export function ExternalLink({
   title?: string
   tabIndex?: number
 }) {
-  const open = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!isTauri()) return
-    event.preventDefault()
-    openExternalUrl(url)
-  }
   return (
     <a
       href={url}
@@ -28,7 +21,6 @@ export function ExternalLink({
       className={className}
       title={title}
       tabIndex={tabIndex}
-      onClick={open}
     >
       {children}
     </a>

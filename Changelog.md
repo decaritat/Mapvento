@@ -45,7 +45,7 @@ once released versions are maintained.
   the GitHub project, documentation, changelog, and license, data and service
   attributions (OpenStreetMap, OpenTopoMap, Nominatim, BRouter, Leaflet), and a
   filterable list of npm and Rust third-party components with their license
-  texts. External links open in the system browser in the desktop app. The
+  texts. External links open exactly once in the system browser in the desktop app. The
   version comes from the Git tag in release builds and is marked `-dev`
   otherwise.
 - Added a map toolbar layer control for OpenStreetMap Carto and OpenTopoMap
