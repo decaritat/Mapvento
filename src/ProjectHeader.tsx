@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { Fragment, useEffect, useRef, useState, type RefObject } from 'react'
 
-export function ProjectHeader({ projectInput, openProject, saveProject, importProject, openCache, openAbout, openSettings, exitApp, desktop }: {
+export function ProjectHeader({ projectInput, newProject, openProject, saveProject, importProject, openCache, openAbout, openSettings, exitApp, desktop }: {
   projectInput: RefObject<HTMLInputElement | null>
+  newProject: () => void
   openProject: () => void
   saveProject: () => void
   importProject: (file: File) => void
@@ -17,12 +18,13 @@ export function ProjectHeader({ projectInput, openProject, saveProject, importPr
   const menuRef = useRef<HTMLDivElement>(null)
 
   const items = [
+    { label: 'Neues Projekt', action: newProject, available: true },
     { label: 'Projekt öffnen', action: openProject, available: true },
     { label: 'Projekt speichern', action: saveProject, available: true },
-    { label: 'Einstellungen', action: openSettings, available: true },
+    { label: 'Einstellungen', action: openSettings, available: true, separator: true },
     { label: 'Cache verwalten', action: openCache, available: true },
-    { label: 'Info', action: openAbout, available: true },
-    ...(desktop ? [{ label: 'Beenden', action: exitApp, available: true }] : []),
+    { label: 'Info', action: openAbout, available: true, separator: true },
+    ...(desktop ? [{ label: 'Beenden', action: exitApp, available: true, separator: true }] : []),
   ]
 
   function closeMenu() {
@@ -45,7 +47,7 @@ export function ProjectHeader({ projectInput, openProject, saveProject, importPr
       <div className="brand">
         <img className="brand-mark" src="/favicon.svg" alt="" />
         <div>
-          <strong>Trailforge</strong>
+          <strong>Mapvento</strong>
           <span>Open route planner</span>
         </div>
       </div>
@@ -76,10 +78,13 @@ export function ProjectHeader({ projectInput, openProject, saveProject, importPr
               }
             }}>
             {items.map((item) => (
-              <button key={item.label} type="button" role="menuitem" disabled={!item.available}
-                onClick={() => { closeMenu(); item.action() }}>
-                {item.label}
-              </button>
+              <Fragment key={item.label}>
+                {item.separator && <div className="header-menu-separator" role="separator" />}
+                <button type="button" role="menuitem" disabled={!item.available}
+                  onClick={() => { closeMenu(); item.action() }}>
+                  {item.label}
+                </button>
+              </Fragment>
             ))}
           </div>
         )}
@@ -87,8 +92,12 @@ export function ProjectHeader({ projectInput, openProject, saveProject, importPr
           ref={projectInput}
           className="hidden-input"
           type="file"
-          accept=".json,.trailforge.json"
-          onChange={(event) => event.target.files?.[0] && importProject(event.target.files[0])}
+          accept=".json,.mapvento.json"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0]
+            event.currentTarget.value = ''
+            if (file) importProject(file)
+          }}
         />
       </div>
     </header>

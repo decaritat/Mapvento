@@ -104,6 +104,10 @@ function App() {
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameDraft, setProjectNameDraft] = useState('')
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState('')
+  const projectDraftRef = useRef({ editingProjectName, projectNameDraft, projectDescriptionDraft })
+  useLayoutEffect(() => {
+    projectDraftRef.current = { editingProjectName, projectNameDraft, projectDescriptionDraft }
+  }, [editingProjectName, projectNameDraft, projectDescriptionDraft])
   const [toolMode, setToolMode] = useState<ToolMode>('route')
   const [routeCreationDialogOpen, setRouteCreationDialogOpen] = useState(false)
   const [routeCreationMode, setRouteCreationMode] = useState<'new' | 'gpx'>('new')
@@ -478,9 +482,32 @@ function App() {
     setProjectDescriptionDraft('')
   }
 
-  const { exportRoute, saveProject, importGpx, importProject } = useProjectFiles({
+  const { exportRoute, saveProject, newProject, openProject, importGpx, importProject } = useProjectFiles({
     project, activeRoute, setProject, setLayerId, setNotice,
   })
+
+  async function createNewProject() {
+    const draft = projectDraftRef.current
+    const projectToSave = draft.editingProjectName ? {
+      ...project,
+      name: draft.projectNameDraft.trim() || project.name,
+      description: draft.projectDescriptionDraft.slice(0, 180),
+    } : project
+    if (!await newProject(projectToSave, () => {
+      const current = projectDraftRef.current
+      return current.editingProjectName === draft.editingProjectName &&
+        current.projectNameDraft === draft.projectNameDraft &&
+        current.projectDescriptionDraft === draft.projectDescriptionDraft
+    })) return
+    cancelProjectNameEdit()
+    setRouteEditor(null)
+    setPointEditor(null)
+    setOpenRouteMenu(null)
+    setSelectedNode(null)
+    setHoveredProfilePoint(null)
+    setContextMenu(null)
+    setErrorBanner(null)
+  }
 
   function confirmDeleteRoute(route: Route) {
     const confirmed = window.confirm(`Soll die Route „${route.name}“ wirklich entfernt werden?`)
@@ -741,7 +768,8 @@ function App() {
         onClick={() => contextMenu && setContextMenu(null)}
       >
 
-      <ProjectHeader projectInput={projectInput} openProject={() => projectInput.current?.click()}
+      <ProjectHeader projectInput={projectInput} newProject={() => { void createNewProject() }}
+        openProject={() => { void openProject(() => projectInput.current?.click()) }}
         saveProject={saveProject} importProject={importProject}
         openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)} openSettings={() => setSettingsOpen(true)}
         desktop={isTauri()} exitApp={() => {

@@ -98,7 +98,7 @@ describe('settings and units', () => {
       geometry: [[0, 0], [0.01, 0], [0.02, 0]], elevations: [100, 150, 120],
       timestamps: ['2020-01-01T00:00:00Z', null, '2020-01-01T01:30:00Z'],
     }
-    localStorage.setItem('trailforge-project', JSON.stringify({ ...initialProject, routes: [route] }))
+    localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -159,7 +159,7 @@ describe('settings and units', () => {
       geometry: [[0, 0], [0.02, 0]], elevations: [100, 120],
       timestamps: ['2020-01-01T00:00:00Z', '2020-01-01T06:42:00Z'],
     }
-    localStorage.setItem('trailforge-project', JSON.stringify({ ...initialProject, routes: [route] }))
+    localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
     const container = document.createElement('div')
     document.body.append(container)
     let root = createRoot(container)

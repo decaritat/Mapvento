@@ -72,7 +72,7 @@ export class TileCache {
   private readonly limit: number
   private readonly dbName: string
 
-  constructor(limit = TILE_CACHE_LIMIT, dbName = 'trailforge-tile-cache') {
+  constructor(limit = TILE_CACHE_LIMIT, dbName = 'mapvento-tile-cache') {
     this.limit = limit
     this.dbName = dbName
   }

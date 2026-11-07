@@ -22,7 +22,7 @@ export type TileDiagnosticEvent = {
 }
 
 export type TileDiagnosticLog = {
-  format: 'trailforge-tile-diagnostics'
+  format: 'mapvento-tile-diagnostics'
   version: 1
   appVersion: string
   environment: 'desktop' | 'browser'
@@ -60,7 +60,7 @@ export class TileDiagnostics {
     if (!this.active) return this.last
     const { startedAt, environment, events, pending, dropped } = this.active
     this.last = {
-      format: 'trailforge-tile-diagnostics', version: 1,
+      format: 'mapvento-tile-diagnostics', version: 1,
       appVersion: formatAppVersion(version, import.meta.env.VITE_APP_VERSION),
       environment, startedAt, stoppedAt: new Date().toISOString(),
       incomplete: pending, dropped, events,
@@ -146,7 +146,7 @@ export function parseTileLog(text: string): TileDiagnosticLog {
   if (!value || typeof value !== 'object') throw new Error('Ungültiges Diagnoseformat')
   const log = value as Record<string, unknown>
   const nonnegative = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0
-  if (log.format !== 'trailforge-tile-diagnostics' || log.version !== 1 ||
+  if (log.format !== 'mapvento-tile-diagnostics' || log.version !== 1 ||
       typeof log.appVersion !== 'string' || (log.environment !== 'desktop' && log.environment !== 'browser') ||
       typeof log.startedAt !== 'string' || typeof log.stoppedAt !== 'string' ||
       !nonnegative(log.incomplete) || !nonnegative(log.dropped) ||

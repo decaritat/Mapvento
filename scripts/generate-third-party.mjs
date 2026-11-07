@@ -5,7 +5,7 @@
 // cargo-about run is cached until Cargo.lock or about.toml change.
 //
 // Usage: node scripts/generate-third-party.mjs [--out <file>] [--require-rust]
-// TRAILFORGE_KEEP_NOTICES=1 keeps an already existing output file (used by the
+// MAPVENTO_KEEP_NOTICES=1 keeps an already existing output file (used by the
 // release build, which receives the file from the license workflow).
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -18,10 +18,10 @@ const args = process.argv.slice(2)
 const outIndex = args.indexOf('--out')
 const out = resolve(root, outIndex >= 0 ? args[outIndex + 1] : 'src/generated/third-party.json')
 const requireRust = args.includes('--require-rust')
-const cacheFile = join(root, 'node_modules/.cache/trailforge/rust-components.json')
+const cacheFile = join(root, 'node_modules/.cache/mapvento/rust-components.json')
 const LICENSE_FILE = /^(licen[cs]e|copying|notice)([-._].*)?$/i
 
-if (process.env.TRAILFORGE_KEEP_NOTICES && existsSync(out)) {
+if (process.env.MAPVENTO_KEEP_NOTICES && existsSync(out)) {
   console.log(`Keeping existing ${out}`)
   process.exit(0)
 }

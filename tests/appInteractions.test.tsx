@@ -117,7 +117,7 @@ describe('application interactions', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -162,7 +162,7 @@ describe('application interactions', () => {
   it('shows a non-interactive insertion cursor while hovering an editable route line', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -213,7 +213,7 @@ describe('application interactions', () => {
   it('clears route-node focus when the map moves, a node is added, Escape is pressed, a tool changes, or the node is clicked again', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -285,7 +285,7 @@ describe('application interactions', () => {
         routingState: 'ready',
       }],
     }
-    localStorage.setItem('trailforge-project', JSON.stringify(saved))
+    localStorage.setItem('mapvento-project', JSON.stringify(saved))
     const mapSpy = vi.spyOn(L, 'map')
     const write = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('showSaveFilePicker', vi.fn().mockResolvedValue({
@@ -336,7 +336,7 @@ describe('application interactions', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       mapOverlayIds: ['waymarked-hiking'],
       routes: [{
@@ -426,7 +426,7 @@ describe('application interactions', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       mapOverlayIds: ['waymarked-hiking'],
       routes: [{
@@ -463,7 +463,7 @@ describe('application interactions', () => {
 
   it('restores map dragging when a line drag is interrupted by opening the editor', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -513,7 +513,7 @@ describe('application interactions', () => {
 
   it('cancels a line drag on window blur and cleans up an active drag on unmount', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -564,7 +564,7 @@ describe('application interactions', () => {
 
   it('does not insert a waypoint when a drag ends outside the map', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [{
         ...initialProject.routes[0],
@@ -851,7 +851,7 @@ describe('application interactions', () => {
     const mapSpy = vi.spyOn(L, 'map')
     const tiles = vi.spyOn(L, 'tileLayer')
     const removeMap = vi.spyOn(L.Map.prototype, 'remove')
-    localStorage.setItem('trailforge-project', JSON.stringify({ ...initialProject, mapLayerId: 'opentopomap' }))
+    localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, mapLayerId: 'opentopomap' }))
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -980,7 +980,7 @@ describe('application interactions', () => {
       expect(trigger.getAttribute('aria-expanded')).toBe('false')
       expect(document.activeElement).toBe(trigger)
       await act(async () => root.unmount())
-      localStorage.setItem('trailforge-project', JSON.stringify(saved))
+      localStorage.setItem('mapvento-project', JSON.stringify(saved))
       const restored = createRoot(container)
       try {
         await act(async () => restored.render(<App />))
@@ -1039,7 +1039,7 @@ describe('application interactions', () => {
       elevations: [100, 200],
       routingState: 'ready',
     }
-    localStorage.setItem('trailforge-project', JSON.stringify({ ...initialProject, routes: [route] }))
+    localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)

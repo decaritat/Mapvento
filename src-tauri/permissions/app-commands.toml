@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-app-commands"
+description = "Allows the frontend to use Mapvento application commands."
+commands.allow = [
+  "search_places",
+  "save_text_file",
+  "open_project_file",
+  "save_project_file",
+  "exit_app"
+]

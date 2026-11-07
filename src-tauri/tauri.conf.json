@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Trailforge",
+  "productName": "Mapvento",
   "version": "0.1.0",
-  "identifier": "org.trailforge.desktop",
+  "identifier": "org.mapvento.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Trailforge",
+        "title": "Mapvento",
         "width": 1440,
         "height": 960,
         "resizable": true,

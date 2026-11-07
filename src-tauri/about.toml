@@ -16,7 +16,7 @@ accepted = [
     "GPL-3.0-or-later",
 ]
 
-# Trailforge itself is GPL-3.0-or-later and listed in the project LICENSE.
+# Mapvento itself is GPL-3.0-or-later and listed in the project LICENSE.
 ignore-build-dependencies = true
 ignore-dev-dependencies = true
 workarounds = ["ring"]

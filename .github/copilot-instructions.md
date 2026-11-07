@@ -1,8 +1,8 @@
-# Trailforge - Copilot Instructions
+# Mapvento - Copilot Instructions
 
 ## Project goal
 
-Trailforge is a locally installable, cross-platform open-source application for creating, editing, analyzing, and exporting hiking and cycling routes. The application is intended to run on Windows 11 and Ubuntu and to provide capabilities commonly expected from online outdoor platforms for tour planning and navigation.
+Mapvento is a locally installable, cross-platform open-source application for creating, editing, analyzing, and exporting hiking and cycling routes. The application is intended to run on Windows 11 and Ubuntu and to provide capabilities commonly expected from online outdoor platforms for tour planning and navigation.
 
 ## Architecture
 
