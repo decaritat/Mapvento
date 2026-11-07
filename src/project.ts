@@ -236,7 +236,7 @@ export function readInitialProject(
   onLayerFallback?: (message: string) => void,
 ): ProjectFile {
   try {
-    const saved = storage.getItem('trailforge-project')
+    const saved = storage.getItem('mapvento-project')
     if (!saved) return initialProject
     return normalizeProject(JSON.parse(saved), onLayerFallback)
   } catch (error) {

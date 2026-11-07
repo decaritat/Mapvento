@@ -1,8 +1,8 @@
-# Trailforge
+# Mapvento
 
-Trailforge is a locally installable open-source application for planning hikes and cycling tours. It is intended as a clear alternative to online outdoor platforms for tour planning and navigation: routes are created, edited, analyzed, and exported as GPX files on an OpenStreetMap-based map.
+Mapvento is a locally installable open-source application for planning hikes and cycling tours. It is intended as a clear alternative to online outdoor platforms for tour planning and navigation: routes are created, edited, analyzed, and exported as GPX files on an OpenStreetMap-based map.
 
-Trailforge is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online; previously viewed map tiles are cached locally, but complete offline areas are not provided.
+Mapvento is intended to run on Windows 11 and Linux. The desktop application is based on Tauri 2, React, TypeScript, and Leaflet. Map data is loaded online; previously viewed map tiles are cached locally, but complete offline areas are not provided.
 
 ## Current status
 
@@ -27,7 +27,7 @@ Trailforge is intended to run on Windows 11 and Linux. The desktop application i
 - Route name, description, type, and color
 - Elevation profile with distance, elevation, and time information
 - Distance, ascent, descent, duration, highest-point, and lowest-point metrics
-- A keyboard-accessible header menu for opening and saving projects, configuring
+- A keyboard-accessible header menu for creating, opening and saving projects, configuring
   settings, managing caches, viewing application information, and exiting the desktop app
 - GPX export for editable routes and read-only GPX import; imported routes can
   change color and distance markers while geometry, name, and description stay
@@ -48,6 +48,19 @@ files are not migrated. An unavailable map-layer ID falls back to OpenStreetMap
 Carto with a visible notice and a console warning; unavailable overlays are
 disabled with a notice. Invalid locally stored
 projects fall back to a new project.
+
+Mapvento uses its own application identifier, storage keys, tile cache, and
+`.mapvento.json` suggested filename; data stored under the previous product
+identity is not migrated.
+
+**Neues Projekt** creates an empty default project. If the current project has
+changed, the application asks whether to save it first; cancelling or failing
+to save keeps the current project open. On desktop and in browsers supporting
+the File System Access API, subsequent saves use the selected project file.
+Other browsers use the download fallback and may ask for a destination again.
+Embedded previews that expose an unrelated Tauri host may not support native
+file dialogs or downloads. When native commands are denied, use the Mapvento
+desktop application or open the development URL in an external browser.
 
 The **Einstellungen** dialog stores application-wide preferences separately
 from project files. Start settings select the base map, overlays, and a fixed
@@ -117,7 +130,7 @@ tile may be evicted before another tile accessed within the same interval.
 Existing caches are upgraded in place on first use; while
 an older application window keeps the cache open, the upgrade may be blocked.
 
-Only tiles requested for interactive display are stored; Trailforge does not
+Only tiles requested for interactive display are stored; Mapvento does not
 prefetch tiles or download offline areas. Refresh marks one layer's entries
 for revalidation and immediately redraws that layer if active. Other entries
 are revalidated only when subsequently viewed. Deleting a layer or the entire
@@ -160,7 +173,7 @@ Rust and the platform build tools), then run `npm ci` once:
   This builds and opens the Tauri application. Leave the terminal running.
   To create an installer instead, run `npm run desktop:build`.
 
-Use the same Trailforge revision, screen/window size, network, base layer and
+Use the same Mapvento revision, screen/window size, network, base layer and
 overlay selection in both. Choose the same map area and starting zoom; avoid
 other activity during the measurements. The browser and desktop have separate
 application and HTTP caches. For a cold **application-cache** comparison,
@@ -264,7 +277,7 @@ Nothing is published unless both builds succeed.
 - Pre-release, i.e. `vX.Y.Z-<anything>` such as `v0.2.0-rc.1` or
   `v0.2.0-nightly`: no GitHub Release is created. The
   installers are pushed to GitHub Packages as an OCI artifact
-  (`ghcr.io/<owner>/trailforge/installers:v0.2.0-rc.1`; characters not allowed
+  (`ghcr.io/<owner>/mapvento/installers:v0.2.0-rc.1`; characters not allowed
   in OCI tags become `-`), downloadable with
   `oras pull`).
 
@@ -275,7 +288,7 @@ git tag v0.2.0 && git push origin v0.2.0
 
 ### Licenses and SBOM
 
-Trailforge is GPL-3.0-or-later. `.github/workflows/licenses.yml` (on every
+Mapvento is GPL-3.0-or-later. `.github/workflows/licenses.yml` (on every
 dependency change and before every release build) generates
 `THIRD-PARTY-NOTICES.md` (package, version, origin, license, copyright, full
 license texts) for production npm dependencies and Rust crates, plus CycloneDX
@@ -288,7 +301,7 @@ corresponding source: the tagged GitHub repository serves as that source.
 
 ## Development with AI assistance
 
-Trailforge is developed with the assistance of AI. AI is used for requirements analysis, architectural decisions, implementation, documentation, and quality assurance. Decisions, code reviews, and responsibility for the results remain with the project team.
+Mapvento is developed with the assistance of AI. AI is used for requirements analysis, architectural decisions, implementation, documentation, and quality assurance. Decisions, code reviews, and responsibility for the results remain with the project team.
 
 ## Data, attribution, and license
 
@@ -300,21 +313,21 @@ Place search uses the public Nominatim service. Searches are sent only after
 the user submits the search field; there is no autocomplete. Results include
 OpenStreetMap attribution. Search results with area geometry are outlined and
 fitted to the map; point results receive a temporary pin. The Tauri desktop
-application identifies its request with a `Trailforge` User-Agent.
+application identifies its request with a `Mapvento` User-Agent.
 
 The public Nominatim service has limited capacity. Its policy requires
 identifying the application, visible attribution, no more than one request per
 second across the application, and the ability to switch services if requested.
-Trailforge caches results for the current app session and prevents searches
+Mapvento caches results for the current app session and prevents searches
 more frequent than once per second in that session. This client-side limit
-cannot enforce the aggregate limit across all Trailforge installations; usage
+cannot enforce the aggregate limit across all Mapvento installations; usage
 must remain moderate, and a configurable provider or proxy is needed before
 relying on the public service at larger scale. See the
 [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/).
 
 ### Routing provider
 
-Trailforge currently uses the public BRouter instance at
+Mapvento currently uses the public BRouter instance at
 `https://brouter.de/brouter`. It does not require an API key and
 selects the routing mode from the route type:
 

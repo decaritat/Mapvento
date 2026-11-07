@@ -26,7 +26,7 @@ describe('routing and route properties in the app', () => {
           routingState: 'idle',
         }],
       }
-      localStorage.setItem('trailforge-project', JSON.stringify(saved))
+      localStorage.setItem('mapvento-project', JSON.stringify(saved))
       let finish!: (response: Response) => void
       let signal!: AbortSignal
       const fetchMock = vi.fn((_url: string, options: RequestInit) =>
@@ -93,7 +93,7 @@ describe('routing and route properties in the app', () => {
       ],
       routingState: 'idle',
     }
-    localStorage.setItem('trailforge-project', JSON.stringify({
+    localStorage.setItem('mapvento-project', JSON.stringify({
       ...initialProject,
       routes: [route, { ...route, id: 'other', name: 'Other' }],
     }))

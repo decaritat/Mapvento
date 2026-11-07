@@ -62,7 +62,7 @@ export function toGpx(
     )
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Trailforge" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Mapvento" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata><name>${escapeXml(route.name)}</name><desc>${escapeXml(route.description)}</desc></metadata>
 ${waypoints}
   <trk><name>${escapeXml(route.name)}</name><type>${route.type}</type><trkseg>

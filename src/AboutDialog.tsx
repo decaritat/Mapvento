@@ -11,7 +11,7 @@ import { getAppVersion } from './appVersion'
 import { ALL_PROVIDER_ATTRIBUTIONS } from './providers'
 import './AboutDialog.css'
 
-const REPOSITORY_URL = 'https://github.com/decaritat/Trailforge'
+const REPOSITORY_URL = 'https://github.com/decaritat/Mapvento'
 
 type Ecosystem = 'npm' | 'rust'
 
@@ -132,7 +132,7 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
         <header className="about-header">
           <img className="about-logo" src="/favicon.svg" alt="" />
           <div>
-            <h2 id="about-title">Trailforge</h2>
+            <h2 id="about-title">Mapvento</h2>
             <span className="about-version">Version {version}</span>
             <p>Open-Source-Routenplaner für Wander- und Radtouren</p>
           </div>

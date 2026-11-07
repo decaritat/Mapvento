@@ -136,6 +136,12 @@
   cursor: not-allowed;
 }
 
+.header-menu-separator {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border);
+}
+
 select,
 .project-name,
 .route-name-input,

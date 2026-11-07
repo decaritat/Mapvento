@@ -47,7 +47,7 @@ export function TileDiagnosticsControl() {
     if (!current) return
     try {
       const stamp = current.startedAt.replaceAll(/[^a-zA-Z0-9-]/g, '-')
-      await saveTextFile(`trailforge-cache-${current.environment}-${stamp}.json`, JSON.stringify(current, null, 2), 'application/json')
+      await saveTextFile(`mapvento-cache-${current.environment}-${stamp}.json`, JSON.stringify(current, null, 2), 'application/json')
       setNotice('Diagnosedatei gespeichert.')
       setError('')
     } catch (reason) {

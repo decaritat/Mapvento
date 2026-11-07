@@ -52,7 +52,7 @@ jobs:
           {
             echo "# Third-party notices"
             echo
-            echo "Trailforge is licensed under GPL-3.0-or-later (see LICENSE)."
+            echo "Mapvento is licensed under GPL-3.0-or-later (see LICENSE)."
             echo "It bundles the following third-party components."
             echo
             cat licenses/npm.md

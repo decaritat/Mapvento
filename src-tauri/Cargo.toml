@@ -1,17 +1,17 @@
 [package]
-name = "trailforge"
+name = "mapvento"
 version = "0.1.0"
 description = "Open-source route planner for hiking and cycling"
-authors = ["Trailforge contributors"]
+authors = ["Mapvento contributors"]
 license = "GPL-3.0-or-later"
-repository = "https://github.com/decaritat/Trailforge"
+repository = "https://github.com/decaritat/Mapvento"
 edition = "2024"
 rust-version = "1.90"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "trailforge_lib"
+name = "mapvento_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -61,7 +61,7 @@ describe('tile diagnostic controls', () => {
       expect(container.textContent).toContain('Vergleich: Desktop')
       const exportButton = [...container.querySelectorAll('button')].find((item) => item.textContent === 'Diagnose speichern')!
       await act(async () => exportButton.click())
-      expect(save).toHaveBeenCalledWith(expect.stringMatching(/trailforge-cache-browser-.*\.json/), JSON.stringify(current, null, 2), 'application/json')
+      expect(save).toHaveBeenCalledWith(expect.stringMatching(/mapvento-cache-browser-.*\.json/), JSON.stringify(current, null, 2), 'application/json')
       await load(1, '{}')
       expect(container.querySelector('[role="alert"]')?.textContent).toContain('konnte nicht gelesen werden')
       expect(container.textContent).toContain('Vergleich: Desktop')

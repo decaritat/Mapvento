@@ -9,6 +9,7 @@
     "core:default",
     "opener:allow-open-url",
     "opener:allow-default-urls",
-    "dialog:default"
+    "dialog:default",
+    "allow-app-commands"
   ]
 }

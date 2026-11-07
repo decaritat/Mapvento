@@ -1,9 +1,9 @@
 # Changelog
 
-All notable changes to Trailforge are documented in this file.
+All notable changes to Mapvento are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-Trailforge follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+Mapvento follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 once released versions are maintained.
 
 ## [Unreleased]
@@ -13,6 +13,10 @@ once released versions are maintained.
 - Disabled text selection and image dragging in the application header.
 
 ### Added
+
+- Established the Mapvento identity across the application, desktop package,
+  project filenames, persisted data, diagnostics, documentation, and releases.
+  Data stored under the previous product identity is not migrated.
 
 - Added an application settings dialog with independently resettable start
   map, overlay and fixed-view defaults and distance, elevation and duration
@@ -41,7 +45,7 @@ once released versions are maintained.
   in the layer tool, routing provider (BRouter) in route properties, and
   geocoding provider (Nominatim) in place search. Preserved visible Leaflet
   attribution on the map with system browser link opening across desktop and web.
-- Added an About dialog (Info in the header menu) showing the Trailforge version, links to
+- Added an About dialog (Info in the header menu) showing the Mapvento version, links to
   the GitHub project, documentation, changelog, and license, data and service
   attributions (OpenStreetMap, OpenTopoMap, Nominatim, BRouter, Leaflet), and a
   filterable list of npm and Rust third-party components with their license
@@ -53,10 +57,15 @@ once released versions are maintained.
   overlays, with a close button and a general map-overlay heading. Overlay
   selections persist in project files and unavailable overlays are reported;
   tile errors identify the affected layer and allow a
-  targeted retry. A keyboard-accessible header menu provides project opening
-  and saving, settings, cache management, Info, and desktop exit. The cache dialog groups active and inactive layers by
+  targeted retry. A keyboard-accessible header menu groups project creation,
+  opening and saving, settings and cache management, Info, and desktop exit
+  with subtle separators. Creating a
+  project offers to save changes first and preserves the current project if
+  saving is cancelled or fails. File dialogs use Mapvento's native commands in
+  the desktop app; environments that deny them report the limitation instead
+  of claiming a download succeeded. The cache dialog groups active and inactive layers by
   provider with usage, freshness, available project coverage details and actions.
-  The desktop webview identifies itself as Trailforge, and
+  The desktop webview identifies itself as Mapvento, and
   provider usage and attribution are documented. Visited base and overlay
   tiles are stored in a bounded persistent cache with indexed least-recently-used
   eviction, transactional size accounting and throttled access-time updates
@@ -67,14 +76,14 @@ once released versions are maintained.
   comparison. Disabling it stops recording and discards its in-memory log.
   No offline area downloads are offered.
 - Added a native file dialog for GPX export and project saving in the desktop
-  app. In the browser, a failing file picker falls back to a normal download.
+  app. Browsers without a file picker use a normal download.
 - Added a CI workflow that runs lint, unit tests, the web build, and a Tauri
   build without installer on Linux and Windows for every pull request and push
   to `main`.
 - Added a license workflow that generates `THIRD-PARTY-NOTICES.md` and
   CycloneDX SBOMs for npm and Rust dependencies, fails on unknown or
   disallowed licenses, and ships the notices with installers and releases.
-  The Rust package metadata identifies the canonical Trailforge repository.
+  The Rust package metadata identifies the canonical Mapvento repository.
 - Added a tag-triggered release workflow that builds a Windows NSIS installer
   and a Linux AppImage and takes the version from the tag. Final
   `vX.Y.Z` tags create a draft GitHub Release whose notes come from the matching
@@ -121,7 +130,7 @@ once released versions are maintained.
 - Added consistent error-banner handling for unavailable map layers and
   routing failures, with provider-specific BRouter messages, retry actions,
   a close button, and the existing direct route fallback.
-- Added a unified Trailforge route-and-mountain app icon for the application
+- Added a unified Mapvento route-and-mountain app icon for the application
   header, browser favicon, and Tauri platform icons.
 - Added optional route outlines and zoom-aware distance markers with compact
   map labels and configurable manual spacing persisted in project files.

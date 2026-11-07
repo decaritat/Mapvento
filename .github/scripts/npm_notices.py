@@ -15,7 +15,7 @@ from pathlib import Path
 ALLOWED = {
     "MIT", "MIT-0", "ISC", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0",
     "MPL-2.0", "0BSD", "Zlib", "CC0-1.0", "Unlicense", "BlueOak-1.0.0",
-    "GPL-3.0-or-later",  # Trailforge itself
+    "GPL-3.0-or-later",  # Mapvento itself
 }
 LICENSE_FILE = re.compile(r"^(licen[cs]e|copying|notice)([-._].*)?$", re.I)
 

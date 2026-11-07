@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   developer: { cacheDiagnostics: false },
 }
 
-export const SETTINGS_KEY = 'trailforge-settings'
+export const SETTINGS_KEY = 'mapvento-settings'
 
 export function parseSettings(value: unknown): Settings {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('Einstellungen sind kein Objekt.')
