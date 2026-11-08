@@ -16,7 +16,7 @@
 }
 
 .inspector.expanded {
-  grid-template-columns: minmax(230px, 0.38fr) minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   grid-template-rows: auto;
   min-height: 0;
   align-items: stretch;
@@ -30,6 +30,11 @@
 .inspector-title-row {
   justify-content: space-between;
   gap: 15px;
+}
+
+.inspector.expanded .inspector-title-row {
+  width: 0;
+  min-width: 100%;
 }
 
 .inspector-close {
@@ -73,6 +78,7 @@
   margin-top: 3px;
   color: var(--text);
   font-size: 19px;
+  overflow-wrap: anywhere;
 }
 
 .inspector-routing-loading {
