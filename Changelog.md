@@ -62,7 +62,8 @@ once released versions are maintained.
   with subtle separators. Creating a
   project or closing the desktop application offers to save changes first and
   preserves the current project or window if saving is cancelled, fails, or
-  the project changes while saving. A separate "Projekt speichern unter" action
+  the project changes while saving. The exit dialog offers save, discard, and
+  cancel choices and opens the file dialog only after save is selected. A separate "Projekt speichern unter" action
   chooses a new project destination for later saves, and Strg+S saves the
   current project. File dialogs use Mapvento's native commands in
   the desktop app; environments that deny them report the limitation instead

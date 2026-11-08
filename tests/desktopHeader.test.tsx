@@ -14,6 +14,13 @@ vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ onCloseReq
 import App from '../src/App'
 import { initialProject } from '../src/project'
 
+async function chooseExit(label: string) {
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="exit-title"]')!
+  const button = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button'))
+    .find((item) => item.textContent === label)!
+  await act(async () => button.click())
+}
+
 describe('desktop header', () => {
   beforeEach(() => {
     desktop.onCloseRequested.mockResolvedValue(desktop.unlisten)
@@ -61,7 +68,6 @@ describe('desktop header', () => {
 
   it.each(['menu', 'window'])('protects unsaved changes on %s close, including an unfinished title edit', async (source) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     desktop.invoke.mockImplementation(async (command: string) => command === 'save_project_file' ? '/saved.json' : undefined)
     const container = document.createElement('div')
     document.body.append(container)
@@ -83,7 +89,9 @@ describe('desktop header', () => {
         await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
           .find((item) => item.textContent === 'Beenden')!.click())
       }
-      expect(confirm).toHaveBeenCalledOnce()
+      expect(document.querySelector('[aria-labelledby="exit-title"]')).not.toBeNull()
+      expect(desktop.invoke.mock.calls.some(([command]) => command === 'save_project_file' || command === 'exit_app')).toBe(false)
+      await chooseExit('Speichern')
       const saved = desktop.invoke.mock.calls.find(([command]) => command === 'save_project_file')!
       expect(JSON.parse(saved[1].content).name).toBe('Entwurf')
       expect(desktop.invoke).toHaveBeenCalledWith('exit_app')
@@ -96,7 +104,6 @@ describe('desktop header', () => {
 
   it.each([null, new Error('write failed')])('keeps the window open when saving on close fails: %s', async (result) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     desktop.invoke.mockImplementation(async (command: string) => {
       if (command === 'save_project_file') {
         if (result instanceof Error) throw result
@@ -116,6 +123,7 @@ describe('desktop header', () => {
         input.dispatchEvent(new Event('input', { bubbles: true }))
       })
       await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
+      await chooseExit('Speichern')
       expect(desktop.invoke).not.toHaveBeenCalledWith('exit_app')
       expect(container.textContent).toContain(result ? 'Projekt konnte nicht gespeichert werden:' : 'Speichern abgebrochen.')
     } finally {
@@ -126,7 +134,6 @@ describe('desktop header', () => {
 
   it('keeps the window open if the draft changes while saving on close', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     let finishSave!: (path: string) => void
     desktop.invoke.mockImplementation((command: string) => command === 'save_project_file'
       ? new Promise((resolve) => { finishSave = resolve }) : Promise.resolve())
@@ -145,6 +152,7 @@ describe('desktop header', () => {
       }
       await change('Erste Änderung')
       await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
+      await chooseExit('Speichern')
       const preventAgain = vi.fn()
       await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: preventAgain }))
       expect(preventAgain).toHaveBeenCalledOnce()
@@ -161,7 +169,6 @@ describe('desktop header', () => {
 
   it.each([false, true])('closes without saving when %s changes are discarded', async (modified) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const container = document.createElement('div')
     document.body.append(container)
     const root = createRoot(container)
@@ -176,9 +183,83 @@ describe('desktop header', () => {
         })
       }
       await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
-      expect(confirm).toHaveBeenCalledTimes(modified ? 1 : 0)
+      if (modified) {
+        expect(desktop.invoke).not.toHaveBeenCalledWith('exit_app')
+        await chooseExit('Beenden ohne Speichern')
+      } else {
+        expect(document.querySelector('[aria-labelledby="exit-title"]')).toBeNull()
+      }
       expect(desktop.invoke).toHaveBeenCalledWith('exit_app')
       expect(desktop.invoke.mock.calls.some(([command]) => command === 'save_project_file')).toBe(false)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it.each(['button', 'escape'])('cancels the exit via %s and permits retry', async (method) => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Projektnamen bearbeiten"]')!.click())
+      const input = container.querySelector<HTMLInputElement>('input[aria-label="Projektname"]')!
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Änderung')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
+      const dialog = document.querySelector<HTMLElement>('[aria-labelledby="exit-title"]')!
+      expect((document.activeElement as HTMLElement).textContent).toBe('Abbrechen')
+      if (method === 'button') await chooseExit('Abbrechen')
+      else await act(async () => dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(document.querySelector('[aria-labelledby="exit-title"]')).toBeNull()
+      expect(desktop.invoke.mock.calls.some(([command]) => command === 'save_project_file' || command === 'exit_app')).toBe(false)
+      await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
+      expect(document.querySelector('[aria-labelledby="exit-title"]')).not.toBeNull()
+      await chooseExit('Beenden ohne Speichern')
+      expect(desktop.invoke).toHaveBeenCalledWith('exit_app')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('saves to the existing desktop file only after the user chooses save', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    desktop.invoke.mockImplementation(async (command: string) => {
+      if (command === 'open_project_file') return { path: '/chosen/project.json', content: JSON.stringify(initialProject) }
+      if (command === 'save_project_file') return '/chosen/project.json'
+      return undefined
+    })
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!.click())
+      await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+        .find((item) => item.textContent === 'Projekt öffnen')!.click())
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Projektnamen bearbeiten"]')!.click())
+      const input = container.querySelector<HTMLInputElement>('input[aria-label="Projektname"]')!
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Geändert')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      await act(async () => desktop.onCloseRequested.mock.calls[0][0]({ preventDefault: vi.fn() }))
+      expect(desktop.invoke.mock.calls.some(([command]) => command === 'save_project_file')).toBe(false)
+      const dialog = document.querySelector<HTMLElement>('[aria-labelledby="exit-title"]')!
+      const buttons = dialog.querySelectorAll<HTMLButtonElement>('button')
+      await act(async () => buttons[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(buttons[0])
+      await act(async () => buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(buttons[2])
+      await chooseExit('Speichern')
+      const saved = desktop.invoke.mock.calls.find(([command]) => command === 'save_project_file')!
+      expect(saved[1].path).toBe('/chosen/project.json')
+      expect(desktop.invoke).toHaveBeenCalledWith('exit_app')
     } finally {
       await act(async () => root.unmount())
       container.remove()

@@ -3,6 +3,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core'
 import { parseGpx, toGpx } from './gpx'
 import { initialProject, normalizeProject } from './project'
 import type { ProjectFile, Route } from './routeModel'
+import type { ExitChoice } from './ExitDialog'
 
 type FileHandle = {
   getFile: () => Promise<File>
@@ -156,18 +157,25 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     }
   }
 
-  async function confirmBeforeExit(projectToSave = project, isCurrent = () => true) {
+  async function confirmBeforeExit(projectToSave: ProjectFile, isCurrent: () => boolean, ask: () => Promise<ExitChoice>) {
     if (saving.current) {
       setNotice('Ein Speichervorgang läuft bereits.')
       return false
     }
     const projectAtStart = JSON.stringify(currentProject.current)
-    if (JSON.stringify(projectToSave) !== savedProject.current &&
-        window.confirm('Soll das aktuelle Projekt vor dem Beenden gespeichert werden?')) {
-      if (!await saveProject(projectToSave)) return false
+    if (JSON.stringify(projectToSave) !== savedProject.current) {
+      const choice = await ask()
+      if (choice === 'cancel') return false
       if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
-        setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+        setNotice('Das Projekt wurde während des Beendens geändert. Bitte erneut versuchen.')
         return false
+      }
+      if (choice === 'save') {
+        if (!await saveProject(projectToSave)) return false
+        if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
+          setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+          return false
+        }
       }
     }
     return true
