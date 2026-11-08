@@ -60,8 +60,11 @@ once released versions are maintained.
   targeted retry. A keyboard-accessible header menu groups project creation,
   opening and saving, settings and cache management, Info, and desktop exit
   with subtle separators. Creating a
-  project offers to save changes first and preserves the current project if
-  saving is cancelled or fails. File dialogs use Mapvento's native commands in
+  project or closing the desktop application offers to save changes first and
+  preserves the current project or window if saving is cancelled, fails, or
+  the project changes while saving. A separate "Projekt speichern unter" action
+  chooses a new project destination for later saves, and Strg+S saves the
+  current project. File dialogs use Mapvento's native commands in
   the desktop app; environments that deny them report the limitation instead
   of claiming a download succeeded. The cache dialog groups active and inactive layers by
   provider with usage, freshness, available project coverage details and actions.
