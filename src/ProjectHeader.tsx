@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useRef, useState, type RefObject } from 'react'
 
-export function ProjectHeader({ projectInput, newProject, openProject, saveProject, importProject, openCache, openAbout, openSettings, exitApp, desktop }: {
+export function ProjectHeader({ projectInput, newProject, openProject, saveProject, saveProjectAs, importProject, openCache, openAbout, openSettings, exitApp, desktop }: {
   projectInput: RefObject<HTMLInputElement | null>
   newProject: () => void
   openProject: () => void
   saveProject: () => void
+  saveProjectAs: () => void
   importProject: (file: File) => void
   openCache: () => void
   openAbout: () => void
@@ -21,6 +22,7 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
     { label: 'Neues Projekt', action: newProject, available: true },
     { label: 'Projekt öffnen', action: openProject, available: true },
     { label: 'Projekt speichern', action: saveProject, available: true },
+    { label: 'Projekt speichern unter', action: saveProjectAs, available: true },
     { label: 'Einstellungen', action: openSettings, available: true, separator: true },
     { label: 'Cache verwalten', action: openCache, available: true },
     { label: 'Info', action: openAbout, available: true, separator: true },
@@ -81,6 +83,8 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
               <Fragment key={item.label}>
                 {item.separator && <div className="header-menu-separator" role="separator" />}
                 <button type="button" role="menuitem" disabled={!item.available}
+                  aria-keyshortcuts={item.label === 'Projekt speichern' ? 'Control+S' : undefined}
+                  title={item.label === 'Projekt speichern' ? 'Strg+S' : undefined}
                   onClick={() => { closeMenu(); item.action() }}>
                   {item.label}
                 </button>

@@ -123,6 +123,121 @@ describe('new project', () => {
     }
   })
 
+  it('saves under a new browser handle and uses it for subsequent saves', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const oldWrite = vi.fn().mockResolvedValue(undefined)
+    const newWrite = vi.fn().mockResolvedValue(undefined)
+    const oldHandle = {
+      getFile: async () => ({ text: async () => JSON.stringify(initialProject) }),
+      createWritable: async () => ({ write: oldWrite, close: async () => {} }),
+    }
+    const newHandle = { createWritable: async () => ({ write: newWrite, close: async () => {} }) }
+    vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue([oldHandle]))
+    const picker = vi.fn().mockResolvedValue(newHandle)
+    vi.stubGlobal('showSaveFilePicker', picker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await action(container, 'Projekt öffnen')
+      await changeName(container, 'Entwurf', false)
+      await action(container, 'Projekt speichern unter')
+      expect(picker).toHaveBeenCalledOnce()
+      expect(JSON.parse(newWrite.mock.calls[0][0]).name).toBe('Entwurf')
+      await action(container, 'Projekt speichern')
+      expect(picker).toHaveBeenCalledOnce()
+      expect(newWrite).toHaveBeenCalledTimes(2)
+      expect(oldWrite).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('saves the latest project draft with Ctrl+S and reuses the selected file', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const write = vi.fn().mockResolvedValue(undefined)
+    const picker = vi.fn().mockResolvedValue({
+      createWritable: async () => ({ write, close: async () => {} }),
+    })
+    vi.stubGlobal('showSaveFilePicker', picker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Erster Entwurf', false)
+      const input = container.querySelector<HTMLInputElement>('input[aria-label="Projektname"]')!
+      const shortcut = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })
+      await act(async () => input.dispatchEvent(shortcut))
+      expect(shortcut.defaultPrevented).toBe(true)
+      expect(JSON.parse(write.mock.calls[0][0]).name).toBe('Erster Entwurf')
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Neuer Entwurf')
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })))
+      expect(picker).toHaveBeenCalledOnce()
+      expect(JSON.parse(write.mock.calls[1][0]).name).toBe('Neuer Entwurf')
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, shiftKey: true, bubbles: true })))
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, repeat: true, bubbles: true })))
+      expect(write).toHaveBeenCalledTimes(2)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not save behind an open dialog when Ctrl+S is pressed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const picker = vi.fn()
+    vi.stubGlobal('showSaveFilePicker', picker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await action(container, 'Einstellungen')
+      const shortcut = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })
+      await act(async () => window.dispatchEvent(shortcut))
+      expect(shortcut.defaultPrevented).toBe(true)
+      expect(picker).not.toHaveBeenCalled()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it.each([new DOMException('cancelled', 'AbortError'), new Error('write failed')])(
+    'retains the old browser handle and unsaved state when Save As fails: %s', async (error) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+      const oldWrite = vi.fn().mockResolvedValue(undefined)
+      const handle = {
+        getFile: async () => ({ text: async () => JSON.stringify(initialProject) }),
+        createWritable: async () => ({ write: oldWrite, close: async () => {} }),
+      }
+      vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue([handle]))
+      vi.stubGlobal('showSaveFilePicker', vi.fn().mockRejectedValue(error))
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const container = document.createElement('div')
+      document.body.append(container)
+      const root = createRoot(container)
+      try {
+        await act(async () => root.render(<App />))
+        await action(container, 'Projekt öffnen')
+        await changeName(container, 'Geändert')
+        await action(container, 'Projekt speichern unter')
+        await action(container, 'Neues Projekt')
+        expect(confirm).toHaveBeenCalledOnce()
+        expect(oldWrite).toHaveBeenCalledOnce()
+      } finally {
+        await act(async () => root.unmount())
+        container.remove()
+      }
+    },
+  )
+
   it('does not replace changes made while the save dialog is open', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.spyOn(window, 'confirm').mockReturnValue(true)

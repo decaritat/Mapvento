@@ -98,7 +98,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     }
   }
 
-  async function saveProject(projectToSave = project) {
+  async function saveProject(projectToSave = project, saveAs = false) {
     if (saving.current) {
       setNotice('Ein Speichervorgang läuft bereits.')
       return false
@@ -108,16 +108,16 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     const serialized = JSON.stringify(projectToSave, null, 2)
     try {
       const filename = `${projectToSave.name.toLowerCase().replaceAll(/[^a-z0-9]+/gi, '-') || 'projekt'}.mapvento.json`
-      let selectedFile = projectFile.current
+      let selectedFile = saveAs ? null : projectFile.current
       let downloadStarted = false
       if (isTauri()) {
         const path = await invoke<string | null>('save_project_file', {
-          filename, content: serialized, path: projectFile.current?.kind === 'desktop' ? projectFile.current.path : null,
+          filename, content: serialized, path: selectedFile?.kind === 'desktop' ? selectedFile.path : null,
         })
         if (!path) throw new DOMException('Save cancelled', 'AbortError')
         selectedFile = { kind: 'desktop', path }
       } else {
-        let handle = projectFile.current?.kind === 'browser' ? projectFile.current.handle : null
+        let handle = selectedFile?.kind === 'browser' ? selectedFile.handle : null
         const picker = (window as SavePickerWindow).showSaveFilePicker
         if (!handle && picker) {
           handle = await picker({
@@ -154,6 +154,23 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     } finally {
       saving.current = false
     }
+  }
+
+  async function confirmBeforeExit(projectToSave = project, isCurrent = () => true) {
+    if (saving.current) {
+      setNotice('Ein Speichervorgang läuft bereits.')
+      return false
+    }
+    const projectAtStart = JSON.stringify(currentProject.current)
+    if (JSON.stringify(projectToSave) !== savedProject.current &&
+        window.confirm('Soll das aktuelle Projekt vor dem Beenden gespeichert werden?')) {
+      if (!await saveProject(projectToSave)) return false
+      if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
+        setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+        return false
+      }
+    }
+    return true
   }
 
   async function newProject(projectToSave = project, isCurrent = () => true) {
@@ -277,5 +294,5 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     }
   }
 
-  return { exportRoute, saveProject, newProject, openProject, importGpx, importProject }
+  return { exportRoute, saveProject, confirmBeforeExit, newProject, openProject, importGpx, importProject }
 }

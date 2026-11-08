@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { invoke, isTauri } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import 'leaflet/dist/leaflet.css'
 import './App.css'
 import AboutDialog from './AboutDialog'
@@ -482,23 +483,46 @@ function App() {
     setProjectDescriptionDraft('')
   }
 
-  const { exportRoute, saveProject, newProject, openProject, importGpx, importProject } = useProjectFiles({
+  const { exportRoute, saveProject, confirmBeforeExit, newProject, openProject, importGpx, importProject } = useProjectFiles({
     project, activeRoute, setProject, setLayerId, setNotice,
   })
 
-  async function createNewProject() {
+  function projectWithDraft() {
     const draft = projectDraftRef.current
     const projectToSave = draft.editingProjectName ? {
       ...project,
       name: draft.projectNameDraft.trim() || project.name,
       description: draft.projectDescriptionDraft.slice(0, 180),
     } : project
-    if (!await newProject(projectToSave, () => {
+    return { projectToSave, isCurrent: () => {
       const current = projectDraftRef.current
       return current.editingProjectName === draft.editingProjectName &&
         current.projectNameDraft === draft.projectNameDraft &&
         current.projectDescriptionDraft === draft.projectDescriptionDraft
-    })) return
+    } }
+  }
+
+  const saveShortcutRef = useRef(() => {})
+  useLayoutEffect(() => {
+    saveShortcutRef.current = () => {
+      if (routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen) return
+      void saveProject(projectWithDraft().projectToSave)
+    }
+  })
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || !event.ctrlKey || event.altKey || event.metaKey || event.shiftKey ||
+          event.key.toLowerCase() !== 's') return
+      event.preventDefault()
+      if (!event.repeat) saveShortcutRef.current()
+    }
+    window.addEventListener('keydown', handleSaveShortcut)
+    return () => window.removeEventListener('keydown', handleSaveShortcut)
+  }, [])
+
+  async function createNewProject() {
+    const { projectToSave, isCurrent } = projectWithDraft()
+    if (!await newProject(projectToSave, isCurrent)) return
     cancelProjectNameEdit()
     setRouteEditor(null)
     setPointEditor(null)
@@ -508,6 +532,41 @@ function App() {
     setContextMenu(null)
     setErrorBanner(null)
   }
+
+  const exitInProgress = useRef(false)
+  async function exitApp() {
+    if (exitInProgress.current) return
+    exitInProgress.current = true
+    try {
+      const { projectToSave, isCurrent } = projectWithDraft()
+      if (await confirmBeforeExit(projectToSave, isCurrent)) await invoke('exit_app')
+    } catch (error) {
+      setNotice(`Beenden fehlgeschlagen: ${String(error)}`)
+    } finally {
+      exitInProgress.current = false
+    }
+  }
+
+  const exitAppRef = useRef(exitApp)
+  useLayoutEffect(() => { exitAppRef.current = exitApp })
+  useEffect(() => {
+    if (!isTauri()) return
+    let disposed = false
+    let unlisten: (() => void) | undefined
+    void getCurrentWindow().onCloseRequested((event) => {
+      event.preventDefault()
+      void exitAppRef.current()
+    }).then((stopListening) => {
+      if (disposed) stopListening()
+      else unlisten = stopListening
+    }).catch((error: unknown) => {
+      if (!disposed) setNotice(`Fensterschließen konnte nicht überwacht werden: ${String(error)}`)
+    })
+    return () => {
+      disposed = true
+      unlisten?.()
+    }
+  }, [])
 
   function confirmDeleteRoute(route: Route) {
     const confirmed = window.confirm(`Soll die Route „${route.name}“ wirklich entfernt werden?`)
@@ -770,11 +829,10 @@ function App() {
 
       <ProjectHeader projectInput={projectInput} newProject={() => { void createNewProject() }}
         openProject={() => { void openProject(() => projectInput.current?.click()) }}
-        saveProject={saveProject} importProject={importProject}
+        saveProject={() => { void saveProject(projectWithDraft().projectToSave) }}
+        saveProjectAs={() => { void saveProject(projectWithDraft().projectToSave, true) }} importProject={importProject}
         openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)} openSettings={() => setSettingsOpen(true)}
-        desktop={isTauri()} exitApp={() => {
-          void invoke('exit_app').catch((error: unknown) => setNotice(`Beenden fehlgeschlagen: ${String(error)}`))
-        }} />
+        desktop={isTauri()} exitApp={() => { void exitApp() }} />
 
       <main className="workspace">
         <aside className="sidebar">

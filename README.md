@@ -57,7 +57,14 @@ identity is not migrated.
 changed, the application asks whether to save it first; cancelling or failing
 to save keeps the current project open. On desktop and in browsers supporting
 the File System Access API, subsequent saves use the selected project file.
-Other browsers use the download fallback and may ask for a destination again.
+**Projekt speichern unter** selects a different destination, which becomes the target
+for subsequent saves when the platform provides a file handle or path. Other
+browsers use the download fallback and may ask for a destination again.
+**Strg+S** saves the current project, including an unfinished project title or
+description edit; the shortcut is unavailable while a dialog is open.
+Before the desktop application closes, it also offers to save unsaved project
+changes. Declining discards them; cancelling or failing to save keeps the
+window open, as does changing the project while saving.
 Embedded previews that expose an unrelated Tauri host may not support native
 file dialogs or downloads. When native commands are denied, use the Mapvento
 desktop application or open the development URL in an external browser.

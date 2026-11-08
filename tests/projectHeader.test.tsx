@@ -17,7 +17,8 @@ describe('header menu', () => {
     const root = createRoot(container)
     try {
       const newProject = vi.fn()
-      await act(async () => root.render(<ProjectHeader projectInput={createRef()} newProject={newProject} openProject={vi.fn()} saveProject={save}
+      const saveAs = vi.fn()
+      await act(async () => root.render(<ProjectHeader projectInput={createRef()} newProject={newProject} openProject={vi.fn()} saveProject={save} saveProjectAs={saveAs}
         importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} openSettings={vi.fn()} exitApp={vi.fn()} desktop={false} />))
       const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!
       expect(container.textContent).not.toContain('Projekt speichern')
@@ -25,12 +26,13 @@ describe('header menu', () => {
       expect(trigger.getAttribute('aria-expanded')).toBe('true')
       const items = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
       expect(items.map((item) => item.textContent)).toEqual([
-        'Neues Projekt', 'Projekt öffnen', 'Projekt speichern', 'Einstellungen', 'Cache verwalten', 'Info',
+        'Neues Projekt', 'Projekt öffnen', 'Projekt speichern', 'Projekt speichern unter', 'Einstellungen', 'Cache verwalten', 'Info',
       ])
       expect(Array.from(container.querySelector('[role="menu"]')!.children).map((child) =>
         child.getAttribute('role') === 'separator' ? '|' : child.textContent,
-      )).toEqual(['Neues Projekt', 'Projekt öffnen', 'Projekt speichern', '|', 'Einstellungen', 'Cache verwalten', '|', 'Info'])
+      )).toEqual(['Neues Projekt', 'Projekt öffnen', 'Projekt speichern', 'Projekt speichern unter', '|', 'Einstellungen', 'Cache verwalten', '|', 'Info'])
       expect(items[2].disabled).toBe(false)
+      expect(items[2].getAttribute('aria-keyshortcuts')).toBe('Control+S')
       expect(document.activeElement).toBe(items[0])
       await act(async () => items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(items[1])
@@ -41,8 +43,8 @@ describe('header menu', () => {
       await act(async () => items[3].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(items[2])
       await act(async () => items[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true })))
-      expect(document.activeElement).toBe(items[5])
-      await act(async () => items[5].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(items[6])
+      await act(async () => items[6].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
       expect(container.querySelector('[role="menu"]')).toBeNull()
       expect(document.activeElement).toBe(trigger)
       await act(async () => trigger.click())
@@ -60,6 +62,10 @@ describe('header menu', () => {
       await act(async () => saveItem.click())
       expect(save).toHaveBeenCalledOnce()
       await act(async () => trigger.click())
+      await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+        .find((item) => item.textContent === 'Projekt speichern unter')!.click())
+      expect(saveAs).toHaveBeenCalledOnce()
+      await act(async () => trigger.click())
       await act(async () => container.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())
       expect(newProject).toHaveBeenCalledOnce()
     } finally {
@@ -76,7 +82,7 @@ describe('header menu', () => {
     document.body.append(container)
     const root = createRoot(container)
     try {
-      await act(async () => root.render(<ProjectHeader projectInput={createRef()} newProject={vi.fn()} openProject={openProject} saveProject={vi.fn()}
+      await act(async () => root.render(<ProjectHeader projectInput={createRef()} newProject={vi.fn()} openProject={openProject} saveProject={vi.fn()} saveProjectAs={vi.fn()}
         importProject={vi.fn()} openCache={vi.fn()} openAbout={vi.fn()} openSettings={vi.fn()} exitApp={exit} desktop />))
       const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!
       await act(async () => trigger.click())
@@ -87,7 +93,7 @@ describe('header menu', () => {
       expect(items.at(-1)?.textContent).toBe('Beenden')
       expect(Array.from(container.querySelector('[role="menu"]')!.children).map((child) =>
         child.getAttribute('role') === 'separator' ? '|' : child.textContent,
-      )).toEqual(['Neues Projekt', 'Projekt öffnen', 'Projekt speichern', '|', 'Einstellungen', 'Cache verwalten', '|', 'Info', '|', 'Beenden'])
+      )).toEqual(['Neues Projekt', 'Projekt öffnen', 'Projekt speichern', 'Projekt speichern unter', '|', 'Einstellungen', 'Cache verwalten', '|', 'Info', '|', 'Beenden'])
       await act(async () => items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(items.at(-1))
       await act(async () => items.at(-1)!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true })))
