@@ -22,6 +22,7 @@ import { PointEditor } from './PointEditor'
 import { MapToolbar } from './MapToolbar'
 import { ElevationProfile } from './ElevationProfile'
 import { SettingsDialog } from './SettingsDialog'
+import { ExitDialog, type ExitChoice } from './ExitDialog'
 import { distanceInUnit, readSettings, SETTINGS_KEY, type Settings } from './settings'
 import { tileDiagnostics } from './tileDiagnostics'
 import { openExternalUrl } from './externalUrl'
@@ -102,6 +103,8 @@ function App() {
   const [project, setProject] = useState<ProjectFile>(initial.project)
   const [settings, setSettings] = useState(initial.settings)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [exitDialogOpen, setExitDialogOpen] = useState(false)
+  const exitChoiceRef = useRef<((choice: ExitChoice) => void) | null>(null)
   const [editingProjectName, setEditingProjectName] = useState(false)
   const [projectNameDraft, setProjectNameDraft] = useState('')
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState('')
@@ -505,7 +508,7 @@ function App() {
   const saveShortcutRef = useRef(() => {})
   useLayoutEffect(() => {
     saveShortcutRef.current = () => {
-      if (routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen) return
+      if (routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen) return
       void saveProject(projectWithDraft().projectToSave)
     }
   })
@@ -534,12 +537,27 @@ function App() {
   }
 
   const exitInProgress = useRef(false)
+  function chooseExit(choice: ExitChoice) {
+    const resolve = exitChoiceRef.current
+    exitChoiceRef.current = null
+    setExitDialogOpen(false)
+    resolve?.(choice)
+  }
+
+  useEffect(() => () => {
+    exitChoiceRef.current?.('cancel')
+    exitChoiceRef.current = null
+  }, [])
+
   async function exitApp() {
     if (exitInProgress.current) return
     exitInProgress.current = true
     try {
       const { projectToSave, isCurrent } = projectWithDraft()
-      if (await confirmBeforeExit(projectToSave, isCurrent)) await invoke('exit_app')
+      if (await confirmBeforeExit(projectToSave, isCurrent, () => new Promise<ExitChoice>((resolve) => {
+        exitChoiceRef.current = resolve
+        setExitDialogOpen(true)
+      }))) await invoke('exit_app')
     } catch (error) {
       setNotice(`Beenden fehlgeschlagen: ${String(error)}`)
     } finally {
@@ -823,7 +841,7 @@ function App() {
       />
       <div
         className="app-shell"
-        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen}
+        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen}
         onClick={() => contextMenu && setContextMenu(null)}
       >
 
@@ -1055,6 +1073,7 @@ function App() {
         project={project} mapZoom={mapZoom}
         diagnosticsEnabled={settings.developer.cacheDiagnostics} />}
       </div>
+      {exitDialogOpen && <ExitDialog onChoose={chooseExit} />}
     </>
   )
 }

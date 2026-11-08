@@ -62,9 +62,10 @@ for subsequent saves when the platform provides a file handle or path. Other
 browsers use the download fallback and may ask for a destination again.
 **Strg+S** saves the current project, including an unfinished project title or
 description edit; the shortcut is unavailable while a dialog is open.
-Before the desktop application closes, it also offers to save unsaved project
-changes. Declining discards them; cancelling or failing to save keeps the
-window open, as does changing the project while saving.
+Before the desktop application closes, a dialog offers **Speichern**,
+**Beenden ohne Speichern**, or **Abbrechen** for unsaved project changes.
+The file dialog opens only after choosing **Speichern**. Cancelling or failing
+to save keeps the window open, as does changing the project while saving.
 Embedded previews that expose an unrelated Tauri host may not support native
 file dialogs or downloads. When native commands are denied, use the Mapvento
 desktop application or open the development URL in an external browser.
