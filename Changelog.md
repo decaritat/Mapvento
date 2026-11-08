@@ -146,8 +146,8 @@ once released versions are maintained.
   invalid chart-edge positions.
 - Unified route statistics and elevation-profile presentation with a compact
   collapsed view, an expanded interactive view, consistent metric ordering,
-  distance-based axis scaling, a clickable mini-profile opener, and an
-  in-panel close button.
+  distance-based axis scaling, a clickable mini-profile opener, an in-panel
+  close button, and a full-width expanded profile aligned with the statistics.
 - Support for separate hiking and cycling routes with a name, description,
   independent preset/custom colors, and route type.
 - Routing through the configured routing provider with a direct fallback.

@@ -1057,6 +1057,16 @@ describe('application interactions', () => {
       expect(container.querySelector('.profile-selection')?.textContent).toContain('200 m Höhe')
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 551 })))
       expect(container.querySelector('.profile-selection')).toBeNull()
+      vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue({
+        x: 100, y: 0, left: 100, top: 0, right: 1220, bottom: 190,
+        width: 1120, height: 190, toJSON: () => ({}),
+      })
+      await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 184 })))
+      expect(container.querySelector('.profile-selection')?.textContent).toContain('100 m Höhe')
+      await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1200 })))
+      expect(container.querySelector('.profile-selection')?.textContent).toContain('200 m Höhe')
+      await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1201 })))
+      expect(container.querySelector('.profile-selection')).toBeNull()
       await act(async () => button(container, 'Höhenprofil schließen').click())
       expect(container.querySelector('.elevation-chart')).toBeNull()
     } finally {
