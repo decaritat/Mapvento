@@ -24,7 +24,7 @@ available.
 
 Mapvento provides a desktop application for **Linux and Windows**. The web
 UI can be run in a current browser during development. Releases are provided
-as Linux AppImage (Linux builds target Ubuntu 22.04 compatibility) and a
+as Linux AppImage (Linux builds target Ubuntu 24.04 compatibility) and a
 Windows installer.
 
 Development and builds require:
