@@ -5,11 +5,10 @@ import { escapeXml } from './xml'
 import { projectCoordinate } from './mapCoordinates'
 import { getPoiIcon, poiIconSvg } from './poiIcons'
 import { defaultPoiIcon } from './poiIconIds'
-import { layers, overlayLayers, type LayerDefinition } from './mapLayers'
 import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarkers, isValidDistanceMarkerStepKm } from './routeMetrics'
 import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
 import { uid } from './uid'
-import { CachedTileLayer } from './cachedTileLayer'
+import { useMapTileLayers } from './useMapTileLayers'
 import { distanceInUnit, type StartSettings, type Units } from './settings'
 
 const activeRouteLineWeight = 4
@@ -48,10 +47,8 @@ export function useLeafletMap({
 }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const initialView = useRef(start)
-  const tileLayersRef = useRef(new Map<string, { layer: L.TileLayer; dispose: () => void }>())
-  const failedTileLayersRef = useRef(new Map<string, LayerDefinition>())
-  const lastRetryRef = useRef(0)
   const routeLayersRef = useRef<L.Polyline[]>([])
   const distanceMarkersRef = useRef<L.Marker[]>([])
   const profileMarkerRef = useRef<L.CircleMarker | null>(null)
@@ -65,6 +62,14 @@ export function useLeafletMap({
   const suppressNextRouteClickRef = useRef(false)
   const suppressClickTimerRef = useRef<number | null>(null)
   const [mapScale, setMapScale] = useState({ zoom: 7, latitude: 51.1657 })
+  const disposeTileLayers = useMapTileLayers({
+    map: mapInstance,
+    layerId,
+    overlayIds: project.mapOverlayIds ?? [],
+    retry: mapLayerRetry,
+    setErrorBanner,
+    setCacheWarning,
+  })
 
   const clearRouteNodeFocus = useCallback(() => {
     focusedRouteNodeRef.current = null
@@ -82,8 +87,6 @@ export function useLeafletMap({
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return
     const map = L.map(mapContainer.current, { zoomControl: true }).setView([initialView.current.latitude, initialView.current.longitude], initialView.current.zoom)
-    const tileLayers = tileLayersRef.current
-    const failedTileLayers = failedTileLayersRef.current
     map.createPane('routeOverlays').style.zIndex = '300'
     const updateMapScale = () => {
       setMapScale({ zoom: map.getZoom(), latitude: map.getCenter().lat })
@@ -102,6 +105,7 @@ export function useLeafletMap({
     }
     northArrow.addTo(map)
     mapRef.current = map
+    setMapInstance(map)
     const clearSuppressedClick = () => {
       suppressNextRouteClickRef.current = false
       if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
@@ -141,9 +145,7 @@ export function useLeafletMap({
       map.off('zoomend moveend', updateMapScale)
       profileMarkerRef.current?.remove()
       profileMarkerRef.current = null
-      tileLayers.forEach(({ dispose }) => dispose())
-      tileLayers.clear()
-      failedTileLayers.clear()
+      disposeTileLayers()
       searchLayerRef.current?.remove()
       searchLayerRef.current = null
       markersRef.current.forEach((marker) => marker.remove())
@@ -152,7 +154,7 @@ export function useLeafletMap({
       map.remove()
       mapRef.current = null
     }
-  }, [clearRouteNodeFocus])
+  }, [clearRouteNodeFocus, disposeTileLayers])
 
   useEffect(() => {
     const map = mapRef.current
@@ -164,86 +166,6 @@ export function useLeafletMap({
   useEffect(() => {
     if (toolMode !== 'route') clearRouteNodeFocus()
   }, [clearRouteNodeFocus, toolMode])
-
-  const overlayKey = (project.mapOverlayIds ?? []).join(',')
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    const base = layers.find((item) => item.id === layerId && !item.requiresKey) ?? layers[0]
-    const selected = [
-      base,
-      ...overlayLayers.filter((item) => !item.requiresKey && overlayKey.split(',').includes(item.id)),
-    ]
-    const selectedIds = new Set(selected.map((item) => item.id))
-    if (!globalThis.indexedDB) {
-      setCacheWarning('Kachelcache nicht verfügbar. Der HTTP-Cache des Browsers wird verwendet.')
-    }
-    const retryId = mapLayerRetry && mapLayerRetry.sequence !== lastRetryRef.current
-      ? mapLayerRetry.layerId
-      : null
-    if (mapLayerRetry) lastRetryRef.current = mapLayerRetry.sequence
-
-    const bannerFor = (definition: LayerDefinition): ErrorBanner => ({
-      title: 'Kartenlayer nicht erreichbar',
-      message: `${definition.provider} – ${definition.label} konnte keine Kartenkacheln laden. Prüfe die Internetverbindung oder deaktiviere den Layer.`,
-      action: 'map-retry',
-      layerId: definition.id,
-    })
-    const clearFailure = (id: string) => {
-      if (!failedTileLayersRef.current.delete(id)) return
-      setErrorBanner((current) => {
-        if (current?.action !== 'map-retry' || current.layerId !== id) return current
-        const next = failedTileLayersRef.current.values().next().value
-        return next ? bannerFor(next) : null
-      })
-    }
-
-    tileLayersRef.current.forEach(({ dispose }, id) => {
-      if (!selectedIds.has(id) || id === retryId) {
-        dispose()
-        tileLayersRef.current.delete(id)
-        clearFailure(id)
-      }
-    })
-
-    selected.forEach((definition) => {
-      if (tileLayersRef.current.has(definition.id)) return
-      const tileOptions: L.TileLayerOptions = {
-        attribution: definition.attribution,
-        maxZoom: 19,
-        maxNativeZoom: definition.maxNativeZoom,
-        pane: definition.id === base.id ? 'tilePane' : 'routeOverlays',
-      }
-      const tileLayer = globalThis.indexedDB
-        ? new CachedTileLayer(definition.tiles, tileOptions, definition.id, setCacheWarning)
-        : L.tileLayer(definition.tiles, tileOptions)
-      let failed = false
-      const onLoading = () => { failed = false }
-      const onTileError = () => {
-        if (tileLayersRef.current.get(definition.id)?.layer !== tileLayer) return
-        failed = true
-        failedTileLayersRef.current.set(definition.id, definition)
-        setErrorBanner((current) =>
-          current?.action === 'map-retry' ? current : bannerFor(definition),
-        )
-      }
-      const onLoad = () => {
-        if (failed || tileLayersRef.current.get(definition.id)?.layer !== tileLayer) return
-        clearFailure(definition.id)
-      }
-      tileLayer.on('loading', onLoading)
-      tileLayer.on('tileerror', onTileError)
-      tileLayer.on('load', onLoad)
-      const dispose = () => {
-        tileLayer.off('loading', onLoading)
-        tileLayer.off('tileerror', onTileError)
-        tileLayer.off('load', onLoad)
-        tileLayer.removeFrom(map)
-      }
-      tileLayersRef.current.set(definition.id, { layer: tileLayer, dispose })
-      tileLayer.addTo(map)
-    })
-  }, [layerId, overlayKey, mapLayerRetry, setErrorBanner, setCacheWarning])
 
   useEffect(() => {
     const map = mapRef.current
