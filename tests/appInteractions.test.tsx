@@ -1121,6 +1121,7 @@ describe('application interactions', () => {
 
   it('updates and clears the expanded elevation profile at chart edges', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const mapSpy = vi.spyOn(L, 'map')
     const route = {
       ...initialProject.routes[0],
       editable: false,
@@ -1143,10 +1144,18 @@ describe('application interactions', () => {
       })
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 42 })))
       expect(container.querySelector('.profile-selection')?.textContent).toContain('100 m Höhe')
+      const map = mapSpy.mock.results[0].value
+      let profileMarker: L.CircleMarker | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.CircleMarker && layer.options.radius === 8) profileMarker = layer
+      })
+      expect(profileMarker?.getLatLng().equals(L.latLng(52, 13))).toBe(true)
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 550 })))
       expect(container.querySelector('.profile-selection')?.textContent).toContain('200 m Höhe')
+      expect(profileMarker?.getLatLng().equals(L.latLng(53, 14))).toBe(true)
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 551 })))
       expect(container.querySelector('.profile-selection')).toBeNull()
+      expect(map.hasLayer(profileMarker!)).toBe(false)
       vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue({
         x: 100, y: 0, left: 100, top: 0, right: 1220, bottom: 190,
         width: 1120, height: 190, toJSON: () => ({}),
