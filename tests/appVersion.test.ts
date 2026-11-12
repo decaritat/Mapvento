@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAppVersion } from '../src/appVersion'
+import { formatAppVersion } from '../src/integrations/desktop/appVersion'
 
 describe('app version', () => {
   it('uses the release version when provided', () => {

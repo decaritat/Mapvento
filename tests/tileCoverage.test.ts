@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { initialProject } from '../src/project'
-import { projectCoverage } from '../src/tileCoverage'
+import { initialProject } from '../src/domain/project'
+import { projectCoverage } from '../src/integrations/map/tileCoverage'
 
 describe('project tile coverage', () => {
   it('distinguishes empty projects from incomplete and stale coverage', () => {

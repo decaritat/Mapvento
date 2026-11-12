@@ -4,7 +4,7 @@ import {
   getDisplayedRouteCoordinates,
   getRouteInsertionIndex,
   type Route,
-} from '../src/routeModel'
+} from '../src/domain/routeModel'
 import {
   getAutomaticDistanceMarkerStepKm,
   formatDuration,
@@ -16,7 +16,7 @@ import {
   profileDetailsAtIndex,
   routeMetrics,
   selectedRoutePointDetails,
-} from '../src/routeMetrics'
+} from '../src/domain/routeMetrics'
 
 function createRoute(type: Route['type'] = 'hiking'): Route {
   return {

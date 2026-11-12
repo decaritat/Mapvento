@@ -2,12 +2,12 @@ import { act, createRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import L from 'leaflet'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from '../src/App'
-import { initialProject } from '../src/project'
-import { DEFAULT_SETTINGS, distanceInUnit, durationInUnit, elevationInUnit, parseSettings, readSettings, SETTINGS_KEY } from '../src/settings'
-import { profileDetailsAtIndex, routeMetrics } from '../src/routeMetrics'
-import { RouteEditor } from '../src/RouteEditor'
-import { tileDiagnostics } from '../src/tileDiagnostics'
+import App from '../src/app/App'
+import { initialProject } from '../src/domain/project'
+import { DEFAULT_SETTINGS, distanceInUnit, durationInUnit, elevationInUnit, parseSettings, readSettings, SETTINGS_KEY } from '../src/domain/settings'
+import { profileDetailsAtIndex, routeMetrics } from '../src/domain/routeMetrics'
+import { RouteEditor } from '../src/components/routes/RouteEditor'
+import { tileDiagnostics } from '../src/integrations/map/tileDiagnostics'
 
 function button(root: ParentNode, text: string) {
   const found = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find((item) => item.textContent?.trim() === text)

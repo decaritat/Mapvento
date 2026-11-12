@@ -13,6 +13,8 @@ dist-ssr
 licenses
 src/generated
 *.local
+__pycache__/
+*.py[cod]
 
 # Task planning (local use only)
 NEXT-TASKS.md

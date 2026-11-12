@@ -1,7 +1,7 @@
 import { indexedDB, IDBCursor, IDBDatabase, IDBIndex, IDBObjectStore } from 'fake-indexeddb'
 import { Blob as NodeBlob } from 'node:buffer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TileCache, TileCacheStorageError, tileExpiry } from '../src/tileCache'
+import { TileCache, TileCacheStorageError, tileExpiry } from '../src/integrations/map/tileCache'
 
 const signal = () => new AbortController().signal
 let name = 0

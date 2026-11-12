@@ -3,10 +3,10 @@ import {
   ALL_PROVIDER_ATTRIBUTIONS,
   GEOCODING_PROVIDER,
   LEAFLET_INFO,
-} from '../src/providers'
-import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
-import { ROUTING_PROVIDER } from '../src/routing'
-import { openExternalUrl } from '../src/externalUrl'
+} from '../src/config/providers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/domain/mapLayers'
+import { ROUTING_PROVIDER } from '../src/domain/routing'
+import { openExternalUrl } from '../src/integrations/desktop/externalUrl'
 
 describe('provider definitions and attributions', () => {
   it('defines valid OpenStreetMap copyright URL', () => {
@@ -60,6 +60,12 @@ describe('provider definitions and attributions', () => {
   it('defines geocoding and library providers with valid URLs', () => {
     expect(GEOCODING_PROVIDER.label).toBe('Nominatim')
     expect(GEOCODING_PROVIDER.url).toContain('nominatim')
+    expect(GEOCODING_PROVIDER.endpoint).toBe('https://nominatim.openstreetmap.org/search')
+    expect(GEOCODING_PROVIDER.searchParameters).toEqual({
+      format: 'jsonv2',
+      limit: '5',
+      polygon_geojson: '1',
+    })
 
     expect(LEAFLET_INFO.label).toBe('Leaflet')
     expect(LEAFLET_INFO.url).toBe('https://leafletjs.com/')

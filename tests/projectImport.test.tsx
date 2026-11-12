@@ -1,8 +1,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from '../src/App'
-import { initialProject } from '../src/project'
+import App from '../src/app/App'
+import { initialProject } from '../src/domain/project'
 
 describe('project loading in the app', () => {
   afterEach(() => {

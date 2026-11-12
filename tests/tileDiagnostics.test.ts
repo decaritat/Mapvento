@@ -1,8 +1,8 @@
 import { indexedDB } from 'fake-indexeddb'
 import { Blob as NodeBlob } from 'node:buffer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TileCache } from '../src/tileCache'
-import { TileDiagnostics, parseTileLog, summarizeTileLog, tileDiagnostics } from '../src/tileDiagnostics'
+import { TileCache } from '../src/integrations/map/tileCache'
+import { TileDiagnostics, parseTileLog, summarizeTileLog, tileDiagnostics } from '../src/integrations/map/tileDiagnostics'
 
 const signal = () => new AbortController().signal
 let id = 0

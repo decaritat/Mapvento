@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { parseGpx, toGpx } from '../src/gpx'
-import { routeMetrics } from '../src/routeMetrics'
-import type { MapPoint, Route } from '../src/routeModel'
+import { parseGpx, toGpx } from '../src/domain/gpx'
+import { routeMetrics } from '../src/domain/routeMetrics'
+import type { MapPoint, Route } from '../src/domain/routeModel'
 
 const route: Route = {
   id: 'route-1',

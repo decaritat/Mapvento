@@ -11,8 +11,8 @@ vi.mock('@tauri-apps/api/core', async (importOriginal) => ({
 vi.mock('@tauri-apps/plugin-opener', () => ({ openUrl: desktop.openUrl }))
 vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ onCloseRequested: desktop.onCloseRequested }) }))
 
-import App from '../src/App'
-import { initialProject } from '../src/project'
+import App from '../src/app/App'
+import { initialProject } from '../src/domain/project'
 
 async function chooseExit(label: string) {
   const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="exit-title"]')!

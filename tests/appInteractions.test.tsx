@@ -2,9 +2,9 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import L from 'leaflet'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from '../src/App'
-import { initialProject } from '../src/project'
-import { tileCache } from '../src/tileCache'
+import App from '../src/app/App'
+import { initialProject } from '../src/domain/project'
+import { tileCache } from '../src/integrations/map/tileCache'
 
 function button(container: ParentNode, label: string) {
   const result = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
@@ -1019,6 +1019,8 @@ describe('application interactions', () => {
       expect(fetchMock).toHaveBeenCalledOnce()
       const result = container.querySelector<HTMLButtonElement>('.map-search-results button')!
       expect(result.textContent).toBe('Berlin')
+      await act(async () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+      expect(fetchMock).toHaveBeenCalledOnce()
       await act(async () => result.click())
       expect(container.querySelector('.search-result-pin')).not.toBeNull()
       await act(async () => button(container, 'Suche schließen').click())
@@ -1029,8 +1031,97 @@ describe('application interactions', () => {
     }
   })
 
+  it('shows a useful error when the geocoding provider returns malformed data', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ place_id: 1, display_name: 'Invalid place', lat: 'not-a-coordinate', lon: '13' }],
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, 'Orte suchen').click())
+      const input = container.querySelector<HTMLInputElement>('[aria-label="Suchbegriff"]')!
+      await changeText(input, 'Invalid place')
+      await act(async () => container.querySelector<HTMLFormElement>('.map-search-form')!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+
+      expect(container.textContent).toContain(
+        'Die Ortssuche ist fehlgeschlagen. Prüfe deine Internetverbindung und versuche es erneut.',
+      )
+      expect(container.querySelector('.map-search-results')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('cancels the active search when its query changes and ignores its late result', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    let resolveResponse!: (response: Response) => void
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init: RequestInit) => {
+      return new Promise<Response>((resolve) => {
+        resolveResponse = resolve
+        expect(init.signal?.aborted).toBe(false)
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, 'Orte suchen').click())
+      const input = container.querySelector<HTMLInputElement>('[aria-label="Suchbegriff"]')!
+      await changeText(input, 'First query')
+      await act(async () => container.querySelector<HTMLFormElement>('.map-search-form')!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+      const signal = fetchMock.mock.calls[0][1].signal
+      expect(signal?.aborted).toBe(false)
+
+      await changeText(input, 'Updated query')
+      expect(signal?.aborted).toBe(true)
+      await act(async () => resolveResponse({
+        ok: true,
+        json: async () => [{ place_id: 1, display_name: 'Stale result', lat: '52.5', lon: '13.4' }],
+      } as Response))
+
+      expect(container.querySelector('.map-search-results')).toBeNull()
+      expect(container.textContent).not.toContain('Stale result')
+      expect(input.value).toBe('Updated query')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('aborts the active browser request when the application unmounts', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init: RequestInit) =>
+      new Promise<Response>(() => {}),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    await act(async () => root.render(<App />))
+    await act(async () => button(container, 'Orte suchen').click())
+    const input = container.querySelector<HTMLInputElement>('[aria-label="Suchbegriff"]')!
+    await changeText(input, 'Unmount test')
+    await act(async () => container.querySelector<HTMLFormElement>('.map-search-form')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+    const signal = fetchMock.mock.calls[0][1].signal
+
+    await act(async () => root.unmount())
+    expect(signal?.aborted).toBe(true)
+    container.remove()
+  })
+
   it('updates and clears the expanded elevation profile at chart edges', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const mapSpy = vi.spyOn(L, 'map')
     const route = {
       ...initialProject.routes[0],
       editable: false,
@@ -1053,10 +1144,18 @@ describe('application interactions', () => {
       })
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 42 })))
       expect(container.querySelector('.profile-selection')?.textContent).toContain('100 m Höhe')
+      const map = mapSpy.mock.results[0].value
+      let profileMarker: L.CircleMarker | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.CircleMarker && layer.options.radius === 8) profileMarker = layer
+      })
+      expect(profileMarker?.getLatLng().equals(L.latLng(52, 13))).toBe(true)
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 550 })))
       expect(container.querySelector('.profile-selection')?.textContent).toContain('200 m Höhe')
+      expect(profileMarker?.getLatLng().equals(L.latLng(53, 14))).toBe(true)
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 551 })))
       expect(container.querySelector('.profile-selection')).toBeNull()
+      expect(map.hasLayer(profileMarker!)).toBe(false)
       vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue({
         x: 100, y: 0, left: 100, top: 0, right: 1220, bottom: 190,
         width: 1120, height: 190, toJSON: () => ({}),

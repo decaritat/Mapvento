@@ -3,8 +3,8 @@ import {
   getDisplayedRouteElevations,
   syntheticElevationProvider,
   type ElevationProvider,
-} from '../src/elevation'
-import type { Route } from '../src/routeModel'
+} from '../src/domain/elevation'
+import type { Route } from '../src/domain/routeModel'
 
 const route: Route = {
   id: 'route-1',
