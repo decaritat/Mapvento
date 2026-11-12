@@ -8,6 +8,8 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-12
+
 ### Added
 
 - Cross-platform desktop route-planning application built with Tauri, React,
