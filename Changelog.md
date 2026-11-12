@@ -8,170 +8,20 @@ once released versions are maintained.
 
 ## [Unreleased]
 
-### Changed
-
-- Disabled text selection and image dragging in the application header.
-
 ### Added
 
-- Established the Mapvento identity across the application, desktop package,
-  project filenames, persisted data, diagnostics, documentation, and releases.
-  Data stored under the previous product identity is not migrated.
-
-- Added an application settings dialog with independently resettable start
-  map, overlay and fixed-view defaults and distance, elevation and duration
-  units with example-based duration formats, a compact grouped start position
-  whose fields can be filled from the current map view, compact
-  label-and-value rows, category descriptions and a visually separated reset
-  action. Unit choices update the map scale and distance markers, route
-  statistics, and elevation profile without changing stored route data.
-
-- Added discreet route-node markers for editable routes: compact intermediate
-  points that enlarge on hover or selection and show their number inside,
-  smaller distinct start and checkered finish symbols, visible keyboard focus,
-  subdued inactive-route markers, and a small black cursor dot over the active
-  editable route to indicate draggable point insertion. Route-point focus clears
-  when the map is moved, a point is added, Escape is pressed, another tool is
-  selected, or the focused point is clicked again. Read-only imports remain
-  unchanged.
-
-- Added smoothing (50 m moving average) and a 3 m threshold to ascent and
-  descent calculation so noisy elevation data no longer inflates route
-  statistics.
-
-- Added a route-calculation loading indicator, explanatory tooltips to metric
-  cards and profile actions. Added direct context-sensitive attribution links
-  for map tile providers (OpenStreetMap Carto, OpenTopoMap and Waymarked Trails)
-  in the layer tool, routing provider (BRouter) in route properties, and
-  geocoding provider (Nominatim) in place search. Preserved visible Leaflet
-  attribution on the map with system browser link opening across desktop and web.
-- Added an About dialog (Info in the header menu) showing the Mapvento version, links to
-  the GitHub project, documentation, changelog, and license, data and service
-  attributions (OpenStreetMap, OpenTopoMap, Nominatim, BRouter, Leaflet), and a
-  filterable list of npm and Rust third-party components with their license
-  texts. External links open exactly once in the system browser in the desktop app. The
-  version comes from the Git tag in release builds and is marked `-dev`
-  otherwise.
-- Added a map toolbar layer control for OpenStreetMap Carto and OpenTopoMap
-  base maps and independently selectable Waymarked Trails hiking and cycling
-  overlays, with a close button and a general map-overlay heading. Overlay
-  selections persist in project files and unavailable overlays are reported;
-  tile errors identify the affected layer and allow a
-  targeted retry. A keyboard-accessible header menu groups project creation,
-  opening and saving, settings and cache management, Info, and desktop exit
-  with subtle separators. Creating a
-  project or closing the desktop application offers to save changes first and
-  preserves the current project or window if saving is cancelled, fails, or
-  the project changes while saving. The exit dialog offers save, discard, and
-  cancel choices and opens the file dialog only after save is selected. A separate "Projekt speichern unter" action
-  chooses a new project destination for later saves, and Strg+S saves the
-  current project. File dialogs use Mapvento's native commands in
-  the desktop app; environments that deny them report the limitation instead
-  of claiming a download succeeded. The cache dialog groups active and inactive layers by
-  provider with usage, freshness, available project coverage details and actions.
-  The desktop webview identifies itself as Mapvento, and
-  provider usage and attribution are documented. Visited base and overlay
-  tiles are stored in a bounded persistent cache with indexed least-recently-used
-  eviction, transactional size accounting and throttled access-time updates
-  for cache hits, provider-specific
-  refresh and deletion, expiry and project-rectangle coverage indicators; an
-  exportable cache diagnostic can be enabled in the development settings and
-  records cache outcomes, fetch calls and IndexedDB timings for browser/desktop
-  comparison. Disabling it stops recording and discards its in-memory log.
-  No offline area downloads are offered.
-- Added a native file dialog for GPX export and project saving in the desktop
-  app. Browsers without a file picker use a normal download.
-- Added a CI workflow that runs lint, unit tests, the web build, and a Tauri
-  build without installer on Linux and Windows for every pull request and push
-  to `main`.
-- Added a license workflow that generates `THIRD-PARTY-NOTICES.md` and
-  CycloneDX SBOMs for npm and Rust dependencies, fails on unknown or
-  disallowed licenses, and ships the notices with installers and releases.
-  The Rust package metadata identifies the canonical Mapvento repository.
-- Added a tag-triggered release workflow that builds a Windows NSIS installer
-  and a Linux AppImage on Ubuntu 24.04 with WebKitGTK 2.52.6 or newer, and
-  takes the version from the tag. Linux desktop CI uses the same Ubuntu
-  version; older distributions such as Ubuntu 22.04 are not guaranteed to run
-  the AppImage. Final
-  `vX.Y.Z` tags create a draft GitHub Release whose notes come from the matching
-  `Changelog.md` section; any `vX.Y.Z-<suffix>` tag is published to GitHub
-  Packages only.
-- Added an editable project title and description with wrapped long titles,
-  wrapping for long route names, plus accessible route-card actions for
-  properties, GPX export, and confirmed route removal.
-- Extracted route geometry, metrics, elevation-profile calculations, GPX handling,
-  elevation-provider fallback, and project validation into independently testable
-  modules with Vitest unit coverage. Opening a project validates the complete
-  current-version format, rejects invalid files, and safely falls back for invalid
-  local storage. Map rendering, the layer selector, and project restoration share
-  one layer registry; unavailable saved layer IDs fall back to OpenStreetMap Carto.
-  Separated Leaflet integration, file operations, route and point editors,
-  route list, toolbar, header, elevation profile and their styles from the
-  application coordinator. Added network-independent React and Leaflet
-  interaction coverage for project and GPX imports, routing retry, route and
-  POI edits, and dialog keyboard and focus behavior.
-- Restricted project title and description fields to edit mode, hid the project
-  description counter outside that mode, and auto-sized the description field
-  without exceeding a quarter of the sidebar.
-- Made project and route descriptions editable in bounded, 180-character drafts
-  with explicit apply/cancel actions; route properties now open in a separate
-  panel beside the route list.
-- Added GPX export to editable routes' action menus and a plus-button flow for
-  creating a route or importing GPX. GPX imports are always read-only, retain
-  that state in project files, allow color and distance-marker changes, hide
-  route points, display any GPX route type as read-only, import GPX waypoints as
-  read-only POIs, cannot be re-exported as GPX, and use available timestamps and
-  elevations for route statistics.
-- Use elevation samples returned by BRouter and GPX files for route metrics,
-  profiles, and GPX exports.
-- Added the map tool selection into a Leaflet-style control rail under the zoom
-  buttons. The rail now provides read-only map panning, route editing,
-  point/POI placement, and fitting the active route to the map.
-- Added mode-specific map cursors and protected route nodes from editing,
-  dragging, insertion, and deletion while read-only panning is active.
-- Added routing provider BRouter. Hiking routes use `hiking-beta` and cycling
-  routes use `trekking`; BRouter GeoJSON geometry is normalized before it is 
-  displayed. Each route has an independent cancellable routing request, with
-  a visible loading state, stale-result protection, and targeted retry; editing
-  route properties does not interrupt or overwrite an active calculation.
-- Added consistent error-banner handling for unavailable map layers and
-  routing failures, with provider-specific BRouter messages, retry actions,
-  a close button, and the existing direct route fallback.
-- Added a unified Mapvento route-and-mountain app icon for the application
-  header, browser favicon, and Tauri platform icons.
-- Added optional route outlines and zoom-aware distance markers with compact
-  map labels and configurable manual spacing persisted in project files.
-- New projects now start with one empty editable route ready for route-point entry.
-- Added a manually submitted place search beside the map toolbar, with an
-  attributed result list, zoom-to-area behavior, temporary area outlines, and
-  pins for point results.
-- Synchronized the expanded elevation profile with the active route by showing
-  a route-colored, white position marker during profile hover and ignoring
-  invalid chart-edge positions.
-- Unified route statistics and elevation-profile presentation with a compact
-  collapsed view, an expanded interactive view, consistent metric ordering,
-  distance-based axis scaling, a clickable mini-profile opener, an in-panel
-  close button, and a full-width expanded profile aligned with the statistics.
-- Support for separate hiking and cycling routes with a name, description,
-  independent preset/custom colors, and route type.
-- Routing through the configured routing provider with a direct fallback.
-- Route waypoint editing, including selection, deletion, and insertion with a
-  live drag preview that keeps the original routed segment's neighboring points
-  fixed throughout the drag. Route clicks insert one point without triggering a
-  second map click, and dragging a route does not drag map or overlay tiles.
-- Elevation profile and route statistics for the active route.
-- GPX export for editable routes, and saving and opening project files.
-- Interactive map points and POIs with symbols from OpenStreetMap Carto (CC0)
-  plus a few custom ones, a symbol dropdown that overlays the editor,
-  labeled white map markers anchored exactly at their coordinates,
-  side-positioned property editing, editable titles and descriptions,
-  deletion, and a zoom-dependent map scale.
-- Tauri desktop shell based on React, TypeScript, and Vite.
-
-<!--
-Categories from Keep a Changelog:
-Added, Changed, Deprecated, Removed, Fixed, Security.
-
-Add new changes only under [Unreleased]. When a release is published, assign
-the changes to a version and add the release date.
--->
+- Cross-platform desktop route-planning application built with Tauri, React,
+  TypeScript, and Leaflet.
+- Interactive hiking and cycling route planning with BRouter, editable
+  waypoints, route properties, and a direct-routing fallback.
+- Elevation profiles and route statistics based on available routing and GPX
+  elevation data.
+- Map layers for OpenStreetMap Carto and OpenTopoMap, with hiking and cycling
+  overlays, visible attribution, and a bounded persistent tile cache.
+- Project and GPX import and export, including validated project data and
+  read-only GPX imports.
+- Map points and POIs with editable properties, plus place search.
+- Application settings, project and route editing, and an About dialog with
+  provider and third-party license information.
+- Automated CI, dependency license checks, and release workflows for Linux and
+  Windows.
