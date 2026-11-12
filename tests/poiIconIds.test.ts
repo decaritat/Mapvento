@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultPoiIcon, isPoiIconId, POI_ICON_IDS } from '../src/poiIconIds'
+import { defaultPoiIcon, isPoiIconId, POI_ICON_IDS } from '../src/domain/poiIconIds'
 
 describe('POI icon identities', () => {
   it('validates every registered ID and keeps the default ID valid', () => {

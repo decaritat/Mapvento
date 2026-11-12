@@ -104,7 +104,7 @@ async fn search_places(query: String) -> Result<String, String> {
     return Err("Search query must contain between 1 and 200 characters".to_string());
   }
 
-  let provider: GeocodingProvider = serde_json::from_str(include_str!("../../src/geocodingProvider.json"))
+  let provider: GeocodingProvider = serde_json::from_str(include_str!("../../src/features/geocoding/geocodingProvider.json"))
     .map_err(|error| format!("Could not load geocoding provider configuration: {error}"))?;
 
   reqwest::Client::builder()

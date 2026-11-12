@@ -3,7 +3,7 @@ import {
   requestRouteGeometry,
   RoutingError,
   routingProfileLabel,
-} from '../src/routing'
+} from '../src/domain/routing'
 
 afterEach(() => {
   vi.unstubAllGlobals()

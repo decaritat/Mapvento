@@ -1,9 +1,9 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TileDiagnosticsControl } from '../src/TileDiagnosticsControl'
-import { tileDiagnostics } from '../src/tileDiagnostics'
-import * as projectFiles from '../src/useProjectFiles'
+import { TileDiagnosticsControl } from '../src/components/map/cache/TileDiagnosticsControl'
+import { tileDiagnostics } from '../src/integrations/map/tileDiagnostics'
+import * as projectFiles from '../src/features/project-files/projectFileAdapter'
 
 describe('tile diagnostic controls', () => {
   afterEach(() => {

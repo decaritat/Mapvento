@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GEOCODING_PROVIDER } from '../src/providers'
+import { GEOCODING_PROVIDER } from '../src/config/providers'
 
 const { invokeMock, isTauriMock } = vi.hoisted(() => ({
   invokeMock: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   isTauri: isTauriMock,
 }))
 
-import { parseGeocodingResponse, searchPlaces } from '../src/geocoding'
+import { parseGeocodingResponse, searchPlaces } from '../src/features/geocoding/geocoding'
 
 const result = {
   place_id: 1,

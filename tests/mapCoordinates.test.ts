@@ -1,6 +1,6 @@
 import { latLng } from 'leaflet'
 import { describe, expect, it } from 'vitest'
-import { projectCoordinate } from '../src/mapCoordinates'
+import { projectCoordinate } from '../src/domain/mapCoordinates'
 
 describe('project map coordinates', () => {
   it.each([

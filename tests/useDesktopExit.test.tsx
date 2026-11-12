@@ -17,8 +17,8 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({ onCloseRequested: desktop.onCloseRequested }),
 }))
 
-import { useDesktopExit } from '../src/useDesktopExit'
-import { initialProject } from '../src/project'
+import { useDesktopExit } from '../src/features/desktop-exit/useDesktopExit'
+import { initialProject } from '../src/domain/project'
 
 function Harness({ confirmBeforeExit }: {
   confirmBeforeExit: Parameters<typeof useDesktopExit>[0]['confirmBeforeExit']

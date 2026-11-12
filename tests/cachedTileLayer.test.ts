@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import { describe, expect, it, vi } from 'vitest'
-import { CachedTileLayer } from '../src/cachedTileLayer'
-import { tileCache, TileCacheStorageError } from '../src/tileCache'
+import { CachedTileLayer } from '../src/integrations/map/cachedTileLayer'
+import { tileCache, TileCacheStorageError } from '../src/integrations/map/tileCache'
 
 const coords = Object.assign(L.point(3, 4), { z: 5 })
 

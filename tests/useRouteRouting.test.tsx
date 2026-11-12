@@ -1,9 +1,9 @@
 import { act, StrictMode, useLayoutEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { initialProject } from '../src/project'
-import { getRouteCoordinates, type Coordinate, type ProjectFile, type Route } from '../src/routeModel'
-import { useRouteRouting } from '../src/useRouteRouting'
+import { initialProject } from '../src/domain/project'
+import { getRouteCoordinates, type Coordinate, type ProjectFile, type Route } from '../src/domain/routeModel'
+import { useRouteRouting } from '../src/features/route-routing/useRouteRouting'
 
 type Request = {
   signal: AbortSignal

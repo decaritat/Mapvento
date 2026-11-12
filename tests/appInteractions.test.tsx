@@ -2,9 +2,9 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import L from 'leaflet'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import App from '../src/App'
-import { initialProject } from '../src/project'
-import { tileCache } from '../src/tileCache'
+import App from '../src/app/App'
+import { initialProject } from '../src/domain/project'
+import { tileCache } from '../src/integrations/map/tileCache'
 
 function button(container: ParentNode, label: string) {
   const result = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)

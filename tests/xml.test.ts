@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { escapeXml } from '../src/xml'
+import { escapeXml } from '../src/domain/xml'
 
 describe('XML utilities', () => {
   it('escapes XML special characters without changing other text', () => {

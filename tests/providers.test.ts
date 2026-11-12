@@ -3,10 +3,10 @@ import {
   ALL_PROVIDER_ATTRIBUTIONS,
   GEOCODING_PROVIDER,
   LEAFLET_INFO,
-} from '../src/providers'
-import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/mapLayers'
-import { ROUTING_PROVIDER } from '../src/routing'
-import { openExternalUrl } from '../src/externalUrl'
+} from '../src/config/providers'
+import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId, layers, overlayLayers, OSM_COPYRIGHT_URL } from '../src/domain/mapLayers'
+import { ROUTING_PROVIDER } from '../src/domain/routing'
+import { openExternalUrl } from '../src/integrations/desktop/externalUrl'
 
 describe('provider definitions and attributions', () => {
   it('defines valid OpenStreetMap copyright URL', () => {

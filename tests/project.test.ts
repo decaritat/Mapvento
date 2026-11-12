@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { parseGpx } from '../src/gpx'
-import { DEFAULT_LAYER_ID, layers, overlayLayers } from '../src/mapLayers'
-import { initialProject, normalizeProject, readInitialProject } from '../src/project'
-import { POI_ICON_IDS } from '../src/poiIconIds'
+import { parseGpx } from '../src/domain/gpx'
+import { DEFAULT_LAYER_ID, layers, overlayLayers } from '../src/domain/mapLayers'
+import { initialProject, normalizeProject, readInitialProject } from '../src/domain/project'
+import { POI_ICON_IDS } from '../src/domain/poiIconIds'
 
 const route = {
   ...initialProject.routes[0],

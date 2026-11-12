@@ -1,7 +1,7 @@
 import { act, createRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ProjectHeader } from '../src/ProjectHeader'
+import { ProjectHeader } from '../src/components/project/ProjectHeader'
 
 describe('header menu', () => {
   afterEach(() => {

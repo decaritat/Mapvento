@@ -1,9 +1,9 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TileCacheControl } from '../src/TileCacheControl'
-import { tileCache } from '../src/tileCache'
-import { initialProject } from '../src/project'
+import { TileCacheControl } from '../src/components/map/cache/TileCacheControl'
+import { tileCache } from '../src/integrations/map/tileCache'
+import { initialProject } from '../src/domain/project'
 
 describe('tile cache controls', () => {
   afterEach(() => {

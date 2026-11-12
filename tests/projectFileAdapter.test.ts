@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { invoke } from '@tauri-apps/api/core'
-import { openProjectFile, readTextFile, saveProjectFile, saveTextFile } from '../src/projectFileAdapter'
+import { openProjectFile, readTextFile, saveProjectFile, saveTextFile } from '../src/features/project-files/projectFileAdapter'
 
 const tauriState = vi.hoisted(() => ({ active: false }))
 
