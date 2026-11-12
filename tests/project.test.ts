@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { parseGpx } from '../src/gpx'
 import { DEFAULT_LAYER_ID, layers, overlayLayers } from '../src/mapLayers'
 import { initialProject, normalizeProject, readInitialProject } from '../src/project'
+import { POI_ICON_IDS } from '../src/poiIconIds'
 
 const route = {
   ...initialProject.routes[0],
@@ -60,6 +61,17 @@ describe('project validation', () => {
       }],
     }
     expect(roundTrip(normalizeProject(roundTrip(saved)))).toEqual(saved)
+  })
+
+  it('preserves every registered POI icon ID and rejects unknown IDs', () => {
+    const iconIds = Object.values(POI_ICON_IDS)
+    const points = iconIds.map((icon, index) => ({ ...point, id: `point-${index}`, icon }))
+
+    expect(normalizeProject({ ...project, points }).points.map(({ icon }) => icon)).toEqual(iconIds)
+    expect(() => normalizeProject({
+      ...project,
+      points: [{ ...point, icon: 'unrecognized' }],
+    })).toThrow('enthält ein unbekanntes POI-Symbol')
   })
 
   it.each(layers.filter((layer) => !layer.requiresKey))('preserves the registered layer $id', ({ id }) => {

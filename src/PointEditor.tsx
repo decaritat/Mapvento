@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { getPoiIcon, POI_ICON_CATEGORIES, poiIconSvg, type PoiIconId } from './poiIcons'
+import { getPoiIcon, POI_ICON_CATEGORIES, poiIconSvg } from './poiIcons'
 import type { MapPoint } from './routeModel'
 
 export function PointEditor({
@@ -87,7 +87,7 @@ export function PointEditor({
                         aria-label={icon.label}
                         aria-pressed={point.icon === icon.id}
                         onClick={() => {
-                          updatePointDraft({ icon: icon.id as PoiIconId })
+                          updatePointDraft({ icon: icon.id })
                           setPoiIconPickerOpen(false)
                         }}
                       >

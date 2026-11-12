@@ -10,7 +10,7 @@ import {
   type Route,
   type RouteNode,
 } from './routeModel'
-import { defaultPoiIcon } from './poiIcons'
+import { defaultPoiIcon } from './poiIconIds'
 import { escapeXml } from './xml'
 
 export type ParsedGpx = {

@@ -1,5 +1,5 @@
 import { getDisplayedRouteCoordinates, type Coordinate, type MapPoint, type ProjectFile, type Route, type RouteNode } from './routeModel'
-import { isPoiIconId } from './poiIcons'
+import { isPoiIconId } from './poiIconIds'
 import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId } from './mapLayers'
 
 const initialRoute: Route = {

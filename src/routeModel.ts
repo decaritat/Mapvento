@@ -1,4 +1,4 @@
-import type { PoiIconId } from './poiIcons'
+import type { PoiIconId } from './poiIconIds'
 
 export type RouteType = 'hiking' | 'cycling'
 export type DistanceMarkerMode = 'auto' | 'manual'
