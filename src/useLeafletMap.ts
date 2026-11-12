@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import L from 'leaflet'
-import type { GeoJsonObject } from 'geojson'
 import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, ToolMode } from './appTypes'
 import { escapeXml } from './xml'
 import { projectCoordinate } from './mapCoordinates'
@@ -760,7 +759,7 @@ export function useLeafletMap({
     searchLayerRef.current?.remove()
     searchLayerRef.current = null
     if (result.geojson && ['Polygon', 'MultiPolygon', 'LineString', 'MultiLineString'].includes(result.geojson.type)) {
-      const layer = L.geoJSON(result.geojson as GeoJsonObject, {
+      const layer = L.geoJSON(result.geojson, {
         style: {
           color: '#e04455',
           weight: 4,

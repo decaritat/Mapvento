@@ -1,0 +1,11 @@
+{
+  "id": "nominatim",
+  "label": "Nominatim",
+  "url": "https://operations.osmfoundation.org/policies/nominatim/",
+  "endpoint": "https://nominatim.openstreetmap.org/search",
+  "searchParameters": {
+    "format": "jsonv2",
+    "limit": "5",
+    "polygon_geojson": "1"
+  }
+}

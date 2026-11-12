@@ -63,7 +63,7 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
   searchPlaces: (event: FormEvent<HTMLFormElement>) => void
   searchInput: RefObject<HTMLInputElement | null>
   searchQuery: string
-  setSearchQuery: Dispatch<SetStateAction<string>>
+  setSearchQuery: (query: string) => void
   searchLoading: boolean
   searchMessage: string
   searchResults: PlaceSearchResult[]

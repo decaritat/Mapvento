@@ -18,5 +18,6 @@ export type PlaceSearchResult = {
   lat: string
   lon: string
   boundingbox?: [string, string, string, string]
-  geojson?: { type: string; coordinates: unknown }
+  geojson?: Geometry
 }
+import type { Geometry } from 'geojson'

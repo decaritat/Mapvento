@@ -1,11 +1,8 @@
+import geocodingProvider from './geocodingProvider.json'
 import { ROUTING_PROVIDER } from './routing'
 import { OSM_COPYRIGHT_URL } from './mapLayers'
 
-export const GEOCODING_PROVIDER = {
-  id: 'nominatim',
-  label: 'Nominatim',
-  url: 'https://operations.osmfoundation.org/policies/nominatim/',
-} as const
+export const GEOCODING_PROVIDER = geocodingProvider
 
 export const LEAFLET_INFO = {
   id: 'leaflet',

@@ -60,6 +60,12 @@ describe('provider definitions and attributions', () => {
   it('defines geocoding and library providers with valid URLs', () => {
     expect(GEOCODING_PROVIDER.label).toBe('Nominatim')
     expect(GEOCODING_PROVIDER.url).toContain('nominatim')
+    expect(GEOCODING_PROVIDER.endpoint).toBe('https://nominatim.openstreetmap.org/search')
+    expect(GEOCODING_PROVIDER.searchParameters).toEqual({
+      format: 'jsonv2',
+      limit: '5',
+      polygon_geojson: '1',
+    })
 
     expect(LEAFLET_INFO.label).toBe('Leaflet')
     expect(LEAFLET_INFO.url).toBe('https://leafletjs.com/')

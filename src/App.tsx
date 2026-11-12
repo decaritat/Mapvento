@@ -5,7 +5,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
 import { invoke, isTauri } from '@tauri-apps/api/core'
@@ -45,8 +44,9 @@ import { readInitialProject } from './project'
 import { useLeafletMap } from './useLeafletMap'
 import { useProjectFiles } from './useProjectFiles'
 import { uid } from './uid'
-import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, ToolMode } from './appTypes'
+import type { ErrorBanner, NodeContextMenu, NodeSelection, ToolMode } from './appTypes'
 import { useRouteRouting } from './useRouteRouting'
+import { usePlaceSearch } from './usePlaceSearch'
 import {
   getPoiIcon,
 } from './poiIcons'
@@ -84,12 +84,7 @@ function StatusBanner({
   )
 }
 
-const GEOCODING_ENDPOINT = 'https://nominatim.openstreetmap.org/search'
-
 function App() {
-  const searchRequestRef = useRef<AbortController | null>(null)
-  const lastSearchAtRef = useRef(0)
-  const searchCacheRef = useRef(new Map<string, PlaceSearchResult[]>())
   const [initial] = useState(() => {
     let warning = ''
     const project = readInitialProject(localStorage, (message) => { warning = message })
@@ -122,11 +117,6 @@ function App() {
   const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [cacheOpen, setCacheOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<PlaceSearchResult[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [searchMessage, setSearchMessage] = useState('')
   const [contextMenu, setContextMenu] = useState<NodeContextMenu | null>(null)
   const [layerId, setLayerId] = useState(initial.project.mapLayerId)
   const [openRouteMenu, setOpenRouteMenu] = useState<{
@@ -153,17 +143,12 @@ function App() {
   const importInput = useRef<HTMLInputElement>(null)
   const routeCreationOptionRef = useRef<HTMLInputElement>(null)
   const projectInput = useRef<HTMLInputElement>(null)
-  const searchInput = useRef<HTMLInputElement>(null)
   const projectDescriptionInput = useRef<HTMLTextAreaElement>(null)
   const routeEditorRef = useRef<HTMLElement>(null)
   const routeMenuRef = useRef<HTMLDivElement>(null)
   const routeMenuPopoverRef = useRef<HTMLDivElement>(null)
   const routeMenuButtonRef = useRef<HTMLButtonElement>(null)
   const routeCardRefs = useRef(new Map<string, HTMLDivElement>())
-
-  useEffect(() => {
-    if (searchOpen) searchInput.current?.focus()
-  }, [searchOpen])
 
   useLayoutEffect(() => {
     const textarea = projectDescriptionInput.current
@@ -350,14 +335,30 @@ function App() {
     setNotice('Neuer Routenpunkt gesetzt; die Route wird neu berechnet.')
   }, [project.routes, toolMode])
 
+  const clearSearchLayerRef = useRef<() => void>(() => {})
+  const placeSearch = usePlaceSearch(() => clearSearchLayerRef.current())
+  const {
+    searchOpen,
+    setSearchOpen,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+    searchMessage,
+    setSearchMessage,
+    searchInput,
+    closeSearch,
+    searchPlaces,
+  } = placeSearch
   const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, getMapView, mapZoom } = useLeafletMap({
     project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
     start: initial.settings.start, units: settings.units,
     mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode, setContextMenu,
     setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor, updateNode, insertNodeAtCoordinate,
   })
-
-  useEffect(() => () => searchRequestRef.current?.abort(), [])
+  useEffect(() => {
+    clearSearchLayerRef.current = clearSearchLayer
+  }, [clearSearchLayer])
 
   function focusRoute(route: Route) {
     setProject((current) => ({ ...current, activeRouteId: route.id }))
@@ -739,77 +740,6 @@ function App() {
 
   function retryMapLayer(failedLayerId: string) {
     setMapLayerRetry((current) => ({ layerId: failedLayerId, sequence: (current?.sequence ?? 0) + 1 }))
-  }
-
-  async function searchPlaces(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const query = searchQuery.trim()
-    if (!query) {
-      setSearchMessage('Gib einen Ortsnamen ein.')
-      return
-    }
-
-    const cacheKey = query.toLocaleLowerCase()
-    const cachedResults = searchCacheRef.current.get(cacheKey)
-    if (cachedResults) {
-      setSearchResults(cachedResults)
-      setSearchMessage(cachedResults.length ? '' : 'Keine passenden Orte gefunden.')
-      return
-    }
-
-    const wait = 1000 - (Date.now() - lastSearchAtRef.current)
-    if (wait > 0) {
-      setSearchMessage('Bitte warte einen Moment, bevor du erneut suchst.')
-      return
-    }
-
-    searchRequestRef.current?.abort()
-    const controller = new AbortController()
-    searchRequestRef.current = controller
-    lastSearchAtRef.current = Date.now()
-    setSearchLoading(true)
-    setSearchMessage('')
-    setSearchResults([])
-    clearSearchLayer()
-
-    try {
-      const url = new URL(GEOCODING_ENDPOINT)
-      url.search = new URLSearchParams({
-        q: query,
-        format: 'jsonv2',
-        limit: '5',
-        polygon_geojson: '1',
-      }).toString()
-      let payload: unknown
-      if (isTauri()) {
-        payload = JSON.parse(await invoke<string>('search_places', { query }))
-      } else {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          referrerPolicy: 'strict-origin-when-cross-origin',
-        })
-        if (!response.ok) throw new Error(`Geocoding request failed: ${response.status}`)
-        payload = await response.json()
-      }
-      if (!Array.isArray(payload)) throw new Error('Invalid geocoding response')
-      const results = payload as PlaceSearchResult[]
-      searchCacheRef.current.set(cacheKey, results)
-      setSearchResults(results)
-      setSearchMessage(results.length ? '' : 'Keine passenden Orte gefunden.')
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return
-      setSearchMessage('Die Ortssuche ist fehlgeschlagen. Prüfe deine Internetverbindung und versuche es erneut.')
-    } finally {
-      if (searchRequestRef.current === controller) {
-        searchRequestRef.current = null
-        setSearchLoading(false)
-      }
-    }
-  }
-
-  function closeSearch() {
-    setSearchOpen(false)
-    clearSearchLayer()
   }
 
   function saveSettings(next: Settings): string | null {
