@@ -270,9 +270,13 @@ builds require them.
 ## Releases
 
 Pushing a tag starting with `v` runs `.github/workflows/release.yml`. It
-builds a Windows NSIS installer (`.exe`) and a Linux AppImage (on Ubuntu 22.04
-for broad glibc compatibility). The tag is the single source of truth for the
-version: the workflow writes it into `package.json` and `src-tauri/Cargo.toml`
+builds a Windows NSIS installer (`.exe`) and a Linux AppImage on Ubuntu 24.04.
+The AppImage requires a compatible glibc; Ubuntu 22.04 and similarly old
+distributions are not guaranteed to run it. The release build requires
+WebKitGTK 2.52.6 or newer to avoid the known IndexedDB incompatibility with
+databases created by WebKitGTK 2.52.6. A later system WebKit version can still
+introduce a newer incompatible database format. The tag is the single source
+of truth for the version: the workflow writes it into `package.json` and `src-tauri/Cargo.toml`
 and the bundle configuration during the build, so the versions committed in the
 repository are placeholders and need no manual update. Development builds show
 `-dev` after the version in the About dialog.
