@@ -11,6 +11,7 @@ import {
   type RouteNode,
 } from './routeModel'
 import { defaultPoiIcon } from './poiIcons'
+import { escapeXml } from './xml'
 
 export type ParsedGpx = {
   route: Route
@@ -20,15 +21,6 @@ export type ParsedGpx = {
 
 function uid(prefix: string) {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
-}
-
-export function escapeXml(value: string) {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
 }
 
 export function toGpx(

@@ -1,5 +1,5 @@
-export type RouteType = 'hiking' | 'cycling'
-export type Coordinate = [number, number]
+import type { Coordinate, RouteType } from './routeModel'
+
 export type RoutingProfile = 'trekking' | 'hiking-beta'
 export type RouteGeometry = {
   coordinates: Coordinate[]

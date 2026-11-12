@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import L from 'leaflet'
 import type { GeoJsonObject } from 'geojson'
 import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, ToolMode } from './appTypes'
-import { escapeXml } from './gpx'
+import { escapeXml } from './xml'
 import { projectCoordinate } from './mapCoordinates'
 import { defaultPoiIcon, getPoiIcon, poiIconSvg } from './poiIcons'
 import { layers, overlayLayers, type LayerDefinition } from './mapLayers'
