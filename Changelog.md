@@ -89,7 +89,10 @@ once released versions are maintained.
   disallowed licenses, and ships the notices with installers and releases.
   The Rust package metadata identifies the canonical Mapvento repository.
 - Added a tag-triggered release workflow that builds a Windows NSIS installer
-  and a Linux AppImage and takes the version from the tag. Final
+  and a Linux AppImage on Ubuntu 24.04 with WebKitGTK 2.52.6 or newer, and
+  takes the version from the tag. Linux desktop CI uses the same Ubuntu
+  version; older distributions such as Ubuntu 22.04 are not guaranteed to run
+  the AppImage. Final
   `vX.Y.Z` tags create a draft GitHub Release whose notes come from the matching
   `Changelog.md` section; any `vX.Y.Z-<suffix>` tag is published to GitHub
   Packages only.
