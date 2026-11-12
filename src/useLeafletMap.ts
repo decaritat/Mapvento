@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import L from 'leaflet'
 import type { ErrorBanner, NodeContextMenu, NodeSelection, PlaceSearchResult, ToolMode } from './appTypes'
-import { projectCoordinate } from './mapCoordinates'
-import { defaultPoiIcon } from './poiIconIds'
-import { getDisplayedRouteCoordinates, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route, type RouteNode } from './routeModel'
+import { getDisplayedRouteCoordinates, type Coordinate, type MapPoint, type ProfilePointDetails, type ProjectFile, type Route } from './routeModel'
 import type { StartSettings, Units } from './settings'
-import { uid } from './uid'
 import { useMapTileLayers } from './useMapTileLayers'
 import { useMapRouteLayers } from './useMapRouteLayers'
 import { useMapPointLayers } from './useMapPointLayers'
 import { useMapDistanceMarkers } from './useMapDistanceMarkers'
 import { useMapProfileMarker } from './useMapProfileMarker'
+import { useMapEditingInteractions } from './useMapEditingInteractions'
 
 type Props = {
   project: ProjectFile
@@ -46,13 +44,7 @@ export function useLeafletMap({
   const mapRef = useRef<L.Map | null>(null)
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
   const initialView = useRef(start)
-  const focusedRouteNodeRef = useRef<string | null>(null)
-  const selectedNodeRef = useRef(selectedNode)
-  const pointerDownRouteNodeRef = useRef<string | null>(null)
   const searchLayerRef = useRef<L.Layer | null>(null)
-  const activeDragCleanupRef = useRef<(() => void) | null>(null)
-  const suppressNextRouteClickRef = useRef(false)
-  const suppressClickTimerRef = useRef<number | null>(null)
   const [mapScale, setMapScale] = useState({ zoom: 7, latitude: 51.1657 })
   const disposeTileLayers = useMapTileLayers({
     map: mapInstance,
@@ -62,19 +54,27 @@ export function useLeafletMap({
     setErrorBanner,
     setCacheWarning,
   })
-
-  const clearRouteNodeFocus = useCallback(() => {
-    focusedRouteNodeRef.current = null
-    const activeElement = document.activeElement
-    if (activeElement instanceof HTMLElement && activeElement.closest('.route-node-wrapper')) {
-      activeElement.blur()
-    }
-    setSelectedNode(null)
-  }, [setSelectedNode])
-
-  useEffect(() => {
-    selectedNodeRef.current = selectedNode
-  }, [selectedNode])
+  const {
+    focusedRouteNodeRef,
+    selectedNodeRef,
+    pointerDownRouteNodeRef,
+    activeDragCleanupRef,
+    suppressNextRouteClickRef,
+    suppressClickTimerRef,
+    clearRouteNodeFocus,
+  } = useMapEditingInteractions({
+    map: mapInstance,
+    activeRoute,
+    toolMode,
+    routePropertiesOpen,
+    contextMenu,
+    selectedNode,
+    setProject,
+    setSelectedNode,
+    setContextMenu,
+    setNotice,
+    openPointEditor,
+  })
 
   useMapPointLayers({
     map: mapInstance,
@@ -140,41 +140,10 @@ export function useLeafletMap({
     northArrow.addTo(map)
     mapRef.current = map
     setMapInstance(map)
-    const clearSuppressedClick = () => {
-      suppressNextRouteClickRef.current = false
-      if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
-      suppressClickTimerRef.current = null
-    }
-    const onFocusIn = (event: FocusEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest('.route-node-wrapper')) {
-        focusedRouteNodeRef.current = null
-      }
-    }
-    const onMouseUp = () => { pointerDownRouteNodeRef.current = null }
-    const onMapDragStart = () => clearRouteNodeFocus()
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || (!focusedRouteNodeRef.current && !selectedNodeRef.current)) return
-      event.preventDefault()
-      event.stopPropagation()
-      clearRouteNodeFocus()
-    }
-    map.getContainer().addEventListener('mousedown', clearSuppressedClick, true)
-    map.on('dragstart', onMapDragStart)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('mouseup', onMouseUp)
-    window.addEventListener('blur', onMouseUp)
     updateMapScale()
     const resizeTimer = window.setTimeout(() => map.invalidateSize(), 0)
     return () => {
       window.clearTimeout(resizeTimer)
-      clearSuppressedClick()
-      map.getContainer().removeEventListener('mousedown', clearSuppressedClick, true)
-      map.off('dragstart', onMapDragStart)
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('mouseup', onMouseUp)
-      window.removeEventListener('blur', onMouseUp)
       map.off('zoomend moveend', updateMapScale)
       disposeTileLayers()
       searchLayerRef.current?.remove()
@@ -182,7 +151,7 @@ export function useLeafletMap({
       map.remove()
       mapRef.current = null
     }
-  }, [clearRouteNodeFocus, disposeTileLayers])
+  }, [disposeTileLayers])
 
   useEffect(() => {
     const map = mapRef.current
@@ -190,71 +159,6 @@ export function useLeafletMap({
     const scale = L.control.scale({ position: 'topright', metric: units.distance === 'km', imperial: units.distance === 'mi', maxWidth: 120 }).addTo(map)
     return () => { scale.remove() }
   }, [units.distance])
-
-  useEffect(() => {
-    if (toolMode !== 'route') clearRouteNodeFocus()
-  }, [clearRouteNodeFocus, toolMode])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    const onClick = (event: L.LeafletMouseEvent) => {
-      if (suppressNextRouteClickRef.current) {
-        suppressNextRouteClickRef.current = false
-        return
-      }
-      if (routePropertiesOpen) return
-      if (contextMenu) setContextMenu(null)
-      if (toolMode === 'point') {
-        const point: MapPoint = {
-          id: uid('point'),
-          name: 'Neuer POI',
-          description: '',
-          coordinate: projectCoordinate(event.latlng),
-          source: 'poi',
-          icon: defaultPoiIcon,
-        }
-        openPointEditor(
-          point,
-          true,
-          event.originalEvent.clientX,
-          event.originalEvent.clientY,
-        )
-        return
-      }
-      if (toolMode === 'pan') return
-      if (!activeRoute || !activeRoute.editable) {
-        setNotice('Diese Route ist schreibgeschützt.')
-        return
-      }
-      const node: RouteNode = {
-        id: uid('node'),
-        coordinate: projectCoordinate(event.latlng),
-      }
-      clearRouteNodeFocus()
-      setProject((current) => ({
-        ...current,
-        routes: current.routes.map((route) =>
-          route.id === current.activeRouteId
-            ? {
-                ...route,
-                nodes: [...route.nodes, node],
-                geometry: undefined,
-                elevations: undefined,
-                timestamps: undefined,
-                routingState: 'idle',
-                routingError: undefined,
-              }
-            : route,
-        ),
-      }))
-      setNotice('Routenpunkt gesetzt; das Segment wurde lokal neu berechnet.')
-    }
-    map.on('click', onClick)
-    return () => {
-      map.off('click', onClick)
-    }
-  }, [activeRoute, contextMenu, routePropertiesOpen, toolMode, openPointEditor, setContextMenu, setProject, setNotice, clearRouteNodeFocus])
 
   function focusRouteOnMap(route: Route) {
     const coordinates = getDisplayedRouteCoordinates(route)
