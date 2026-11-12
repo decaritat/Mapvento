@@ -1,66 +1,15 @@
 import { useLayoutEffect, useRef, type Dispatch, type SetStateAction } from 'react'
-import { invoke, isTauri } from '@tauri-apps/api/core'
 import { parseGpx, toGpx } from './gpx'
 import { initialProject, normalizeProject } from './project'
 import type { ProjectFile, Route } from './routeModel'
 import type { ExitChoice } from './ExitDialog'
-
-type FileHandle = {
-  getFile: () => Promise<File>
-  createWritable: () => Promise<{
-    write: (content: string) => Promise<void>
-    close: () => Promise<void>
-  }>
-}
-
-type SavePickerWindow = Window & {
-  showSaveFilePicker?: (options: {
-    suggestedName: string
-    types: Array<{ description: string; accept: Record<string, string[]> }>
-  }) => Promise<FileHandle>
-  showOpenFilePicker?: (options: {
-    types: Array<{ description: string; accept: Record<string, string[]> }>
-    multiple: boolean
-  }) => Promise<FileHandle[]>
-}
+import { openProjectFile, readTextFile, saveProjectFile, saveTextFile, type ProjectFileReference } from './projectFileAdapter'
 
 function isAclDenied(error: unknown) {
   return String(error).includes('not allowed by ACL')
 }
 
 const unavailableFileDialog = 'Dateidialog in dieser Umgebung nicht verfügbar. Bitte Mapvento als Desktop-App oder in einem externen Browser öffnen.'
-
-export async function saveTextFile(filename: string, content: string, type: string) {
-  if (isTauri()) {
-    const saved = await invoke<boolean>('save_text_file', { filename, content })
-    if (!saved) throw new DOMException('Save cancelled', 'AbortError')
-    return
-  }
-
-  const savePicker = (window as SavePickerWindow).showSaveFilePicker
-  if (savePicker) {
-    const extension = filename.split('.').pop() ?? 'txt'
-    const handle = await savePicker({
-      suggestedName: filename,
-      types: [{ description: type, accept: { [type]: [`.${extension}`] } }],
-    })
-    const writable = await handle.createWritable()
-    await writable.write(content)
-    await writable.close()
-    return
-  }
-
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  document.body.append(anchor)
-  anchor.click()
-  anchor.remove()
-  URL.revokeObjectURL(url)
-}
-
 
 export function useProjectFiles({ project, activeRoute, setProject, setLayerId, setNotice }: {
   project: ProjectFile
@@ -72,7 +21,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
   const savedProject = useRef(JSON.stringify(project))
   const currentProject = useRef(project)
   useLayoutEffect(() => { currentProject.current = project }, [project])
-  const projectFile = useRef<{ kind: 'desktop'; path: string } | { kind: 'browser'; handle: FileHandle } | null>(null)
+  const projectFile = useRef<ProjectFileReference | null>(null)
   const projectGeneration = useRef(0)
   const openRequest = useRef(0)
   const saving = useRef(false)
@@ -109,41 +58,15 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     const serialized = JSON.stringify(projectToSave, null, 2)
     try {
       const filename = `${projectToSave.name.toLowerCase().replaceAll(/[^a-z0-9]+/gi, '-') || 'projekt'}.mapvento.json`
-      let selectedFile = saveAs ? null : projectFile.current
-      let downloadStarted = false
-      if (isTauri()) {
-        const path = await invoke<string | null>('save_project_file', {
-          filename, content: serialized, path: selectedFile?.kind === 'desktop' ? selectedFile.path : null,
-        })
-        if (!path) throw new DOMException('Save cancelled', 'AbortError')
-        selectedFile = { kind: 'desktop', path }
-      } else {
-        let handle = selectedFile?.kind === 'browser' ? selectedFile.handle : null
-        const picker = (window as SavePickerWindow).showSaveFilePicker
-        if (!handle && picker) {
-          handle = await picker({
-            suggestedName: filename,
-            types: [{ description: 'application/json', accept: { 'application/json': ['.json'] } }],
-          })
-        }
-        if (handle) {
-          const writable = await handle.createWritable()
-          await writable.write(serialized)
-          await writable.close()
-          selectedFile = { kind: 'browser', handle }
-        } else {
-          await saveTextFile(filename, serialized, 'application/json')
-          downloadStarted = true
-        }
-      }
+      const saved = await saveProjectFile(filename, serialized, projectFile.current, saveAs)
       if (projectGeneration.current !== generation) {
         setNotice('Das gespeicherte Projekt ist nicht mehr geöffnet.')
         return false
       }
       localStorage.setItem('mapvento-project', serialized)
-      projectFile.current = selectedFile
+      projectFile.current = saved.file
       savedProject.current = JSON.stringify(projectToSave)
-      setNotice(downloadStarted ? 'Projekt-Download gestartet.' : 'Projekt gespeichert.')
+      setNotice(saved.downloadStarted ? 'Projekt-Download gestartet.' : 'Projekt gespeichert.')
       return true
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -213,7 +136,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
 
   function importGpx(file: File) {
     const generation = projectGeneration.current
-    file.text().then((content) => {
+    readTextFile(file).then((content) => {
       if (projectGeneration.current !== generation) return
       const parsed = parseGpx(content)
       if (!parsed) {
@@ -243,7 +166,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     })
   }
 
-  function loadProject(content: string, file: typeof projectFile.current) {
+  function loadProject(content: string, file: ProjectFileReference | null) {
     try {
       let warning = ''
       const normalizedProject = normalizeProject(JSON.parse(content), (message) => { warning = message })
@@ -264,7 +187,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     const request = ++openRequest.current
     const generation = projectGeneration.current
     try {
-      const content = await file.text()
+      const content = await readTextFile(file)
       if (request === openRequest.current && generation === projectGeneration.current) {
         loadProject(content, null)
       }
@@ -280,21 +203,9 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     const generation = projectGeneration.current
     const isCurrent = () => request === openRequest.current && generation === projectGeneration.current
     try {
-      if (isTauri()) {
-        const opened = await invoke<{ path: string; content: string } | null>('open_project_file')
-        if (opened && isCurrent()) loadProject(opened.content, { kind: 'desktop', path: opened.path })
-      } else if ((window as SavePickerWindow).showOpenFilePicker) {
-        const [handle] = await (window as SavePickerWindow).showOpenFilePicker!({
-          types: [{ description: 'Projektdatei', accept: { 'application/json': ['.json'] } }],
-          multiple: false,
-        })
-        if (handle) {
-          const content = await (await handle.getFile()).text()
-          if (isCurrent()) loadProject(content, { kind: 'browser', handle })
-        }
-      } else {
-        fallback()
-      }
+      const opened = await openProjectFile()
+      if (opened === 'fallback') fallback()
+      else if (opened && isCurrent()) loadProject(opened.content, opened.file)
     } catch (error) {
       if (isCurrent() && !(error instanceof DOMException && error.name === 'AbortError')) {
         setNotice(isAclDenied(error) ? unavailableFileDialog : `Die Projektdatei konnte nicht geöffnet werden: ${String(error)}`)

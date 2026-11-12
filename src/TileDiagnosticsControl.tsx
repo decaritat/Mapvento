@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react'
 import { tileDiagnostics, parseTileLog, summarizeTileLog, type TileDiagnosticLog } from './tileDiagnostics'
-import { saveTextFile } from './useProjectFiles'
+import { saveTextFile } from './projectFileAdapter'
 
 function Summary({ log, title }: { log: TileDiagnosticLog; title: string }) {
   const summary = summarizeTileLog(log)
