@@ -1,6 +1,7 @@
 import geocodingProvider from '../features/geocoding/geocodingProvider.json'
 import { ROUTING_PROVIDER } from '../domain/routing'
 import { OSM_COPYRIGHT_URL } from '../domain/mapLayers'
+import { PLACES_PROVIDER } from '../features/osm-places/places'
 
 export const GEOCODING_PROVIDER = geocodingProvider
 
@@ -30,6 +31,11 @@ export const ALL_PROVIDER_ATTRIBUTIONS = [
     name: 'Nominatim',
     text: 'Ortssuche über den öffentlichen Nominatim-Dienst der OpenStreetMap Foundation.',
     url: GEOCODING_PROVIDER.url,
+  },
+  {
+    name: 'Overpass (Private.coffee)',
+    text: 'OSM-Orte über die öffentliche Overpass-Instanz von Private.coffee.',
+    url: PLACES_PROVIDER.url,
   },
   {
     name: 'BRouter',

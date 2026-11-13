@@ -234,6 +234,66 @@
   position: relative;
 }
 
+.osm-places-control {
+  position: relative;
+}
+
+.osm-places-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.osm-places-panel > button:not(.map-layer-close) {
+  display: block;
+  margin: 5px 0;
+}
+
+.osm-places-panel-status,
+.osm-places-attribution {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.osm-places-status {
+  position: absolute;
+  left: 40px;
+  top: 0;
+  width: min(250px, calc(100vw - 90px));
+  padding: 6px 8px;
+  border-radius: 5px;
+  color: #26343b;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.osm-places-status a {
+  display: inline-block;
+  margin-top: 4px;
+  color: #315a44;
+  font-weight: 700;
+}
+
+.osm-place-marker {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid #222;
+  border-radius: 50%;
+  color: #111;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.osm-place-marker svg {
+  width: 18px;
+  height: 18px;
+}
+
 .map-layer-panel {
   position: absolute;
   top: 0;

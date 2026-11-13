@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "Mapvento",
+        "userAgent": "Mapvento/0.1.0 (+https://github.com/decaritat/Mapvento)",
         "width": 1440,
         "height": 960,
         "resizable": true,

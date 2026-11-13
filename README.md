@@ -20,6 +20,28 @@ your device; map data is loaded online.
 Visited map tiles are cached locally. Full offline maps are not currently
 available.
 
+### OpenStreetMap places
+
+Use the OSM places button on the map toolbar to choose categories and enable
+their display. Places are loaded only for the visible area at zoom level 14
+or higher. The download status, waiting periods and errors remain visible
+while the layer is enabled. Explicitly private or inaccessible places are
+excluded; places with unspecified access are included.
+
+The app uses the public [Private.coffee Overpass service](https://overpass.private.coffee/)
+without an API key. Loading places sends the visible map area to that provider;
+its privacy information is on the provider's page. Requests are batched,
+sequential and rate-limited. Cached places are shared between projects and
+persist across restarts. Entries are refreshed after 14 days; outdated entries
+remain visible while refreshing or if the service fails. The cache is bounded
+to approximately 20 MiB and old entries can be evicted. Browser or application
+storage may also be cleared by the user or operating system.
+
+Use **Sichtbare Orte aktualisieren** to refresh the selected categories in the
+current view without first deleting their cached data. **Orte-Cache löschen**
+removes the stored place data instead. OSM places are separate from editable
+project POIs and are not saved in project files.
+
 ## Platforms and requirements
 
 Mapvento provides a desktop application for **Linux and Windows**. The web

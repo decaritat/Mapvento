@@ -8,6 +8,11 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+### Added
+
+- Optional OpenStreetMap places with category filters, a persistent 14-day
+  cache, download status, and manual refresh through Private.coffee Overpass.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added
