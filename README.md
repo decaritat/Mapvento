@@ -28,10 +28,23 @@ or higher. The download status, waiting periods and errors remain visible
 while the layer is enabled. Explicitly private or inaccessible places are
 excluded; places with unspecified access are included.
 
-The app uses the public [Private.coffee Overpass service](https://overpass.private.coffee/)
-without an API key. Loading places sends the visible map area to that provider;
-its privacy information is on the provider's page. Requests are batched,
-sequential and rate-limited. Cached places are shared between projects and
+The app uses the public [Dresel Overpass service](https://ovp.dresel.systems/)
+for covered areas in Europe and North America, without an API key. The worldwide
+[Private.coffee Overpass service](https://overpass.private.coffee/) is used
+outside those areas or if Dresel is unavailable; the current provider and any
+switch are shown while loading. An area must fit completely inside one regional
+extract, including a safety margin, to use Dresel. Requests are batched,
+sequential and rate-limited, and rate-limit responses are respected rather than
+bypassed. Loading places sends the map area and IP address to the selected
+provider. Dresel documents 14-day API and query logs in its
+[privacy information](https://ovp.dresel.systems/impressum.html#datenschutz);
+see also [Private.coffee's privacy information](https://private.coffee/privacy).
+The regional coverage uses a snapshot of Geofabrik's
+[extract boundaries](https://download.geofabrik.de/technical.html), retrieved
+on 2026-11-14 (© OpenStreetMap contributors, ODbL). It must be updated if
+Geofabrik changes the extract boundaries; neither public service guarantees
+availability.
+Cached places are shared between providers and projects and
 persist across restarts. Entries are refreshed after 14 days; outdated entries
 remain visible while refreshing or if the service fails. The cache is bounded
 to approximately 20 MiB and old entries can be evicted. Browser or application
@@ -41,6 +54,16 @@ Use **Sichtbare Orte aktualisieren** to refresh the selected categories in the
 current view without first deleting their cached data. **Orte-Cache löschen**
 removes the stored place data instead. OSM places are separate from editable
 project POIs and are not saved in project files.
+
+For troubleshooting, enable **Overpass-Diagnose** under Einstellungen →
+Entwicklung. The OSM places menu shows recent request and cache outcomes, phases,
+HTTP statuses, recognized server errors and cancellation causes, with an option
+to save the log. A map movement event may also be triggered programmatically;
+network and CORS errors cannot always be distinguished by the browser. The log
+contains no coordinates, URLs, API keys, response text or place data. It stays
+in memory until disabled or the app closes and keeps at most 100 events. When
+enabled, up to 4 KiB of an HTTP error response are inspected for one second at
+most; only recognized error categories are recorded, never the response text.
 
 ## Platforms and requirements
 

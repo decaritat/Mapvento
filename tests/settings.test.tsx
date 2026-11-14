@@ -54,12 +54,14 @@ describe('settings and units', () => {
     expect(parseSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS)
     const oldSettings = { version: 1, start: DEFAULT_SETTINGS.start, units: DEFAULT_SETTINGS.units }
     expect(parseSettings(oldSettings).developer.cacheDiagnostics).toBe(false)
+    expect(parseSettings(oldSettings).developer.placesDiagnostics).toBe(false)
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, start: { ...DEFAULT_SETTINGS.start, latitude: 90 } })).toThrow()
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, start: { ...DEFAULT_SETTINGS.start, overlayIds: ['invalid'] } })).toThrow()
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, distance: 'invalid' } })).toThrow()
     expect(parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, duration: 'clock' } }).units.duration).toBe('clock')
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, units: { ...DEFAULT_SETTINGS.units, duration: 'invalid' } })).toThrow()
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, developer: { cacheDiagnostics: 'yes' } })).toThrow()
+    expect(() => parseSettings({ ...DEFAULT_SETTINGS, developer: { placesDiagnostics: 'yes' } })).toThrow()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
     localStorage.setItem(SETTINGS_KEY, '{bad')
     expect(readSettings(localStorage)).toMatchObject({ settings: DEFAULT_SETTINGS, saved: false })
@@ -288,5 +290,26 @@ describe('settings and units', () => {
       container.remove()
       tileDiagnostics.clear()
     }
+  })
+
+  it('persists the opt-in Overpass diagnostics setting', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await openSettings(container)
+      await click(button(document, 'Entwicklung'))
+      const checkbox = Array.from(document.querySelectorAll('label'))
+        .find((label) => label.textContent?.includes('Overpass-Diagnose'))
+        ?.querySelector<HTMLInputElement>('input')
+      expect(checkbox?.checked).toBe(false)
+      await click(checkbox!)
+      await click(button(document, 'Übernehmen'))
+      expect(readSettings(localStorage).settings.developer.placesDiagnostics).toBe(true)
+      await click(container.querySelector<HTMLButtonElement>('[aria-label="OSM-Orte und Filter"]')!)
+      expect(container.querySelector('[aria-label="Overpass-Diagnose"]')).not.toBeNull()
+    } finally { await act(async () => root.unmount()); container.remove() }
   })
 })

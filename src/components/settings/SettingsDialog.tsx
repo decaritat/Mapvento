@@ -113,6 +113,18 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                   />
                   Cache-Diagnose
                 </label>
+                <label className="settings-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={draft.developer.placesDiagnostics}
+                    onChange={(event) => setDraft({
+                      ...draft,
+                      developer: { ...draft.developer, placesDiagnostics: event.target.checked },
+                    })}
+                  />
+                  Overpass-Diagnose
+                </label>
+                <p>Zeigt Anfrage-, Abbruch- und Cache-Status im OSM-Orte-Menü; keine Kartenkoordinaten, URLs oder Ortsdaten.</p>
               </>}
               <div className="settings-reset">
                 <button type="button" onClick={() => {

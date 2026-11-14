@@ -1,4 +1,4 @@
-import { PLACE_CATEGORIES, PLACES_PROVIDER, type Bounds, type PlaceCategory } from './places'
+import { PLACE_CATEGORIES, type Bounds, type PlaceCategory } from './places'
 import { isPlacesEntryFresh, type CachedPlaces } from './placesCache'
 
 export const PLACES_ZOOM = 14
@@ -51,7 +51,8 @@ export function cellForPosition(latitude: number, longitude: number): PlaceCell 
 }
 
 export function cellKey(cell: PlaceCell, category: PlaceCategory): string {
-  return `v1:${PLACES_PROVIDER.id}:${PLACES_ZOOM}:${cell.x}:${cell.y}:${category}`
+  // Preserve the original cache namespace across provider changes.
+  return `v1:private-coffee:${PLACES_ZOOM}:${cell.x}:${cell.y}:${category}`
 }
 
 export function batchesForCells(cells: readonly PlaceCell[], categories: readonly PlaceCategory[],

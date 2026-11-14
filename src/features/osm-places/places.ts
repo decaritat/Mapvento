@@ -1,10 +1,7 @@
 import { POI_ICON_IDS, type PoiIconId } from '../../domain/poiIconIds'
-
-export const PLACES_PROVIDER = {
-  id: 'private-coffee',
-  endpoint: 'https://overpass.private.coffee/api/interpreter',
-  url: 'https://overpass.private.coffee/',
-} as const
+import { diagnosticErrorName, overpassErrorDetail, placesAbortReason, type PlacesDiagnostic } from './placesDiagnostics'
+import { PRIVATE_COFFEE, type PlacesProvider } from './placesProviders'
+export type { PlacesDiagnostic } from './placesDiagnostics'
 
 export const PLACE_CATEGORIES = [
   { id: 'water', label: 'Wasser' },
@@ -40,6 +37,9 @@ export class OverpassHttpError extends Error {
 }
 
 export class OverpassSizeError extends Error {}
+export class OverpassUnavailableError extends Error {}
+export class OverpassNetworkError extends Error {}
+export class OverpassInvalidResponseError extends Error {}
 
 type PlaceKind = { category: PlaceCategory; key: string; value: string; icon: PoiIconId }
 
@@ -111,44 +111,164 @@ export function buildPlacesQuery(bounds: Bounds, categories: readonly PlaceCateg
   return `[out:json][timeout:25];(${selectors});out center;`
 }
 
-export async function fetchPlaces(bounds: Bounds, categories: readonly PlaceCategory[], signal: AbortSignal): Promise<Place[]> {
-  const response = await fetch(PLACES_PROVIDER.endpoint, {
-    method: 'POST',
-    body: new URLSearchParams({ data: buildPlacesQuery(bounds, categories) }),
-    signal,
-    referrerPolicy: 'strict-origin-when-cross-origin',
-  })
-  if (!response.ok) {
-    await response.body?.cancel()
-    throw new OverpassHttpError(response.status, response.headers.get('retry-after'))
-  }
-  const maxBytes = 4 * 1024 * 1024
-  const advertised = Number(response.headers.get('content-length'))
-  if (Number.isFinite(advertised) && advertised > maxBytes) {
-    await response.body?.cancel()
-    throw new OverpassSizeError('Overpass-Antwort zu groß')
-  }
-  if (!response.body) throw new Error('Overpass-Antwort enthält keine Daten')
+async function readErrorDetail(response: Response, signal: AbortSignal): Promise<PlacesDiagnostic['detail']> {
+  if (!response.body) return null
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let text = ''
   let bytes = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 1000) })
   try {
-    while (true) {
-      const { done, value } = await reader.read()
+    while (bytes < 4096) {
+      const result = await Promise.race([reader.read(), timeout])
+      if (!result) return 'body-unavailable'
+      const { done, value } = result
       if (done) break
       bytes += value.byteLength
-      if (bytes > maxBytes) {
-        await reader.cancel()
-        throw new OverpassSizeError('Overpass-Antwort zu groß')
-      }
-      text += decoder.decode(value, { stream: true })
+      text += decoder.decode(value.subarray(0, Math.max(0, 4096 - (bytes - value.byteLength))), { stream: true })
+      const detail = overpassErrorDetail(text)
+      if (detail) return detail
     }
-    text += decoder.decode()
+    return overpassErrorDetail(text)
+  } catch {
+    signal.throwIfAborted()
+    return 'body-unavailable'
   } finally {
+    clearTimeout(timer)
+    void reader.cancel().catch(() => {})
     reader.releaseLock()
   }
-  const data: unknown = JSON.parse(text)
-  if (isRecord(data) && data.remark !== undefined) throw new OverpassSizeError('Overpass-Abfrage unvollständig')
-  return parsePlaces(data)
+}
+
+export async function fetchPlaces(bounds: Bounds, categories: readonly PlaceCategory[], signal: AbortSignal,
+  onDiagnostic?: (event: PlacesDiagnostic) => void, collectDetails: () => boolean = () => Boolean(onDiagnostic),
+  provider: PlacesProvider = PRIVATE_COFFEE): Promise<Place[]> {
+  const startedAt = new Date().toISOString()
+  const start = performance.now()
+  let httpStatus: number | null = null
+  let outcome: PlacesDiagnostic['outcome'] = 'client-error'
+  let phase: PlacesDiagnostic['phase'] = 'prepare'
+  let detail: PlacesDiagnostic['detail'] = null
+  let errorName: string | null = null
+  let responseBytes: number | null = null
+  let retryAfterMs: number | null = null
+  let itemCount: number | null = null
+  try {
+    const query = buildPlacesQuery(bounds, categories)
+    phase = 'request'
+    outcome = 'network-error'
+    let response: Response
+    try {
+      response = await fetch(provider.endpoint, {
+        method: 'POST',
+        body: new URLSearchParams({ data: query }),
+        signal,
+        referrerPolicy: 'strict-origin-when-cross-origin',
+      })
+    } catch (error) {
+      signal.throwIfAborted()
+      if (error instanceof TypeError) throw new OverpassNetworkError('Overpass-Netzwerk- oder CORS-Fehler')
+      throw error
+    }
+    httpStatus = response.status
+    if (!response.ok) {
+      outcome = 'http-error'
+      const httpError = new OverpassHttpError(response.status, response.headers.get('retry-after'))
+      if (response.status === 429 || response.status === 406) retryAfterMs = httpError.retryAfterMs
+      if (collectDetails()) {
+        phase = 'body'
+        try {
+          detail = await readErrorDetail(response, signal)
+        } catch {
+          signal.throwIfAborted()
+          detail = 'body-unavailable'
+        }
+      } else {
+        await response.body?.cancel()
+      }
+      throw httpError
+    }
+    outcome = 'invalid-response'
+    phase = 'body'
+    detail = 'body-unavailable'
+    const maxBytes = 4 * 1024 * 1024
+    const advertised = Number(response.headers.get('content-length'))
+    if (Number.isFinite(advertised) && advertised > maxBytes) {
+      detail = 'response-too-large'
+      await response.body?.cancel()
+      throw new OverpassSizeError('Overpass-Antwort zu groß')
+    }
+    if (!response.body) throw new OverpassInvalidResponseError('Overpass-Antwort enthält keine Daten')
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let text = ''
+    let bytes = 0
+    responseBytes = 0
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        bytes += value.byteLength
+        responseBytes = bytes
+        if (bytes > maxBytes) {
+          detail = 'response-too-large'
+          await reader.cancel()
+          throw new OverpassSizeError('Overpass-Antwort zu groß')
+        }
+        text += decoder.decode(value, { stream: true })
+      }
+      text += decoder.decode()
+    } catch (error) {
+      signal.throwIfAborted()
+      if (error instanceof OverpassSizeError) throw error
+      throw new OverpassNetworkError('Overpass-Antwort konnte nicht gelesen werden', { cause: error })
+    } finally {
+      reader.releaseLock()
+    }
+    phase = 'parse'
+    detail = 'invalid-json'
+    let data: unknown
+    try {
+      data = JSON.parse(text)
+    } catch (error) {
+      detail = overpassErrorDetail(text) ?? 'invalid-json'
+      throw new OverpassInvalidResponseError('Ungültiges JSON in der Overpass-Antwort', { cause: error })
+    }
+    detail = 'invalid-data'
+    if (isRecord(data) && data.remark !== undefined) {
+      detail = typeof data.remark === 'string' ? overpassErrorDetail(data.remark) ?? 'overpass-error' : 'overpass-error'
+      if (detail === 'out-of-memory') {
+        throw new OverpassSizeError('Overpass-Abfrage hat das Ressourcenlimit überschritten')
+      }
+      if (detail === 'server-busy') throw new OverpassUnavailableError('Overpass meldet eine Überlastung. Bitte später erneut versuchen.')
+      if (detail === 'query-timeout') throw new OverpassUnavailableError('Overpass-Abfrage hat das Zeitlimit des Servers erreicht. Bitte später erneut versuchen.')
+      throw new OverpassInvalidResponseError('Overpass meldet eine unvollständige Antwort')
+    }
+    let result: Place[]
+    try {
+      result = parsePlaces(data)
+    } catch (error) {
+      throw new OverpassInvalidResponseError('Ungültige Overpass-Antwort', { cause: error })
+    }
+    outcome = 'success'
+    phase = 'complete'
+    detail = null
+    itemCount = result.length
+    return result
+  } catch (error) {
+    errorName = diagnosticErrorName(error)
+    if (signal.aborted) {
+      outcome = signal.reason instanceof DOMException && signal.reason.name === 'TimeoutError' ? 'timeout' : 'aborted'
+    } else if (outcome === 'network-error') {
+      detail = 'network-or-cors'
+    } else if (outcome === 'client-error') {
+      detail = 'invalid-request'
+    }
+    throw error
+  } finally {
+    onDiagnostic?.({ startedAt, durationMs: Math.round(performance.now() - start), provider: provider.id, phase, httpStatus, outcome,
+      detail, abortReason: outcome === 'aborted' ? placesAbortReason(signal) : null,
+      errorName, categoryCount: categories.length, itemCount, responseBytes, splitDepth: null, retryAfterMs })
+  }
 }

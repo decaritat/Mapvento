@@ -350,7 +350,7 @@ function App() {
   } = placeSearch
   const { mapContainer, focusRouteOnMap, focusSearchResultOnMap, clearSearchLayer, getMapView, mapZoom, osmPlaces } = useLeafletMap({
     project, setProject, activeRoute, layerId, mapLayerRetry, toolMode, routePropertiesOpen,
-    start: initial.settings.start, units: settings.units,
+    start: initial.settings.start, units: settings.units, placesDiagnostics: settings.developer.placesDiagnostics,
     mapHoveredPoint: hoveredProfilePoint, selectedNode, contextMenu, setSelectedNode, setContextMenu,
     setErrorBanner, setNotice, setCacheWarning, setSearchMessage, openPointEditor, updateNode, insertNodeAtCoordinate,
   })

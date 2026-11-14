@@ -1,7 +1,7 @@
 import geocodingProvider from '../features/geocoding/geocodingProvider.json'
 import { ROUTING_PROVIDER } from '../domain/routing'
 import { OSM_COPYRIGHT_URL } from '../domain/mapLayers'
-import { PLACES_PROVIDER } from '../features/osm-places/places'
+import { DRESEL_EUROPE, PRIVATE_COFFEE } from '../features/osm-places/placesProviders'
 
 export const GEOCODING_PROVIDER = geocodingProvider
 
@@ -33,9 +33,14 @@ export const ALL_PROVIDER_ATTRIBUTIONS = [
     url: GEOCODING_PROVIDER.url,
   },
   {
+    name: 'Overpass (Dresel)',
+    text: 'OSM-Orte über die öffentlichen Overpass-Instanzen von Dresel für Europa und Nordamerika.',
+    url: DRESEL_EUROPE.url,
+  },
+  {
     name: 'Overpass (Private.coffee)',
-    text: 'OSM-Orte über die öffentliche Overpass-Instanz von Private.coffee.',
-    url: PLACES_PROVIDER.url,
+    text: 'Weltweiter Overpass-Dienst für OSM-Orte außerhalb der Dresel-Abdeckung und als Fallback.',
+    url: PRIVATE_COFFEE.url,
   },
   {
     name: 'BRouter',

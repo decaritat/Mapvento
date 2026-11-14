@@ -29,6 +29,7 @@ export type StartSettings = {
 
 export type DeveloperSettings = {
   cacheDiagnostics: boolean
+  placesDiagnostics: boolean
 }
 
 export type Settings = { version: 1; start: StartSettings; units: Units; developer: DeveloperSettings }
@@ -37,7 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   version: 1,
   start: { layerId: DEFAULT_LAYER_ID, overlayIds: [], latitude: 51.1657, longitude: 10.4515, zoom: 7 },
   units: { distance: 'km', elevation: 'm', duration: 'hours-minutes' },
-  developer: { cacheDiagnostics: false },
+  developer: { cacheDiagnostics: false, placesDiagnostics: false },
 }
 
 export const SETTINGS_KEY = 'mapvento-settings'
@@ -62,14 +63,15 @@ export function parseSettings(value: unknown): Settings {
       (units.distance !== 'km' && units.distance !== 'mi') ||
       (units.elevation !== 'm' && units.elevation !== 'ft') ||
       !isDurationFormat(units.duration) ||
-      (developer.cacheDiagnostics !== undefined && typeof developer.cacheDiagnostics !== 'boolean')) {
+      (developer.cacheDiagnostics !== undefined && typeof developer.cacheDiagnostics !== 'boolean') ||
+      (developer.placesDiagnostics !== undefined && typeof developer.placesDiagnostics !== 'boolean')) {
     throw new Error('Einstellungen enthalten ungültige Werte.')
   }
   return {
     version: 1,
     start: { layerId: start.layerId, overlayIds: [...start.overlayIds], latitude: start.latitude, longitude: start.longitude, zoom: start.zoom },
     units: { distance: units.distance, elevation: units.elevation, duration: units.duration },
-    developer: { cacheDiagnostics: developer.cacheDiagnostics === true },
+    developer: { cacheDiagnostics: developer.cacheDiagnostics === true, placesDiagnostics: developer.placesDiagnostics === true },
   }
 }
 
