@@ -119,6 +119,9 @@ function App() {
   const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [cacheOpen, setCacheOpen] = useState(false)
+  const [projectChangeDialogOpen, setProjectChangeDialogOpen] = useState(false)
+  const [projectChangeDescription, setProjectChangeDescription] = useState('')
+  const projectChangeChoiceRef = useRef<((choice: 'save' | 'discard' | 'cancel') => void) | null>(null)
   const [contextMenu, setContextMenu] = useState<NodeContextMenu | null>(null)
   const [layerId, setLayerId] = useState(initial.project.mapLayerId)
   const [openRouteMenu, setOpenRouteMenu] = useState<{
@@ -513,7 +516,16 @@ function App() {
     setProjectDescriptionDraft('')
   }
 
-  const { exportRoute, saveProject, confirmBeforeExit, newProject, openProject, importGpx, importProject } = useProjectFiles({
+  const {
+    exportRoute,
+    saveProject,
+    confirmBeforeExit,
+    isProjectDirty,
+    newProject,
+    openProject,
+    importGpx,
+    importProject,
+  } = useProjectFiles({
     project, activeRoute, setProject, setLayerId, setNotice,
   })
 
@@ -531,6 +543,43 @@ function App() {
         current.projectDescriptionDraft === draft.projectDescriptionDraft
     } }
   }
+
+  function askBeforeProjectChange(action: 'new' | 'open') {
+    setProjectChangeDescription(action === 'new'
+      ? 'Soll das aktuelle Projekt vor dem Erstellen eines neuen Projekts gespeichert werden?'
+      : 'Soll das aktuelle Projekt vor dem Öffnen eines anderen Projekts gespeichert werden?')
+    setProjectChangeDialogOpen(true)
+    return new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+      projectChangeChoiceRef.current = resolve
+    })
+  }
+
+  function chooseProjectChange(choice: 'save' | 'discard' | 'cancel') {
+    const resolve = projectChangeChoiceRef.current
+    projectChangeChoiceRef.current = null
+    setProjectChangeDialogOpen(false)
+    resolve?.(choice)
+  }
+
+  useEffect(() => () => {
+    projectChangeChoiceRef.current?.('cancel')
+    projectChangeChoiceRef.current = null
+  }, [])
+
+  useEffect(() => {
+    const projectToSave = editingProjectName ? {
+      ...project,
+      name: projectNameDraft.trim() || project.name,
+      description: projectDescriptionDraft.slice(0, 180),
+    } : project
+    if (isTauri() || !isProjectDirty(projectToSave)) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [project, editingProjectName, projectNameDraft, projectDescriptionDraft, isProjectDirty])
 
   const { exitDialogOpen, chooseExit, exitApp } = useDesktopExit({
     getProjectToSave: projectWithDraft,
@@ -558,7 +607,7 @@ function App() {
 
   async function createNewProject() {
     const { projectToSave, isCurrent } = projectWithDraft()
-    if (!await newProject(projectToSave, isCurrent)) return
+    if (!await newProject(projectToSave, isCurrent, () => askBeforeProjectChange('new'))) return
     cancelProjectNameEdit()
     setRouteEditor(null)
     setPointEditor(null)
@@ -753,12 +802,20 @@ function App() {
       />
       <div
         className="app-shell"
-        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen || Boolean(availableUpdate)}
+        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen || projectChangeDialogOpen || Boolean(availableUpdate)}
         onClick={() => contextMenu && setContextMenu(null)}
       >
 
       <ProjectHeader projectInput={projectInput} newProject={() => { void createNewProject() }}
-        openProject={() => { void openProject(() => projectInput.current?.click()) }}
+        openProject={() => {
+          const { projectToSave, isCurrent } = projectWithDraft()
+          void openProject(
+            () => projectInput.current?.click(),
+            projectToSave,
+            isCurrent,
+            () => askBeforeProjectChange('open'),
+          )
+        }}
         saveProject={() => { void saveProject(projectWithDraft().projectToSave) }}
         saveProjectAs={() => { void saveProject(projectWithDraft().projectToSave, true) }} importProject={importProject}
         openCache={() => setCacheOpen(true)} openAbout={() => setAboutOpen(true)} openSettings={() => setSettingsOpen(true)}
@@ -992,6 +1049,11 @@ function App() {
         diagnosticsEnabled={settings.developer.cacheDiagnostics} />}
       </div>
       {exitDialogOpen && <ExitDialog onChoose={chooseExit} />}
+      {projectChangeDialogOpen && <ExitDialog
+        onChoose={chooseProjectChange}
+        description={projectChangeDescription}
+        discardLabel="Nicht speichern"
+      />}
     </>
   )
 }

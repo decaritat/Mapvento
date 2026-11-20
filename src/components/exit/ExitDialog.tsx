@@ -4,7 +4,17 @@ import './ExitDialog.css'
 
 export type ExitChoice = 'save' | 'discard' | 'cancel'
 
-export function ExitDialog({ onChoose }: { onChoose: (choice: ExitChoice) => void }) {
+export function ExitDialog({
+  onChoose,
+  title = 'Ungespeicherte Änderungen',
+  description = 'Soll das aktuelle Projekt vor dem Beenden gespeichert werden?',
+  discardLabel = 'Beenden ohne Speichern',
+}: {
+  onChoose: (choice: ExitChoice) => void
+  title?: string
+  description?: string
+  discardLabel?: string
+}) {
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,11 +49,11 @@ export function ExitDialog({ onChoose }: { onChoose: (choice: ExitChoice) => voi
     <div className="exit-backdrop">
       <div className="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-title"
         aria-describedby="exit-description" ref={dialogRef} onKeyDown={handleKeys}>
-        <h2 id="exit-title">Ungespeicherte Änderungen</h2>
-        <p id="exit-description">Soll das aktuelle Projekt vor dem Beenden gespeichert werden?</p>
+        <h2 id="exit-title">{title}</h2>
+        <p id="exit-description">{description}</p>
         <div className="exit-actions">
           <button type="button" className="route-editor-action save" onClick={() => onChoose('save')}>Speichern</button>
-          <button type="button" className="route-editor-action" onClick={() => onChoose('discard')}>Beenden ohne Speichern</button>
+          <button type="button" className="route-editor-action" onClick={() => onChoose('discard')}>{discardLabel}</button>
           <button type="button" className="route-editor-action cancel" data-cancel onClick={() => onChoose('cancel')}>Abbrechen</button>
         </div>
       </div>
