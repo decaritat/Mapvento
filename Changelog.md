@@ -8,6 +8,10 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+### Fixed
+
+- Protect unsaved project changes when opening or creating a project.
+
 ## [0.2.0] - 2026-11-20
 
 ### Added

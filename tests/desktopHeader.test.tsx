@@ -310,7 +310,6 @@ describe('desktop header', () => {
 
   it('saves an edited opened project to its existing desktop path before creating a new project', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     desktop.invoke.mockImplementation(async (command: string) => {
       if (command === 'open_project_file') return { path: '/chosen/project.json', content: JSON.stringify({ ...initialProject, name: 'Datei' }) }
       if (command === 'save_project_file') return '/chosen/project.json'
@@ -335,6 +334,7 @@ describe('desktop header', () => {
         input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
       })
       await action('Neues Projekt')
+      await chooseExit('Speichern')
       const saved = desktop.invoke.mock.calls.find(([command]) => command === 'save_project_file')!
       expect(saved[1].path).toBe('/chosen/project.json')
       expect(JSON.parse(saved[1].content).name).toBe('Geändert')
@@ -347,7 +347,6 @@ describe('desktop header', () => {
 
   it('reports unavailable native dialogs without pretending to save or replacing the project', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     desktop.invoke.mockRejectedValue(new Error('Command open_project_file not allowed by ACL'))
     const savePicker = vi.fn()
     vi.stubGlobal('showSaveFilePicker', savePicker)
@@ -378,6 +377,7 @@ describe('desktop header', () => {
         return undefined
       })
       await action('Neues Projekt')
+      await chooseExit('Speichern')
       expect(savePicker).not.toHaveBeenCalled()
       expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Geändert')
       expect(container.textContent).toContain('Dateidialog in dieser Umgebung nicht verfügbar.')

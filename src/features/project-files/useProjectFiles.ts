@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useLayoutEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { parseGpx, toGpx } from '../../domain/gpx'
 import { initialProject, normalizeProject } from '../../domain/project'
 import type { ProjectFile, Route } from '../../domain/routeModel'
@@ -25,6 +25,46 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
   const projectGeneration = useRef(0)
   const openRequest = useRef(0)
   const saving = useRef(false)
+  const pendingOpen = useRef<{
+    request: number
+    generation: number
+    projectSnapshot: string
+    isCurrent: () => boolean
+  } | null>(null)
+
+  const isProjectDirty = useCallback(
+    (projectToCheck: ProjectFile) => JSON.stringify(projectToCheck) !== savedProject.current,
+    [],
+  )
+
+  async function confirmBeforeReplace(
+    projectToSave: ProjectFile,
+    isCurrent: () => boolean,
+    ask: () => Promise<ExitChoice>,
+  ) {
+    if (saving.current) {
+      setNotice('Ein Speichervorgang läuft bereits.')
+      return false
+    }
+
+    const projectAtStart = JSON.stringify(currentProject.current)
+    if (!isProjectDirty(projectToSave)) return isCurrent()
+
+    const choice = await ask()
+    if (choice === 'cancel') return false
+    if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
+      setNotice('Das Projekt wurde während des Projektwechsels geändert. Bitte erneut versuchen.')
+      return false
+    }
+    if (choice === 'discard') return true
+
+    if (!await saveProject(projectToSave)) return false
+    if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
+      setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+      return false
+    }
+    return true
+  }
 
   async function exportRoute(route = activeRoute) {
     if (!route) return
@@ -104,19 +144,13 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     return true
   }
 
-  async function newProject(projectToSave = project, isCurrent = () => true) {
-    if (saving.current) {
-      setNotice('Ein Speichervorgang läuft bereits.')
-      return false
-    }
-    if (JSON.stringify(projectToSave) !== savedProject.current &&
-        window.confirm('Soll das aktuelle Projekt vor dem Erstellen eines neuen Projekts gespeichert werden?')) {
-      if (!await saveProject(projectToSave)) return false
-      if (JSON.stringify(currentProject.current) !== JSON.stringify(project) || !isCurrent()) {
-        setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
-        return false
-      }
-    }
+  async function newProject(
+    projectToSave: ProjectFile,
+    isCurrent: () => boolean,
+    ask: () => Promise<ExitChoice>,
+  ) {
+    if (!await confirmBeforeReplace(projectToSave, isCurrent, ask)) return false
+    pendingOpen.current = null
     const next = structuredClone(initialProject)
     try {
       localStorage.setItem('mapvento-project', JSON.stringify(next))
@@ -172,6 +206,8 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       const normalizedProject = normalizeProject(JSON.parse(content), (message) => { warning = message })
       const mapLayerId = normalizedProject.mapLayerId
       localStorage.setItem('mapvento-project', JSON.stringify(normalizedProject))
+      pendingOpen.current = null
+      openRequest.current += 1
       projectGeneration.current += 1
       projectFile.current = file
       savedProject.current = JSON.stringify(normalizedProject)
@@ -179,39 +215,80 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       setLayerId(mapLayerId)
       setNotice(warning ? `Projekt geöffnet. ${warning}` : 'Projekt geöffnet.')
     } catch {
+      pendingOpen.current = null
+      openRequest.current += 1
       setNotice('Die Projektdatei konnte nicht gelesen werden.')
     }
   }
 
   async function importProject(file: File) {
-    const request = ++openRequest.current
-    const generation = projectGeneration.current
+    const opening = pendingOpen.current
+    if (!opening) {
+      setNotice('Projektöffnung wurde nicht bestätigt. Bitte erneut über das Hauptmenü öffnen.')
+      return
+    }
     try {
       const content = await readTextFile(file)
-      if (request === openRequest.current && generation === projectGeneration.current) {
+      const stillCurrent = opening.request === openRequest.current &&
+        opening.generation === projectGeneration.current &&
+        JSON.stringify(currentProject.current) === opening.projectSnapshot &&
+        opening.isCurrent()
+      if (stillCurrent) {
         loadProject(content, null)
+      } else if (opening.request === openRequest.current) {
+        pendingOpen.current = null
+        setNotice('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
       }
     } catch {
-      if (request === openRequest.current && generation === projectGeneration.current) {
+      if (opening.request === openRequest.current) {
+        pendingOpen.current = null
         setNotice('Die Projektdatei konnte nicht gelesen werden.')
       }
     }
   }
 
-  async function openProject(fallback: () => void) {
+  async function openProject(
+    fallback: () => void,
+    projectToSave: ProjectFile,
+    isCurrent: () => boolean,
+    ask: () => Promise<ExitChoice>,
+  ) {
+    if (!await confirmBeforeReplace(projectToSave, isCurrent, ask)) return
     const request = ++openRequest.current
     const generation = projectGeneration.current
-    const isCurrent = () => request === openRequest.current && generation === projectGeneration.current
+    const projectSnapshot = JSON.stringify(currentProject.current)
+    const isOpenCurrent = () => request === openRequest.current &&
+      generation === projectGeneration.current &&
+      JSON.stringify(currentProject.current) === projectSnapshot &&
+      isCurrent()
+    pendingOpen.current = { request, generation, projectSnapshot, isCurrent }
     try {
       const opened = await openProjectFile()
       if (opened === 'fallback') fallback()
-      else if (opened && isCurrent()) loadProject(opened.content, opened.file)
+      else if (opened && isOpenCurrent()) loadProject(opened.content, opened.file)
+      else if (!opened && request === openRequest.current) pendingOpen.current = null
+      else if (opened && request === openRequest.current) {
+        pendingOpen.current = null
+        setNotice('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
+      }
     } catch (error) {
-      if (isCurrent() && !(error instanceof DOMException && error.name === 'AbortError')) {
-        setNotice(isAclDenied(error) ? unavailableFileDialog : `Die Projektdatei konnte nicht geöffnet werden: ${String(error)}`)
+      if (request === openRequest.current) {
+        pendingOpen.current = null
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setNotice(isAclDenied(error) ? unavailableFileDialog : `Die Projektdatei konnte nicht geöffnet werden: ${String(error)}`)
+        }
       }
     }
   }
 
-  return { exportRoute, saveProject, confirmBeforeExit, newProject, openProject, importGpx, importProject }
+  return {
+    exportRoute,
+    saveProject,
+    confirmBeforeExit,
+    isProjectDirty,
+    newProject,
+    openProject,
+    importGpx,
+    importProject,
+  }
 }

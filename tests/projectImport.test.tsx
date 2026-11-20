@@ -42,6 +42,9 @@ describe('project loading in the app', () => {
       expect(localStorage.getItem('mapvento-project')).toBe(invalid)
 
       const valid = { ...initialProject, name: 'Geöffnetes Projekt', mapLayerId: 'opentopomap' }
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!.click())
+      await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+        .find((item) => item.textContent === 'Projekt öffnen')!.click())
       Object.defineProperty(input!, 'files', {
         configurable: true,
         value: [{ text: async () => JSON.stringify(valid) }],
@@ -79,6 +82,9 @@ describe('project loading in the app', () => {
 
       const input = container.querySelector<HTMLInputElement>('input[accept=".json,.mapvento.json"]')!
       const opened = { ...saved, name: 'Geöffnete Tour' }
+      await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!.click())
+      await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+        .find((item) => item.textContent === 'Projekt öffnen')!.click())
       Object.defineProperty(input, 'files', {
         configurable: true,
         value: [{ text: async () => JSON.stringify(opened) }],

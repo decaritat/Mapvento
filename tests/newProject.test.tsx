@@ -21,6 +21,14 @@ async function changeName(container: HTMLElement, name: string, commit = true) {
   })
 }
 
+async function chooseProjectChange(container: HTMLElement, choice: 'save' | 'discard' | 'cancel') {
+  const label = { save: 'Speichern', discard: 'Nicht speichern', cancel: 'Abbrechen' }[choice]
+  const button = Array.from(document.querySelectorAll<HTMLButtonElement>('.exit-actions button'))
+    .find((item) => item.textContent?.trim() === label)
+  if (!button) throw new Error(`Project change action not found: ${label}`)
+  await act(async () => button.click())
+}
+
 describe('new project', () => {
   afterEach(() => {
     localStorage.clear()
@@ -53,7 +61,7 @@ describe('new project', () => {
     }
   })
 
-  it('creates a default project without prompting when unchanged, and discards changes on No', async () => {
+  it('creates a default project without prompting when unchanged, and offers an explicit discard choice', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const container = document.createElement('div')
@@ -65,7 +73,12 @@ describe('new project', () => {
       expect(confirm).not.toHaveBeenCalled()
       await changeName(container, 'Geändert')
       await action(container, 'Neues Projekt')
-      expect(confirm).toHaveBeenCalledOnce()
+      expect(confirm).not.toHaveBeenCalled()
+      expect(document.querySelector('.exit-dialog')?.textContent).toContain('Soll das aktuelle Projekt vor dem Erstellen')
+      await chooseProjectChange(container, 'cancel')
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Geändert')
+      await action(container, 'Neues Projekt')
+      await chooseProjectChange(container, 'discard')
       expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe(initialProject.name)
       expect(JSON.parse(localStorage.getItem('mapvento-project')!)).toEqual(initialProject)
     } finally {
@@ -76,7 +89,6 @@ describe('new project', () => {
 
   it('saves an unfinished title edit through Save As before replacing the project', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const write = vi.fn().mockResolvedValue(undefined)
     const close = vi.fn().mockResolvedValue(undefined)
     const picker = vi.fn().mockResolvedValue({ createWritable: async () => ({ write, close }) })
@@ -88,10 +100,165 @@ describe('new project', () => {
       await act(async () => root.render(<App />))
       await changeName(container, 'Entwurf', false)
       await action(container, 'Neues Projekt')
+      await chooseProjectChange(container, 'save')
       expect(picker).toHaveBeenCalledOnce()
       expect(JSON.parse(write.mock.calls[0][0]).name).toBe('Entwurf')
       expect(close).toHaveBeenCalledOnce()
       expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe(initialProject.name)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('cancels opening another project without opening the picker or replacing current work', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const picker = vi.fn()
+    vi.stubGlobal('showOpenFilePicker', picker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Ungespeichert')
+      await action(container, 'Projekt öffnen')
+      expect(document.querySelector('.exit-dialog')?.textContent).toContain('vor dem Öffnen')
+      await chooseProjectChange(container, 'cancel')
+      expect(picker).not.toHaveBeenCalled()
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Ungespeichert')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('opens another project only after explicitly discarding current changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const openedProject = { ...initialProject, name: 'Geöffnetes Projekt' }
+    const picker = vi.fn().mockResolvedValue([{
+      getFile: async () => ({ text: async () => JSON.stringify(openedProject) }),
+    }])
+    vi.stubGlobal('showOpenFilePicker', picker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Zu verwerfen')
+      await action(container, 'Projekt öffnen')
+      await chooseProjectChange(container, 'discard')
+      expect(picker).toHaveBeenCalledOnce()
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Geöffnetes Projekt')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('keeps current work when the replacement file picker is cancelled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue(null))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Behalten')
+      await action(container, 'Projekt öffnen')
+      await chooseProjectChange(container, 'discard')
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Behalten')
+      expect(container.textContent).not.toContain('Projekt geöffnet.')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('applies the same replacement guard to the browser file-input fallback', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Zu verwerfen')
+      const input = container.querySelector<HTMLInputElement>('input[accept=".json,.mapvento.json"]')!
+      vi.spyOn(input, 'click').mockImplementation(() => {})
+      await action(container, 'Projekt öffnen')
+      await chooseProjectChange(container, 'discard')
+      expect(input.click).toHaveBeenCalledOnce()
+
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [{
+          text: async () => JSON.stringify({ ...initialProject, name: 'Fallback-Datei' }),
+        }],
+      })
+      await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })))
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Fallback-Datei')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not open a replacement file when saving current changes fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('showSaveFilePicker', vi.fn().mockRejectedValue(new Error('write failed')))
+    const openPicker = vi.fn()
+    vi.stubGlobal('showOpenFilePicker', openPicker)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Behalten')
+      await action(container, 'Projekt öffnen')
+      await chooseProjectChange(container, 'save')
+      expect(openPicker).not.toHaveBeenCalled()
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Behalten')
+      expect(container.textContent).toContain('Projekt konnte nicht gespeichert werden:')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('does not replace edits made while the replacement file picker is open', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    let finishOpen!: (handles: unknown[]) => void
+    vi.stubGlobal('showOpenFilePicker', vi.fn(() => new Promise((resolve) => { finishOpen = resolve })))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Erste Änderung')
+      await action(container, 'Projekt öffnen')
+      await chooseProjectChange(container, 'discard')
+      await changeName(container, 'Spätere Änderung')
+      await act(async () => finishOpen([{
+        getFile: async () => ({ text: async () => JSON.stringify({ ...initialProject, name: 'Verspätet' }) }),
+      }]))
+      expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Spätere Änderung')
+      expect(container.textContent).toContain('während des Öffnens geändert')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('warns before closing the browser tab when project changes are unsaved', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await changeName(container, 'Ungespeichert')
+      const event = new Event('beforeunload', { bubbles: true, cancelable: true })
+      await act(async () => window.dispatchEvent(event))
+      expect(event.defaultPrevented).toBe(true)
     } finally {
       await act(async () => root.unmount())
       container.remove()
@@ -103,7 +270,6 @@ describe('new project', () => {
     new Error('write failed'),
   ])('keeps the modified project when saving fails or is cancelled: %s', async (error) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.stubGlobal('showSaveFilePicker', vi.fn().mockRejectedValue(error))
     const container = document.createElement('div')
     document.body.append(container)
@@ -112,6 +278,7 @@ describe('new project', () => {
       await act(async () => root.render(<App />))
       await changeName(container, 'Unersetzt')
       await action(container, 'Neues Projekt')
+      await chooseProjectChange(container, 'save')
       expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe('Unersetzt')
       expect(container.textContent).toContain(error.name === 'AbortError' ? 'Speichern abgebrochen.' : 'Projekt konnte nicht gespeichert werden:')
     } finally {
@@ -122,7 +289,6 @@ describe('new project', () => {
 
   it('saves changes to the previously opened browser file without another picker', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const write = vi.fn().mockResolvedValue(undefined)
     const handle = {
       getFile: async () => ({ text: async () => JSON.stringify({ ...initialProject, name: 'Datei' }) }),
@@ -139,6 +305,7 @@ describe('new project', () => {
       await action(container, 'Projekt öffnen')
       await changeName(container, 'Datei geändert')
       await action(container, 'Neues Projekt')
+      await chooseProjectChange(container, 'save')
       expect(JSON.parse(write.mock.calls[0][0]).name).toBe('Datei geändert')
       expect(savePicker).not.toHaveBeenCalled()
       expect(container.querySelector('[aria-label="Projektname"]')?.textContent).toBe(initialProject.name)
@@ -244,7 +411,6 @@ describe('new project', () => {
       }
       vi.stubGlobal('showOpenFilePicker', vi.fn().mockResolvedValue([handle]))
       vi.stubGlobal('showSaveFilePicker', vi.fn().mockRejectedValue(error))
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
       const container = document.createElement('div')
       document.body.append(container)
       const root = createRoot(container)
@@ -254,7 +420,7 @@ describe('new project', () => {
         await changeName(container, 'Geändert')
         await action(container, 'Projekt speichern unter')
         await action(container, 'Neues Projekt')
-        expect(confirm).toHaveBeenCalledOnce()
+        await chooseProjectChange(container, 'save')
         expect(oldWrite).toHaveBeenCalledOnce()
       } finally {
         await act(async () => root.unmount())
@@ -265,7 +431,6 @@ describe('new project', () => {
 
   it('does not replace changes made while the save dialog is open', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     let finishPicker!: (handle: { createWritable: () => Promise<{ write: () => Promise<void>; close: () => Promise<void> }> }) => void
     vi.stubGlobal('showSaveFilePicker', vi.fn(() => new Promise((resolve) => { finishPicker = resolve })))
     const container = document.createElement('div')
@@ -275,6 +440,7 @@ describe('new project', () => {
       await act(async () => root.render(<App />))
       await changeName(container, 'Erste Änderung')
       await action(container, 'Neues Projekt')
+      await chooseProjectChange(container, 'save')
       await changeName(container, 'Spätere Änderung')
       await act(async () => finishPicker({
         createWritable: async () => ({ write: async () => {}, close: async () => {} }),
