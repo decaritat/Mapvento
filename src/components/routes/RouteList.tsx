@@ -54,7 +54,7 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                         <span className="route-card-title">
                             {route.name}
                             {!route.editable && (
-                              <span className="lock-badge" title="Diese Route ist schreibgeschützt">
+                              <span className="lock-badge" lang="en" title="Diese Route ist schreibgeschützt">
                                 READ-ONLY
                               </span>
                             )}

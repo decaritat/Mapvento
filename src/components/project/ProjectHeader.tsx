@@ -50,7 +50,7 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
         <img className="brand-mark" src="/favicon.svg" alt="" />
         <div>
           <strong>Mapvento</strong>
-          <span>Open route planner</span>
+          <span lang="en">Open route planner</span>
         </div>
       </div>
       <div className="topbar-actions" ref={rootRef}>

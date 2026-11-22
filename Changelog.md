@@ -10,12 +10,14 @@ once released versions are maintained.
 
 ### Changed
 
+- Declare the interface language and improve visible keyboard focus across controls.
 - Improve text contrast and scalable typography in route details, editors and elevation profiles.
 - Keep dialog focus and cancellation behavior consistent.
 - Expand the elevation profile via a dedicated button and inspect it using clicks and keyboard navigation.
 
 ### Fixed
 
+- Close the POI icon picker when focus leaves it so it does not cover the next field.
 - Close place search and cancel waypoint and route-line drags with Escape.
 - Protect unsaved project changes when opening or creating a project.
 
