@@ -1,5 +1,5 @@
-import { useMemo, type Dispatch, type SetStateAction } from 'react'
-import { formatDistanceAxis, getDistanceScale, getElevationScale, profileDetailsAtFraction, routeMetrics, type ElevationScale } from '../../domain/routeMetrics'
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { formatDistanceAxis, getDistanceScale, getElevationScale, profileDetailsAtFraction, profileDetailsAtIndex, routeMetrics, type ElevationScale } from '../../domain/routeMetrics'
 import type { ProfilePointDetails, Route } from '../../domain/routeModel'
 import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from '../../domain/settings'
 
@@ -65,36 +65,84 @@ function elevationProfileY(
 }
 
 
-export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredProfilePoint,
+export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredProfilePoint, clearProfileSelection,
   elevationExpanded, setElevationExpanded, units }: {
   units: Units
   activeRoute: Route | undefined
   profilePointDetails: ProfilePointDetails | null
   setHoveredProfilePoint: Dispatch<SetStateAction<ProfilePointDetails | null>>
+  clearProfileSelection: () => void
   elevationExpanded: boolean
   setElevationExpanded: Dispatch<SetStateAction<boolean>>
 }) {
+  const [selection, setSelection] = useState<{ route: Route; index: number } | null>(null)
+  const [helpDismissed, setHelpDismissed] = useState(false)
   const activeMetrics = useMemo(() => activeRoute ? routeMetrics(activeRoute) : null, [activeRoute])
   const elevations = (activeMetrics?.elevations ?? []).map((value) => elevationInUnit(value, units.elevation))
   const distances = (activeMetrics?.distances ?? []).map((value) => distanceInUnit(value, units.distance))
   const activeElevationScale = getElevationScale(elevations)
   const activeDistanceScale = getDistanceScale(distanceInUnit(activeMetrics?.length ?? 0, units.distance))
+  const canInspect = Boolean(activeRoute && activeMetrics && elevations.length >= 2 && activeMetrics.length > 0)
+  const hasRecordedElevations = Boolean(
+    activeRoute?.elevations?.length === elevations.length &&
+    elevations.length > 0 &&
+    activeRoute.elevations.every(Number.isFinite),
+  )
+  const selectedIndex = selection && activeRoute &&
+    selection.route.id === activeRoute.id &&
+    selection.route.geometry === activeRoute.geometry &&
+    selection.route.nodes === activeRoute.nodes &&
+    selection.route.elevations === activeRoute.elevations &&
+    selection.route.timestamps === activeRoute.timestamps &&
+    selection.route.type === activeRoute.type
+    ? selection.index : null
+
+  useEffect(() => {
+    setHoveredProfilePoint(null)
+  }, [activeRoute?.id, activeRoute?.geometry, activeRoute?.nodes, activeRoute?.elevations,
+    activeRoute?.timestamps, activeRoute?.type, elevationExpanded, setHoveredProfilePoint])
+
+  function indexForDistance(distance: number) {
+    return (activeMetrics?.distances ?? []).reduce(
+      (closest, value, index, values) =>
+        Math.abs(value - distance) < Math.abs(values[closest] - distance) ? index : closest,
+      0,
+    )
+  }
+
+  function selectIndex(index: number) {
+    if (!activeRoute || !activeMetrics || !canInspect) return
+    const nextIndex = Math.max(0, Math.min(activeMetrics.elevations.length - 1, index))
+    setSelection({ route: activeRoute, index: nextIndex })
+    setHoveredProfilePoint(profileDetailsAtIndex(activeRoute, nextIndex))
+  }
+
+  const currentIndex = selectedIndex ?? (profilePointDetails ? indexForDistance(profilePointDetails.distance) : 0)
+  const pointDescription = profilePointDetails
+    ? `${Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} ${units.elevation} Höhe, ${distanceInUnit(profilePointDetails.distance, units.distance).toFixed(2)} ${units.distance} ab Start, ${durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start`
+    : 'Keine Position ausgewählt'
   return (
           <section
             className={`inspector ${elevationExpanded ? 'expanded' : 'compact'}`}
             id="active-elevation-profile"
           >
-            {elevationExpanded && (
               <button
                 className="inspector-close"
                 type="button"
-                onClick={() => setElevationExpanded(false)}
-                title="Höhenprofil schließen"
-                aria-label="Höhenprofil schließen"
+                onClick={() => {
+                  if (elevationExpanded) setSelection(null)
+                  setElevationExpanded(!elevationExpanded)
+                }}
+                aria-expanded={elevationExpanded}
+                title={elevationExpanded ? 'Höhenprofil schließen' : 'Höhenprofil ausklappen'}
+                aria-label={elevationExpanded ? 'Höhenprofil schließen' : 'Höhenprofil ausklappen'}
               >
-                ×
+                {elevationExpanded ? '×' : (
+                  <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M 3 10 L 8 5 L 13 10" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </button>
-            )}
             <div className="inspector-main">
               <div className="inspector-title-row">
                 <div>
@@ -195,27 +243,104 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
             {elevationExpanded && (
               <div className="elevation-card">
                 <div className="elevation-header">
-                  <span className="eyebrow">Höhenprofil</span>
+                  <div className="elevation-heading">
+                    <span className="eyebrow">Höhenprofil</span>
+                    {canInspect && (
+                      <span className="profile-help" onMouseEnter={() => setHelpDismissed(false)}>
+                        <button
+                          className="profile-help-button"
+                          type="button"
+                          aria-label="Hilfe zur Höhenprofilbedienung"
+                          aria-describedby="profile-instructions"
+                          onFocus={() => setHelpDismissed(false)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Escape') {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              setHelpDismissed(true)
+                            }
+                          }}
+                        >
+                          ?
+                        </button>
+                        <span
+                          className={`profile-help-tooltip${helpDismissed ? ' dismissed' : ''}`}
+                          id="profile-instructions"
+                          role="tooltip"
+                        >
+                          Position anklicken oder mit Pfeiltasten wählen; Pos1 und Ende springen zum Anfang und Ende, Escape hebt die Auswahl auf.
+                        </span>
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {!canInspect ? (
+                  <p className="profile-message">Für ein Höhenprofil ist eine Route mit mindestens zwei unterschiedlichen Punkten erforderlich.</p>
+                ) : (
+                <>
+                {!hasRecordedElevations && (
+                  <p className="profile-message">Keine vollständigen Höhenwerte vorhanden. Das Profil verwendet synthetische Ersatzwerte.</p>
+                )}
                 <div className={`profile-chart-area ${profilePointDetails ? 'has-selection' : ''}`}>
                   <svg
                     viewBox="0 0 560 190"
                     preserveAspectRatio="none"
                     className="elevation-chart"
-                    role="img"
-                    aria-label="Höhenprofil der aktiven Route"
-                    onMouseMove={(event) => {
-                      if (!activeRoute || !activeMetrics?.elevations.length) {
-                        setHoveredProfilePoint(null)
+                    role="slider"
+                    tabIndex={0}
+                    aria-label="Position im Höhenprofil"
+                    aria-describedby="profile-instructions"
+                    aria-valuemin={0}
+                    aria-valuemax={elevations.length - 1}
+                    aria-valuenow={currentIndex}
+                    aria-valuetext={pointDescription}
+                    onKeyDown={(event) => {
+                      let nextIndex: number
+                      if (event.key === 'Escape') {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setSelection(null)
+                        clearProfileSelection()
+                        return
+                      } else if (event.key === 'Home') {
+                        nextIndex = 0
+                      } else if (event.key === 'End') {
+                        nextIndex = elevations.length - 1
+                      } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+                        nextIndex = profilePointDetails ? currentIndex + 1 : 0
+                      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                        nextIndex = profilePointDetails ? currentIndex - 1 : elevations.length - 1
+                      } else {
                         return
                       }
+                      event.preventDefault()
+                      selectIndex(nextIndex)
+                    }}
+                    onClick={(event) => {
+                      if (!activeRoute) return
+                      const fraction = profileFractionFromPointer(event.clientX, event.currentTarget.getBoundingClientRect())
+                      if (fraction === null) return
+                      if (fraction === 0 || fraction === 1) {
+                        event.currentTarget.focus()
+                        selectIndex(fraction === 0 ? 0 : elevations.length - 1)
+                        return
+                      }
+                      const details = profileDetailsAtFraction(activeRoute, fraction)
+                      if (!details) return
+                      event.currentTarget.focus()
+                      selectIndex(indexForDistance(details.distance))
+                    }}
+                    onMouseMove={(event) => {
+                      if (!activeRoute || selectedIndex !== null) return
                       const bounds = event.currentTarget.getBoundingClientRect()
                       const fraction = profileFractionFromPointer(event.clientX, bounds)
                       setHoveredProfilePoint(
                         fraction === null ? null : profileDetailsAtFraction(activeRoute, fraction),
                       )
                     }}
-                    onMouseLeave={() => setHoveredProfilePoint(null)}
+                    onMouseLeave={() => {
+                      if (selectedIndex === null) setHoveredProfilePoint(null)
+                    }}
                   >
                     <defs>
                       <linearGradient id="elevation-fill" x1="0" x2="0" y1="0" y2="1">
@@ -419,6 +544,11 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     </div>
                   )}
                 </div>
+                <span className="profile-live-status" role="status" aria-live="polite">
+                  {selectedIndex !== null ? pointDescription : ''}
+                </span>
+                </>
+                )}
               </div>
             )}
           </section>

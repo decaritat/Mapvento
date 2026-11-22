@@ -8,6 +8,10 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+### Changed
+
+- Expand the elevation profile via a dedicated button and inspect it using clicks and keyboard navigation.
+
 ### Fixed
 
 - Protect unsaved project changes when opening or creating a project.

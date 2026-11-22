@@ -1248,6 +1248,18 @@ describe('application interactions', () => {
       await importStoredProject(container)
       await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
       const chart = container.querySelector<SVGElement>('.elevation-chart')!
+      const help = button(container, 'Hilfe zur Höhenprofilbedienung')
+      const tooltip = container.querySelector<HTMLElement>('[role="tooltip"]')!
+      expect(help.getAttribute('aria-describedby')).toBe(tooltip.id)
+      expect(chart.getAttribute('aria-describedby')).toBe(tooltip.id)
+      expect(tooltip.textContent).toContain('Pfeiltasten')
+      await act(async () => help.focus())
+      await act(async () => help.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })))
+      expect(tooltip.classList.contains('dismissed')).toBe(true)
+      expect(document.activeElement).toBe(help)
+      await act(async () => help.blur())
+      await act(async () => help.focus())
+      expect(tooltip.classList.contains('dismissed')).toBe(false)
       vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue({
         x: 0, y: 0, left: 0, top: 0, right: 560, bottom: 190,
         width: 560, height: 190, toJSON: () => ({}),
@@ -1276,8 +1288,91 @@ describe('application interactions', () => {
       expect(container.querySelector('.profile-selection')?.textContent).toContain('200 m Höhe')
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1201 })))
       expect(container.querySelector('.profile-selection')).toBeNull()
+
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Home' })))
+      expect(chart.getAttribute('aria-valuetext')).toContain('100 m Höhe')
+      expect(container.querySelector('.profile-live-status')?.textContent).toContain('100 m Höhe')
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.CircleMarker && layer.options.radius === 8) profileMarker = layer
+      })
+      expect(profileMarker?.getLatLng().equals(L.latLng(52, 13))).toBe(true)
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' })))
+      expect(chart.getAttribute('aria-valuetext')).toContain('200 m Höhe')
+      expect(profileMarker?.getLatLng().equals(L.latLng(53, 14))).toBe(true)
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowLeft' })))
+      expect(chart.getAttribute('aria-valuetext')).toContain('100 m Höhe')
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' })))
+      expect(chart.getAttribute('aria-valuetext')).toContain('200 m Höhe')
+      expect(chart.getAttribute('aria-valuetext')).toContain('ab Start')
+
+      await act(async () => chart.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 1200 })))
+      expect(profileMarker?.getLatLng().equals(L.latLng(53, 14))).toBe(true)
+      await act(async () => chart.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 184 })))
+      await act(async () => chart.dispatchEvent(new MouseEvent('mouseout', { bubbles: true })))
+      expect(container.querySelector('.profile-selection')?.textContent).toContain('100 m Höhe')
+      expect(profileMarker?.getLatLng().equals(L.latLng(52, 13))).toBe(true)
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })))
+      expect(container.querySelector('.profile-selection')).toBeNull()
+      expect(chart.getAttribute('aria-valuetext')).toBe('Keine Position ausgewählt')
+      expect(map.hasLayer(profileMarker!)).toBe(false)
       await act(async () => button(container, 'Höhenprofil schließen').click())
       expect(container.querySelector('.elevation-chart')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('expands and collapses the profile using its corner button', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const toggle = button(container, 'Höhenprofil ausklappen')
+      expect(toggle.getAttribute('aria-expanded')).toBe('false')
+      await act(async () => toggle.focus())
+      await act(async () => toggle.click())
+      expect(container.querySelector('.inspector.expanded')).not.toBeNull()
+      expect(button(container, 'Höhenprofil schließen')).toBe(toggle)
+      expect(toggle.getAttribute('aria-expanded')).toBe('true')
+      expect(document.activeElement).toBe(toggle)
+      await act(async () => toggle.click())
+      expect(container.querySelector('.inspector.compact')).not.toBeNull()
+      expect(toggle.getAttribute('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(toggle)
+      await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
+      expect(container.querySelector('.inspector.expanded')).not.toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('explains empty profiles and calculated fallback heights', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
+      expect(container.textContent).toContain('mindestens zwei unterschiedlichen Punkten')
+      expect(container.querySelector('[role="slider"]')).toBeNull()
+
+      const route = {
+        ...initialProject.routes[0], editable: false,
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]], routingState: 'ready',
+      }
+      localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
+      await importStoredProject(container)
+      expect(container.textContent).toContain('Keine vollständigen Höhenwerte vorhanden. Das Profil verwendet synthetische Ersatzwerte.')
+      const chart = container.querySelector<SVGElement>('[role="slider"]')!
+      await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' })))
+      expect(chart.getAttribute('aria-valuetext')).toContain('Höhe')
+      expect(container.querySelector('.profile-selection')?.textContent).toContain('ab Start')
     } finally {
       await act(async () => root.unmount())
       container.remove()

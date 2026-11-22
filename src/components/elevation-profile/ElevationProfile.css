@@ -32,6 +32,10 @@
   gap: 15px;
 }
 
+.inspector.compact .inspector-title-row {
+  padding-right: 32px;
+}
+
 .inspector.expanded .inspector-title-row {
   width: 0;
   min-width: 100%;
@@ -59,6 +63,11 @@
   border-color: var(--border-strong);
   color: var(--text);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.inspector-close:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
 }
 
 .route-name-input {
@@ -240,6 +249,80 @@
   margin-bottom: 8px;
 }
 
+.elevation-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-help {
+  position: relative;
+  display: inline-flex;
+}
+
+.profile-help-button {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.profile-help-button:hover,
+.profile-help-button:focus-visible {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.profile-help-button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.profile-help-tooltip {
+  position: absolute;
+  z-index: 4;
+  top: 100%;
+  left: 0;
+  width: min(300px, 65vw);
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  color: var(--text);
+  background: #17232a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
+  font-size: 12px;
+  line-height: 1.4;
+  visibility: hidden;
+}
+
+.profile-help:hover .profile-help-tooltip:not(.dismissed),
+.profile-help:focus-within .profile-help-tooltip:not(.dismissed) {
+  visibility: visible;
+}
+
+.profile-message {
+  flex: 0 0 auto;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.profile-live-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .profile-selection {
   display: flex;
   align-items: center;
@@ -316,6 +399,11 @@
   overflow: visible;
   border-bottom: 1px solid var(--border);
   cursor: crosshair;
+}
+
+.elevation-chart:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
 }
 
 .elevation-axis-overlay {
