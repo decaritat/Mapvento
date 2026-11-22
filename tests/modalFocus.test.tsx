@@ -41,7 +41,7 @@ function RemovedOpener() {
 const dialogs: Array<[string, (close: () => void) => ReactNode]> = [
   ['Info', (close) => <AboutDialog onClose={close} />],
   ['Cache', (close) => <CacheDialog onClose={close} layerIds={[]} retry={() => {}}
-    project={initialProject} mapZoom={10} diagnosticsEnabled={false} />],
+    project={initialProject} mapZoom={10} diagnosticsEnabled={false} reportProblem={() => {}} />],
   ['Einstellungen', (close) => <SettingsDialog settings={DEFAULT_SETTINGS} getMapView={() => null}
     onSave={() => null} onClose={close} />],
   ['Update', (close) => <UpdateDialog currentVersion="1" availableVersion="2" onClose={close} />],

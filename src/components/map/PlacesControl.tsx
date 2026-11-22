@@ -56,6 +56,7 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
   onCreatePoi: (place: Place, clientX: number, clientY: number) => boolean
 }) {
   const [diagnosticMessage, setDiagnosticMessage] = useState('')
+  const [clearMessage, setClearMessage] = useState('')
   const panel = useRef<HTMLElement>(null)
   const [panelMaxHeight, setPanelMaxHeight] = useState<number>()
 
@@ -76,7 +77,6 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
   }, [open, disabled])
 
   const status = [
-    places.error,
     places.progress && [
       places.progress.message,
       places.progress.total > 0
@@ -124,6 +124,8 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
         <button type="button" className="map-layer-close" aria-label="OSM-Orte schließen"
           onClick={() => onClose(true)}>×</button>
       </div>
+      {places.error && <p className="osm-places-panel-status" role="alert">{places.error}</p>}
+      {clearMessage && <p className="osm-places-panel-status" role="status">{clearMessage}</p>}
       {(places.needsLoad || status) && <div className="osm-places-status-row">
         <p className="osm-places-panel-status" role="status">{status}</p>
         {places.needsLoad && <button type="button" className="osm-places-load"
@@ -137,11 +139,12 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
         {PLACE_CATEGORIES.map((category) => {
           const kinds = PLACE_KINDS.filter((kind) => kind.category === category.id)
           const allSelected = kinds.every((kind) => places.selectedKinds.includes(kind.id))
-          return <fieldset key={category.id}>
+          return <fieldset key={category.id} disabled={places.clearing}>
             <legend><span className="osm-places-group-heading">
               <span>{category.label}</span>
               <button type="button" className="osm-places-select-all"
                 aria-label={`${category.label}: ${allSelected ? 'alle abwählen' : 'alle auswählen'}`}
+                disabled={places.clearing}
                 onClick={() => places.toggleCategory(category.id, !allSelected)}>
                 {allSelected ? 'Alle abwählen' : 'Alle auswählen'}
               </button>
@@ -157,8 +160,11 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
         {places.needsRetry && <button className="action-button" type="button" disabled={!places.canRefresh} onClick={places.retry}>Erneut versuchen</button>}
         {!places.needsRetry && places.activeKinds.length > 0 &&
           <button className="action-button" type="button" disabled={!places.canRefresh} onClick={places.refresh}>Bereich um Kartenmitte aktualisieren</button>}
-        <button className="action-button danger" type="button" onClick={() => {
-          if (window.confirm('Alle lokal gespeicherten OSM-Orte löschen?')) void places.clear()
+        <button className="action-button danger" type="button" disabled={places.clearing} onClick={() => {
+          if (window.confirm('Alle lokal gespeicherten OSM-Orte löschen? Sie müssen bei Bedarf erneut geladen werden und stehen offline nicht mehr zur Verfügung. Der Kachelcache bleibt unverändert.')) {
+            setClearMessage('')
+            void places.clear()
+          } else setClearMessage('Löschen des Orte-Caches abgebrochen.')
         }}>Orte-Cache löschen</button>
         {places.diagnosticsEnabled && <section aria-label="Overpass-Diagnose">
           <h4>Overpass-Diagnose</h4>

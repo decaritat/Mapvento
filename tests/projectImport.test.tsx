@@ -41,6 +41,7 @@ describe('project loading in the app', () => {
       expect(title?.textContent).toBe(initialProject.name)
       expect(localStorage.getItem('mapvento-project')).toBe(invalid)
 
+      vi.useFakeTimers()
       const valid = { ...initialProject, name: 'Geöffnetes Projekt', mapLayerId: 'opentopomap' }
       await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Hauptmenü"]')!.click())
       await act(async () => Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
@@ -53,9 +54,16 @@ describe('project loading in the app', () => {
       expect(title?.textContent).toBe(valid.name)
       expect(container.textContent).toContain('Projekt geöffnet.')
       expect(JSON.parse(localStorage.getItem('mapvento-project')!)).toEqual(valid)
+      expect(container.querySelector('.map-problem[role="alert"]')?.textContent).toContain('Die Projektdatei konnte nicht gelesen werden.')
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+      expect(container.querySelector('.map-problem')?.textContent).toContain('Bitte eine gültige Projektdatei auswählen.')
+      expect(container.querySelector('.map-notice-stack [role="status"]')).toBeNull()
+      await act(async () => container.querySelector<HTMLButtonElement>('.map-problem button')!.click())
+      expect(container.querySelector('.map-problem')).toBeNull()
     } finally {
       await act(async () => root.unmount())
       container.remove()
+      vi.useRealTimers()
     }
   })
 
