@@ -52,6 +52,7 @@ import type { ErrorBanner, NodeContextMenu, NodeSelection, ToolMode } from './ap
 import { useRouteRouting } from '../features/route-routing/useRouteRouting'
 import { usePlaceSearch } from '../features/geocoding/usePlaceSearch'
 import { useDesktopExit } from '../features/desktop-exit/useDesktopExit'
+import { useNotifications } from '../features/notifications/useNotifications'
 import {
   getPoiIcon,
 } from '../integrations/map/poiIcons'
@@ -113,7 +114,7 @@ function App() {
   const [routeCreationDialogOpen, setRouteCreationDialogOpen] = useState(false)
   const [routeCreationMode, setRouteCreationMode] = useState<'new' | 'gpx'>('new')
   const [elevationExpanded, setElevationExpanded] = useState(false)
-  const [notice, setNotice] = useState(initial.warning)
+  const { notice, setNotice, problems, reportProblem, dismissProblem } = useNotifications(initial.warning)
   const [cacheWarning, setCacheWarning] = useState('')
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [mapLayerRetry, setMapLayerRetry] = useState<{ layerId: string; sequence: number } | null>(null)
@@ -181,12 +182,6 @@ function App() {
       item?.focus()
     }
   }, [openRouteMenu])
-
-  useEffect(() => {
-    if (!notice) return
-    const timeout = window.setTimeout(() => setNotice(''), 4000)
-    return () => window.clearTimeout(timeout)
-  }, [notice])
 
   useEffect(() => {
     if (!openRouteMenu) return
@@ -301,7 +296,7 @@ function App() {
     }
     openPointEditor(createPoiDraftFromOsmPlace(place, uid('point')), true, clientX, clientY)
     return true
-  }, [openPointEditor, pointEditor, routeEditor])
+  }, [openPointEditor, pointEditor, routeEditor, setNotice])
 
   const updateNode = useCallback((routeId: string, nodeId: string, coordinate: Coordinate) => {
     const route = project.routes.find((item) => item.id === routeId)
@@ -328,7 +323,7 @@ function App() {
       ),
     }))
     setNotice('Routenpunkt verschoben; die angrenzenden Segmente wurden neu berechnet.')
-  }, [project.routes, toolMode])
+  }, [project.routes, toolMode, setNotice])
 
   const insertNodeAtCoordinate = useCallback((routeId: string, coordinate: Coordinate, neighbors: [string, string]) => {
     const route = project.routes.find((item) => item.id === routeId)
@@ -354,7 +349,7 @@ function App() {
       }),
     }))
     setNotice('Neuer Routenpunkt gesetzt; die Route wird neu berechnet.')
-  }, [project.routes, toolMode])
+  }, [project.routes, toolMode, setNotice])
 
   const clearSearchLayerRef = useRef<() => void>(() => {})
   const placeSearch = usePlaceSearch(() => clearSearchLayerRef.current())
@@ -418,7 +413,7 @@ function App() {
       current?.routeId === routeId && current.nodeId === nodeId ? null : current,
     )
     setNotice('Routenpunkt gelöscht und Route neu berechnet.')
-  }, [project.routes, toolMode])
+  }, [project.routes, toolMode, setNotice])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -518,7 +513,7 @@ function App() {
     importGpx,
     importProject,
   } = useProjectFiles({
-    project, activeRoute, setProject, setLayerId, setNotice,
+    project, activeRoute, setProject, setLayerId, setNotice, reportProblem,
   })
 
   function projectWithDraft() {
@@ -576,7 +571,7 @@ function App() {
   const { exitDialogOpen, chooseExit, exitApp } = useDesktopExit({
     getProjectToSave: projectWithDraft,
     confirmBeforeExit,
-    setNotice,
+    reportProblem,
   })
 
   const saveShortcutRef = useRef(() => {})
@@ -973,9 +968,15 @@ function App() {
                   ? [...(current.mapOverlayIds ?? []).filter((item) => item !== id), id]
                   : (current.mapOverlayIds ?? []).filter((item) => item !== id),
               }))} />
-            {notice && (
-              <div className="map-notice" role="status" aria-live="polite">
-                {notice}
+            {(notice || problems.length > 0) && (
+              <div className="map-notice-stack">
+                {problems.map((problem) => (
+                  <div className="map-notice map-problem" role="alert" key={problem}>
+                    <span>{problem}</span>
+                    <button type="button" onClick={() => dismissProblem(problem)} aria-label="Meldung schließen">×</button>
+                  </div>
+                ))}
+                {notice && <div className="map-notice" role="status">{notice}</div>}
               </div>
             )}
             {cacheWarning && (
@@ -1044,7 +1045,7 @@ function App() {
       {cacheOpen && <CacheDialog onClose={() => setCacheOpen(false)}
         layerIds={[layerId, ...(project.mapOverlayIds ?? [])]} retry={retryMapLayer}
         project={project} mapZoom={mapZoom}
-        diagnosticsEnabled={settings.developer.cacheDiagnostics} />}
+        diagnosticsEnabled={settings.developer.cacheDiagnostics} reportProblem={reportProblem} />}
       </div>
       {exitDialogOpen && <ExitDialog onChoose={chooseExit} />}
       {projectChangeDialogOpen && <ExitDialog

@@ -13,6 +13,7 @@ export type PlacesControlState = {
   activeKinds: PlaceKindId[]
   progress: PlacesProgress | null
   error: string
+  clearing: boolean
   needsLoad: boolean
   canLoad: boolean
   canRefresh: boolean
@@ -58,9 +59,11 @@ export function useOsmPlaces(map: L.Map | null, diagnosticsEnabled = false, onPl
   const [selectedPlace, setSelectedPlace] = useState<PlacesControlState['selectedPlace']>(null)
   const [progress, setProgress] = useState<PlacesProgress | null>(null)
   const [error, setError] = useState('')
+  const [clearing, setClearing] = useState(false)
   const [diagnostics, setDiagnostics] = useState<PlacesDiagnostic[]>([])
   const diagnosticsEnabledRef = useRef(diagnosticsEnabled)
   const mounted = useRef(false)
+  const clearingRef = useRef(false)
   const activeRequest = useRef<AbortController | null>(null)
   const selectedMarker = useRef<L.Marker | null>(null)
   const selectedMarkerKey = useRef<string | null>(null)
@@ -112,7 +115,7 @@ export function useOsmPlaces(map: L.Map | null, diagnosticsEnabled = false, onPl
   }, [map])
 
   useEffect(() => {
-    if (!activeKinds.length || !viewport || moving) return
+    if (!activeKinds.length || !viewport || moving || clearingRef.current) return
     const controller = new AbortController()
     activeRequest.current = controller
     const force = nextForce.current
@@ -259,38 +262,51 @@ export function useOsmPlaces(map: L.Map | null, diagnosticsEnabled = false, onPl
   }, [activeKinds])
 
   const load = useCallback(() => {
-    if (!viewport || moving) return
+    if (!viewport || moving || clearingRef.current) return
     abortPlaces(activeRequest.current, 'manual-refresh')
     nextForce.current = false
     setActiveKinds(selectedKinds)
   }, [selectedKinds, viewport, moving])
 
   const reload = useCallback((force: boolean) => {
-    if (!viewport || moving || !activeKinds.length) return
+    if (!viewport || moving || !activeKinds.length || clearingRef.current) return
     abortPlaces(activeRequest.current, 'manual-refresh')
     nextForce.current = force
     setReloadSequence((current) => current + 1)
   }, [viewport, moving, activeKinds])
 
   const clear = useCallback(async () => {
+    if (clearingRef.current) return
+    clearingRef.current = true
+    setClearing(true)
     abortPlaces(activeRequest.current, 'cache-clear')
     setLoading(false)
+    setError('')
+    setProgress({ available: 0, total: 0, pending: 0, stale: 0,
+      message: 'Orte-Cache wird gelöscht …' })
     const startedAt = new Date().toISOString()
     const start = performance.now()
     let errorName: string | null = null
     let outcome: PlacesDiagnostic['outcome'] = 'success'
     try {
       await placesCache.clear()
-      setEntries(new Map())
-      setNeedsRetry(true)
-      setError('')
-      setProgress({ available: 0, total: 0, pending: 0, stale: 0,
-        message: 'Orte-Cache gelöscht.' })
+      if (mounted.current) {
+        setEntries(new Map())
+        setNeedsRetry(true)
+        setProgress({ available: 0, total: 0, pending: 0, stale: 0,
+          message: 'Orte-Cache gelöscht.' })
+      }
     } catch (reason) {
       outcome = 'cache-error'
       errorName = diagnosticErrorName(reason)
-      setError(`Orte-Cache konnte nicht gelöscht werden: ${reason instanceof Error ? reason.message : String(reason)}`)
+      if (mounted.current) {
+        setNeedsRetry(true)
+        setProgress(null)
+        setError(`Orte-Cache konnte nicht gelöscht werden: ${reason instanceof Error ? reason.message : String(reason)}. Bitte Speicherzugriff prüfen und erneut versuchen.`)
+      }
     } finally {
+      clearingRef.current = false
+      if (mounted.current) setClearing(false)
       recordDiagnostic({ startedAt, durationMs: Math.round(performance.now() - start), provider: null, phase: 'cache-clear',
         httpStatus: null, outcome, detail: null, abortReason: null, errorName, kindCount: 0,
         itemCount: null, responseBytes: null, splitDepth: null, retryAfterMs: null })
@@ -307,10 +323,10 @@ export function useOsmPlaces(map: L.Map | null, diagnosticsEnabled = false, onPl
   }, [])
 
   const needsLoad = selectedKinds.some((kind) => !activeKinds.includes(kind))
-  const canLoad = Boolean(needsLoad && viewport && !moving)
-  const canRefresh = Boolean(!loading && !moving && activeKinds.length && viewport)
+  const canLoad = Boolean(needsLoad && viewport && !moving && !clearing)
+  const canRefresh = Boolean(!loading && !moving && !clearing && activeKinds.length && viewport)
   return {
-    selectedPlace, selectedKinds, activeKinds, progress, error, needsLoad, canLoad, canRefresh, needsRetry,
+    selectedPlace, selectedKinds, activeKinds, progress, error, clearing, needsLoad, canLoad, canRefresh, needsRetry,
     diagnosticsEnabled, diagnostics,
     toggleKind, toggleCategory,
     load,

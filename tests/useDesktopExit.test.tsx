@@ -26,7 +26,7 @@ function Harness({ confirmBeforeExit }: {
   const { exitDialogOpen, chooseExit, exitApp } = useDesktopExit({
     getProjectToSave: () => ({ projectToSave: initialProject, isCurrent: () => true }),
     confirmBeforeExit,
-    setNotice: vi.fn(),
+    reportProblem: vi.fn(),
   })
   return (
     <>

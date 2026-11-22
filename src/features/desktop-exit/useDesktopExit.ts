@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { ExitChoice } from '../../components/exit/ExitDialog'
@@ -11,10 +11,10 @@ type Props = {
     isCurrent: () => boolean,
     ask: () => Promise<ExitChoice>,
   ) => Promise<boolean>
-  setNotice: Dispatch<SetStateAction<string>>
+  reportProblem: (message: string) => void
 }
 
-export function useDesktopExit({ getProjectToSave, confirmBeforeExit, setNotice }: Props) {
+export function useDesktopExit({ getProjectToSave, confirmBeforeExit, reportProblem }: Props) {
   const [exitDialogOpen, setExitDialogOpen] = useState(false)
   const exitChoiceRef = useRef<((choice: ExitChoice) => void) | null>(null)
   const exitInProgress = useRef(false)
@@ -42,11 +42,11 @@ export function useDesktopExit({ getProjectToSave, confirmBeforeExit, setNotice 
         setExitDialogOpen(true)
       }))) await invoke('exit_app')
     } catch (error) {
-      setNotice(`Beenden fehlgeschlagen: ${String(error)}`)
+      reportProblem(`Beenden fehlgeschlagen: ${String(error)}. Bitte erneut versuchen oder das Fenster schließen.`)
     } finally {
       exitInProgress.current = false
     }
-  }, [confirmBeforeExit, getProjectToSave, setNotice])
+  }, [confirmBeforeExit, getProjectToSave, reportProblem])
 
   useLayoutEffect(() => {
     exitAppRef.current = exitApp
@@ -63,13 +63,13 @@ export function useDesktopExit({ getProjectToSave, confirmBeforeExit, setNotice 
       if (disposed) stopListening()
       else unlisten = stopListening
     }).catch((error: unknown) => {
-      if (!disposed) setNotice(`Fensterschließen konnte nicht überwacht werden: ${String(error)}`)
+      if (!disposed) reportProblem(`Fensterschließen konnte nicht überwacht werden: ${String(error)}. Bitte Änderungen vor dem Schließen speichern.`)
     })
     return () => {
       disposed = true
       unlisten?.()
     }
-  }, [setNotice])
+  }, [reportProblem])
 
   return { exitDialogOpen, chooseExit, exitApp }
 }

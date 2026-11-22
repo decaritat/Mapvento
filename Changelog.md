@@ -10,6 +10,7 @@ once released versions are maintained.
 
 ### Changed
 
+- Keep project file and cache action problems visible and confirm cache deletions.
 - Show unavailable route statistics as placeholders and identify estimated durations.
 - Clarify icon states and make route color selection accessible.
 - Consolidate action colors and states and remove symbols from text buttons.

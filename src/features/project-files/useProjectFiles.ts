@@ -11,12 +11,13 @@ function isAclDenied(error: unknown) {
 
 const unavailableFileDialog = 'Dateidialog in dieser Umgebung nicht verfügbar. Bitte Mapvento als Desktop-App oder in einem externen Browser öffnen.'
 
-export function useProjectFiles({ project, activeRoute, setProject, setLayerId, setNotice }: {
+export function useProjectFiles({ project, activeRoute, setProject, setLayerId, setNotice, reportProblem }: {
   project: ProjectFile
   activeRoute: Route | undefined
   setProject: Dispatch<SetStateAction<ProjectFile>>
   setLayerId: Dispatch<SetStateAction<string>>
   setNotice: Dispatch<SetStateAction<string>>
+  reportProblem: (message: string) => void
 }) {
   const savedProject = useRef(JSON.stringify(project))
   const currentProject = useRef(project)
@@ -43,7 +44,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     ask: () => Promise<ExitChoice>,
   ) {
     if (saving.current) {
-      setNotice('Ein Speichervorgang läuft bereits.')
+      reportProblem('Ein Speichervorgang läuft bereits. Bitte warten und erneut versuchen.')
       return false
     }
 
@@ -53,14 +54,14 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     const choice = await ask()
     if (choice === 'cancel') return false
     if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
-      setNotice('Das Projekt wurde während des Projektwechsels geändert. Bitte erneut versuchen.')
+      reportProblem('Das Projekt wurde während des Projektwechsels geändert. Bitte erneut versuchen.')
       return false
     }
     if (choice === 'discard') return true
 
     if (!await saveProject(projectToSave)) return false
     if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
-      setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+      reportProblem('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
       return false
     }
     return true
@@ -69,7 +70,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
   async function exportRoute(route = activeRoute) {
     if (!route) return
     if (!route.editable) {
-      setNotice('Schreibgeschützte GPX-Routen können nicht exportiert werden.')
+      reportProblem('Schreibgeschützte GPX-Routen können nicht exportiert werden. Bitte eine bearbeitbare Route auswählen.')
       return
     }
     try {
@@ -84,13 +85,13 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
         setNotice('GPX-Export abgebrochen.')
         return
       }
-      setNotice(isAclDenied(error) ? unavailableFileDialog : 'GPX konnte nicht gespeichert werden.')
+      reportProblem(isAclDenied(error) ? unavailableFileDialog : 'GPX konnte nicht gespeichert werden. Bitte erneut versuchen.')
     }
   }
 
   async function saveProject(projectToSave = project, saveAs = false) {
     if (saving.current) {
-      setNotice('Ein Speichervorgang läuft bereits.')
+      reportProblem('Ein Speichervorgang läuft bereits. Bitte warten und erneut versuchen.')
       return false
     }
     saving.current = true
@@ -100,7 +101,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       const filename = `${projectToSave.name.toLowerCase().replaceAll(/[^a-z0-9]+/gi, '-') || 'projekt'}.mapvento.json`
       const saved = await saveProjectFile(filename, serialized, projectFile.current, saveAs)
       if (projectGeneration.current !== generation) {
-        setNotice('Das gespeicherte Projekt ist nicht mehr geöffnet.')
+        reportProblem('Das gespeicherte Projekt ist nicht mehr geöffnet. Bitte das aktuelle Projekt erneut speichern.')
         return false
       }
       localStorage.setItem('mapvento-project', serialized)
@@ -113,7 +114,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
         setNotice('Speichern abgebrochen.')
         return false
       }
-      setNotice(isAclDenied(error) ? unavailableFileDialog : `Projekt konnte nicht gespeichert werden: ${String(error)}`)
+      reportProblem(isAclDenied(error) ? unavailableFileDialog : `Projekt konnte nicht gespeichert werden: ${String(error)}. Bitte erneut versuchen.`)
       return false
     } finally {
       saving.current = false
@@ -122,7 +123,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
 
   async function confirmBeforeExit(projectToSave: ProjectFile, isCurrent: () => boolean, ask: () => Promise<ExitChoice>) {
     if (saving.current) {
-      setNotice('Ein Speichervorgang läuft bereits.')
+      reportProblem('Ein Speichervorgang läuft bereits. Bitte warten und erneut versuchen.')
       return false
     }
     const projectAtStart = JSON.stringify(currentProject.current)
@@ -130,13 +131,13 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       const choice = await ask()
       if (choice === 'cancel') return false
       if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
-        setNotice('Das Projekt wurde während des Beendens geändert. Bitte erneut versuchen.')
+        reportProblem('Das Projekt wurde während des Beendens geändert. Bitte erneut versuchen.')
         return false
       }
       if (choice === 'save') {
         if (!await saveProject(projectToSave)) return false
         if (JSON.stringify(currentProject.current) !== projectAtStart || !isCurrent()) {
-          setNotice('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
+          reportProblem('Das Projekt wurde während des Speicherns geändert. Bitte erneut versuchen.')
           return false
         }
       }
@@ -155,7 +156,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
     try {
       localStorage.setItem('mapvento-project', JSON.stringify(next))
     } catch (error) {
-      setNotice(`Neues Projekt konnte nicht angelegt werden: ${String(error)}`)
+      reportProblem(`Neues Projekt konnte nicht angelegt werden: ${String(error)}. Bitte Speicherzugriff prüfen und erneut versuchen.`)
       return false
     }
     projectFile.current = null
@@ -174,7 +175,7 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       if (projectGeneration.current !== generation) return
       const parsed = parseGpx(content)
       if (!parsed) {
-        setNotice('Die GPX-Datei konnte nicht gelesen werden.')
+        reportProblem('Die GPX-Datei konnte nicht gelesen werden. Bitte eine gültige GPX-Datei auswählen.')
         return
       }
       const route = {
@@ -194,9 +195,11 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       const skippedWaypointNotice = parsed.skippedWaypoints
         ? ` ${parsed.skippedWaypoints} ungültige GPX-Wegpunkte übersprungen.`
         : ''
-      setNotice(`GPX schreibgeschützt importiert.${waypointNotice}${skippedWaypointNotice}`)
+      const message = `GPX schreibgeschützt importiert.${waypointNotice}${skippedWaypointNotice}`
+      if (parsed.skippedWaypoints) reportProblem(`${message} Bitte die Quelldatei prüfen.`)
+      else setNotice(message)
     }).catch(() => {
-      if (projectGeneration.current === generation) setNotice('Die GPX-Datei konnte nicht gelesen werden.')
+      if (projectGeneration.current === generation) reportProblem('Die GPX-Datei konnte nicht gelesen werden. Bitte eine gültige GPX-Datei auswählen.')
     })
   }
 
@@ -213,18 +216,19 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       savedProject.current = JSON.stringify(normalizedProject)
       setProject(normalizedProject)
       setLayerId(mapLayerId)
-      setNotice(warning ? `Projekt geöffnet. ${warning}` : 'Projekt geöffnet.')
+      if (warning) reportProblem(`Projekt geöffnet. ${warning} Bitte die Kartenauswahl prüfen.`)
+      else setNotice('Projekt geöffnet.')
     } catch {
       pendingOpen.current = null
       openRequest.current += 1
-      setNotice('Die Projektdatei konnte nicht gelesen werden.')
+      reportProblem('Die Projektdatei konnte nicht gelesen werden. Bitte eine gültige Projektdatei auswählen.')
     }
   }
 
   async function importProject(file: File) {
     const opening = pendingOpen.current
     if (!opening) {
-      setNotice('Projektöffnung wurde nicht bestätigt. Bitte erneut über das Hauptmenü öffnen.')
+      reportProblem('Projektöffnung wurde nicht bestätigt. Bitte erneut über das Hauptmenü öffnen.')
       return
     }
     try {
@@ -237,12 +241,12 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
         loadProject(content, null)
       } else if (opening.request === openRequest.current) {
         pendingOpen.current = null
-        setNotice('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
+        reportProblem('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
       }
     } catch {
       if (opening.request === openRequest.current) {
         pendingOpen.current = null
-        setNotice('Die Projektdatei konnte nicht gelesen werden.')
+        reportProblem('Die Projektdatei konnte nicht gelesen werden. Bitte eine gültige Projektdatei auswählen.')
       }
     }
   }
@@ -269,13 +273,13 @@ export function useProjectFiles({ project, activeRoute, setProject, setLayerId, 
       else if (!opened && request === openRequest.current) pendingOpen.current = null
       else if (opened && request === openRequest.current) {
         pendingOpen.current = null
-        setNotice('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
+        reportProblem('Das Projekt wurde während des Öffnens geändert. Bitte erneut versuchen.')
       }
     } catch (error) {
       if (request === openRequest.current) {
         pendingOpen.current = null
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          setNotice(isAclDenied(error) ? unavailableFileDialog : `Die Projektdatei konnte nicht geöffnet werden: ${String(error)}`)
+          reportProblem(isAclDenied(error) ? unavailableFileDialog : `Die Projektdatei konnte nicht geöffnet werden: ${String(error)}. Bitte erneut versuchen.`)
         }
       }
     }

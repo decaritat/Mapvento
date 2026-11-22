@@ -50,6 +50,46 @@ describe('OSM places map interaction', () => {
     vi.restoreAllMocks()
   })
 
+  it('confirms clearing the separate places cache and reports cancellation, progress and failure', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    let fail!: (reason: Error) => void
+    const clear = vi.spyOn(placesCache, 'clear').mockReturnValue(new Promise<void>((_resolve, reject) => { fail = reject }))
+    const mapElement = document.createElement('div')
+    Object.defineProperties(mapElement, { clientWidth: { value: 700 }, clientHeight: { value: 500 } })
+    document.body.append(mapElement)
+    const map = L.map(mapElement).setView([50, 8], 15)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<Harness map={map} />))
+      await act(async () => button(container, 'OSM-Orte und Filter').click())
+      await act(async () => button(container, 'Orte-Cache löschen').click())
+      expect(clear).not.toHaveBeenCalled()
+      expect(container.textContent).toContain('Löschen des Orte-Caches abgebrochen.')
+      expect(confirm.mock.calls[0][0]).toContain('Kachelcache bleibt unverändert')
+      confirm.mockReturnValue(true)
+      await act(async () => button(container, 'Orte-Cache löschen').click())
+      expect(container.textContent).toContain('Orte-Cache wird gelöscht')
+      expect(button(container, 'Orte-Cache löschen').disabled).toBe(true)
+      expect(kindInput(container, 'Wasserquellen').closest('fieldset')?.disabled).toBe(true)
+      expect(button(container, 'Wasser: alle auswählen').disabled).toBe(true)
+      await act(async () => fail(new Error('Speicherfehler')))
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain('Speicherfehler')
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain('erneut versuchen')
+      expect(button(container, 'Orte-Cache löschen').disabled).toBe(false)
+      await act(async () => button(container, 'OSM-Orte schließen').click())
+      await act(async () => button(container, 'OSM-Orte und Filter').click())
+      expect(container.querySelector('[role="alert"]')?.textContent).toContain('Speicherfehler')
+    } finally {
+      await act(async () => root.unmount())
+      map.remove()
+      mapElement.remove()
+      container.remove()
+    }
+  })
+
   it('selects each type independently or as a group without issuing requests', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.useFakeTimers()
