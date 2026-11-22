@@ -4,8 +4,9 @@ import { TILE_CACHE_LIMIT, tileCache, type TileCacheStats } from '../../../integ
 import { projectCoverage } from '../../../integrations/map/tileCoverage'
 import type { ProjectFile } from '../../../domain/routeModel'
 import { TileDiagnosticsControl } from './TileDiagnosticsControl'
+import { formatNumber } from '../../../domain/numberFormat'
 
-const formatSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MiB`
+const formatSize = (bytes: number) => `${formatNumber(bytes / 1024 / 1024, 1)} MiB`
 
 export function TileCacheControl({ layerIds, retry, project, mapZoom, diagnosticsEnabled, reportProblem, onBusyChange }: {
   layerIds: string[]
@@ -95,7 +96,7 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom, diagnostic
       {!stats && !statsError && <p role="status">Cacheinformationen werden geladen …</p>}
       {stats && (
         <>
-          <p className="cache-summary"><strong>{formatSize(stats.bytes)}</strong> von {formatSize(TILE_CACHE_LIMIT)} · {stats.count} Kacheln</p>
+          <p className="cache-summary"><strong>{formatSize(stats.bytes)}</strong> von {formatSize(TILE_CACHE_LIMIT)} · {formatNumber(stats.count)} Kacheln</p>
           <p className="cache-hint">Nur besuchte Ausschnitte; keine vollständige Gebietsabdeckung. Der Cache wird projektübergreifend geteilt.</p>
           {providers.map((provider) => (
             <section className="tile-cache-provider" key={provider} aria-label={provider}>
@@ -109,9 +110,9 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom, diagnostic
                 return (
                   <div className="tile-cache-layer" key={id}>
                     <strong>{label} <span className={`cache-layer-state ${active ? 'active' : ''}`}>{active ? 'Aktiv' : 'Nicht aktiv'}</span></strong>
-                    <span>{entry?.count ?? 0} Kacheln · {formatSize(entry?.bytes ?? 0)} · {entry?.stale ?? 0} veraltet
+                    <span>{formatNumber(entry?.count ?? 0)} Kacheln · {formatSize(entry?.bytes ?? 0)} · {formatNumber(entry?.stale ?? 0)} veraltet
                       {entry?.zooms.length ? ` · Zoom ${[...entry.zooms].sort((a, b) => a - b).join(', ')}` : ' · Keine Zoomstufen'}</span>
-                    {coverage && <span>Projekt-Rechteck bei Zoom {zoom}: {coverage.cached}/{coverage.total}, davon {coverage.stale} veraltet</span>}
+                    {coverage && <span>Projekt-Rechteck bei Zoom {zoom}: {formatNumber(coverage.cached)}/{formatNumber(coverage.total)}, davon {formatNumber(coverage.stale)} veraltet</span>}
                     <div className="cache-actions">
                       <button type="button" aria-label={`${label} aktualisieren`} disabled={busy || !entry?.count} onClick={() => void perform(async () => {
                         await tileCache.revalidate(id)

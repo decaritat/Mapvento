@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 import { tileDiagnostics, parseTileLog, summarizeTileLog, type TileDiagnosticLog } from '../../../integrations/map/tileDiagnostics'
 import { saveTextFile } from '../../../features/project-files/projectFileAdapter'
+import { formatNumber } from '../../../domain/numberFormat'
 
 function Summary({ log, title }: { log: TileDiagnosticLog; title: string }) {
   const summary = summarizeTileLog(log)
@@ -9,14 +10,14 @@ function Summary({ log, title }: { log: TileDiagnosticLog; title: string }) {
     <div className="diagnostic-summary">
       <strong>{title}: {log.environment === 'desktop' ? 'Desktop' : 'Browser'} · {log.appVersion}</strong>
       <span>{log.startedAt} – {log.stoppedAt}</span>
-      <span>{summary.count} abgeschlossene Kachelladevorgänge · {summary.hits} Treffer · {summary.misses} nicht im Cache · {summary.stale} veraltet</span>
-      <span>{summary.requests} Fetch-Aufrufe · {summary.errors} Fehler · {summary.aborted} abgebrochen · {summary.evicted} verdrängt</span>
-      <span>Davon {summary.storageErrors} Cache-Speicherfehler · {summary.httpErrors} HTTP-Fehlerantworten</span>
-      {summary.hasTouchAttempts && <span>{summary.touchAttempts} Zugriffsaktualisierungen bei {summary.hits} Cache-Treffern</span>}
-      <span>Ø IndexedDB in ms: Öffnen {summary.openMs.toFixed(1)} · Lesen {summary.readMs.toFixed(1)} · Treffer aktualisieren {summary.touchMs.toFixed(1)} · Schreiben {summary.writeMs.toFixed(1)}</span>
-      <span>Ø Fetch {summary.fetchMs.toFixed(1)} ms · Antwortinhalt {summary.bodyMs.toFixed(1)} ms</span>
+      <span>{formatNumber(summary.count)} abgeschlossene Kachelladevorgänge · {formatNumber(summary.hits)} Treffer · {formatNumber(summary.misses)} nicht im Cache · {formatNumber(summary.stale)} veraltet</span>
+      <span>{formatNumber(summary.requests)} Fetch-Aufrufe · {formatNumber(summary.errors)} Fehler · {formatNumber(summary.aborted)} abgebrochen · {formatNumber(summary.evicted)} verdrängt</span>
+      <span>Davon {formatNumber(summary.storageErrors)} Cache-Speicherfehler · {formatNumber(summary.httpErrors)} HTTP-Fehlerantworten</span>
+      {summary.hasTouchAttempts && <span>{formatNumber(summary.touchAttempts)} Zugriffsaktualisierungen bei {formatNumber(summary.hits)} Cache-Treffern</span>}
+      <span>Ø IndexedDB in ms: Öffnen {formatNumber(summary.openMs, 1)} · Lesen {formatNumber(summary.readMs, 1)} · Treffer aktualisieren {formatNumber(summary.touchMs, 1)} · Schreiben {formatNumber(summary.writeMs, 1)}</span>
+      <span>Ø Fetch {formatNumber(summary.fetchMs, 1)} ms · Antwortinhalt {formatNumber(summary.bodyMs, 1)} ms</span>
       <span>Layer und Zoom: {layerZooms.join(', ') || 'keine'}</span>
-      {(log.incomplete > 0 || log.dropped > 0) && <span>Unvollständig beim Stoppen: {log.incomplete} · wegen Limit nicht gespeichert: {log.dropped}</span>}
+      {(log.incomplete > 0 || log.dropped > 0) && <span>Unvollständig beim Stoppen: {formatNumber(log.incomplete)} · wegen Limit nicht gespeichert: {formatNumber(log.dropped)}</span>}
     </div>
   )
 }

@@ -110,9 +110,7 @@
   color: var(--orange);
   font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .route-card-meta,

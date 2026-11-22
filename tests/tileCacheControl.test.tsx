@@ -82,7 +82,7 @@ describe('tile cache controls', () => {
         project={{ ...initialProject, points: [{ id: 'p', name: 'P', description: '', coordinate: [13, 52], source: 'manual' }] }}
         mapZoom={7} diagnosticsEnabled={false} reportProblem={reportProblem} onBusyChange={vi.fn()} />))
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 150)) })
-      expect(container.textContent).toContain('1.0 MiB von 100.0 MiB')
+      expect(container.textContent).toContain('1,0 MiB von 100,0 MiB')
       expect(container.textContent).toContain('Projekt-Rechteck bei Zoom 7: 1/1, davon 1 veraltet')
       await act(async () => container.querySelector<HTMLButtonElement>('.cache-clear')!.click())
       expect(container.querySelector('[role="alert"]')?.textContent).toContain('Speicherfehler')
