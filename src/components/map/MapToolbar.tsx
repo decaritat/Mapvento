@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
 import type { PlaceSearchResult, ToolMode } from '../../app/appTypes'
 import { ExternalLink } from '../shared/ExternalLink'
 import { OSM_COPYRIGHT_URL } from '../../domain/mapLayers'
@@ -83,47 +83,74 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
   osmPlaces: PlacesControlState
   onCreatePoiFromOsm: (place: Place, clientX: number, clientY: number) => boolean
 }) {
-  const searchButtonRef = useRef<HTMLButtonElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const [otherPanel, setOtherPanel] = useState<'layers' | 'places' | null>(null)
+  const activePanel = searchOpen ? 'search' : otherPanel
+
+  const closePanel = useCallback((panel: 'search' | 'layers' | 'places', restoreFocus: boolean) => {
+    if (panel === 'search') closeSearch()
+    else setOtherPanel((current) => current === panel ? null : current)
+    if (restoreFocus) {
+      toolbarRef.current?.querySelector<HTMLButtonElement>(`[data-map-panel-trigger="${panel}"]`)?.focus()
+    }
+  }, [closeSearch])
+
+  function togglePanel(panel: 'search' | 'layers' | 'places') {
+    if (panel === 'search') {
+      if (searchOpen) closePanel('search', false)
+      else {
+        setOtherPanel(null)
+        setSearchOpen(true)
+      }
+      return
+    }
+    setOtherPanel(activePanel === panel ? null : panel)
+    if (searchOpen) closeSearch()
+  }
 
   useEffect(() => {
-    if (!searchOpen) return
+    if (!activePanel) return
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"]')) return
-      const target = event.target
-      if (target !== document.body && !(target instanceof Element && target.closest('.map-container'))) return
       event.preventDefault()
       event.stopPropagation()
-      closeSearch()
-      searchButtonRef.current?.focus()
+      closePanel(activePanel, true)
+    }
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (toolbarRef.current?.contains(event.target as Node)) return
+      closePanel(activePanel, false)
     }
     document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [searchOpen, closeSearch])
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('pointerdown', closeOnOutsideClick)
+    }
+  }, [activePanel, closePanel])
 
   return (
-            <div className="map-tools" role="toolbar" aria-label="Kartenwerkzeuge">
+            <div className="map-tools" ref={toolbarRef} role="toolbar" aria-label="Kartenwerkzeuge">
               <div className="map-search" onKeyDown={(event) => {
-                if (event.key !== 'Escape' || !searchOpen) return
+                if (event.key !== 'Escape' || activePanel !== 'search') return
                 event.preventDefault()
                 event.stopPropagation()
-                closeSearch()
-                searchButtonRef.current?.focus()
+                closePanel('search', true)
               }}>
                 <button
-                  ref={searchButtonRef}
                   type="button"
-                  className={`map-tool-button ${searchOpen ? 'active' : ''}`}
+                  className={`map-tool-button ${activePanel === 'search' ? 'active' : ''}`}
                   disabled={routePropertiesOpen}
-                  onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+                  onClick={() => togglePanel('search')}
                   aria-label="Orte suchen"
-                  aria-expanded={searchOpen}
+                  aria-expanded={activePanel === 'search'}
                   aria-controls="map-place-search"
+                  data-map-panel-trigger="search"
                   data-tooltip="Ort suchen"
                   title="Ort suchen"
                 >
                   <MapToolIcon name="search" />
                 </button>
-                {searchOpen && (
+                {activePanel === 'search' && (
                   <section
                     className="map-search-panel"
                     id="map-place-search"
@@ -144,7 +171,7 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
                       <button
                         type="button"
                         className="map-search-close"
-                        onClick={closeSearch}
+                        onClick={() => closePanel('search', true)}
                         aria-label="Suche schließen"
                         title="Schließen"
                       >
@@ -193,8 +220,13 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
                 )}
               </div>
               <LayerControl layerId={layerId} overlayIds={overlayIds} disabled={routePropertiesOpen}
+                open={activePanel === 'layers'} onToggle={() => togglePanel('layers')}
+                onClose={(restoreFocus) => closePanel('layers', restoreFocus)}
                 changeLayer={changeLayer} toggleOverlay={toggleOverlay} />
-              <PlacesControl places={osmPlaces} disabled={routePropertiesOpen} onCreatePoi={onCreatePoiFromOsm} />
+              <PlacesControl places={osmPlaces} disabled={routePropertiesOpen}
+                open={activePanel === 'places'} onToggle={() => togglePanel('places')}
+                onClose={(restoreFocus) => closePanel('places', restoreFocus)}
+                onCreatePoi={onCreatePoiFromOsm} />
               <button
                 type="button"
                 className={`map-tool-button ${toolMode === 'pan' ? 'active' : ''}`}

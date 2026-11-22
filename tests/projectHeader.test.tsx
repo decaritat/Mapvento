@@ -13,7 +13,9 @@ describe('header menu', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const save = vi.fn()
     const container = document.createElement('div')
+    const outside = document.createElement('button')
     document.body.append(container)
+    document.body.append(outside)
     const root = createRoot(container)
     try {
       const newProject = vi.fn()
@@ -48,8 +50,19 @@ describe('header menu', () => {
       expect(container.querySelector('[role="menu"]')).toBeNull()
       expect(document.activeElement).toBe(trigger)
       await act(async () => trigger.click())
-      await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })))
+      await act(async () => {
+        outside.focus()
+        outside.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      })
       expect(container.querySelector('[role="menu"]')).toBeNull()
+      expect(document.activeElement).toBe(outside)
+      await act(async () => {
+        trigger.focus()
+        trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }))
+      })
+      const reopenedItems = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      expect(document.activeElement).toBe(reopenedItems[6])
+      await act(async () => reopenedItems[6].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(trigger)
       await act(async () => trigger.click())
       const current = container.querySelector<HTMLButtonElement>('[role="menuitem"]')!
@@ -71,6 +84,7 @@ describe('header menu', () => {
     } finally {
       await act(async () => root.unmount())
       container.remove()
+      outside.remove()
     }
   })
 
