@@ -94,12 +94,13 @@ export function PointEditor({
                   <div className="poi-icon-options">
                     {category.icons.map((icon) => (
                       <button
-                        className={`poi-icon-option ${point.icon === icon.id ? 'selected' : ''}`}
+                        className={`poi-icon-option ${selectedIcon.id === icon.id ? 'selected' : ''}`}
                         key={icon.id}
                         type="button"
                         disabled={isReadOnly}
                         aria-label={icon.label}
-                        aria-pressed={point.icon === icon.id}
+                        aria-pressed={selectedIcon.id === icon.id}
+                        title={icon.label}
                         onClick={() => {
                           updatePointDraft({ icon: icon.id })
                           setPoiIconPickerOpen(false)

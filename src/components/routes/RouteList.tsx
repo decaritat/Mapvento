@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { routeMetrics } from '../../domain/routeMetrics'
 import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from '../../domain/settings'
-import type { ProjectFile, Route } from '../../domain/routeModel'
+import { DEFAULT_ROUTE_COLOR, type ProjectFile, type Route } from '../../domain/routeModel'
 
 type RouteMenu = { routeId: string; top: number; left: number }
 export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuRef, routeMenuPopoverRef,
@@ -48,7 +48,7 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                     >
                       <span
                         className={`route-color ${route.type}`}
-                        style={{ backgroundColor: route.color ?? '#7ee787' }}
+                        style={{ backgroundColor: route.color ?? DEFAULT_ROUTE_COLOR }}
                       />
                       <span className="route-card-content">
                         <span className="route-card-title">

@@ -1,23 +1,23 @@
 import { ExternalLink } from '../shared/ExternalLink'
 import { ROUTING_PROVIDER, routingProfileLabel } from '../../domain/routing'
 import { DISTANCE_MARKER_MIN_STEP_KM, DISTANCE_MARKER_MAX_STEP_KM, isValidDistanceMarkerStepKm } from '../../domain/routeMetrics'
-import type { Route, RouteType } from '../../domain/routeModel'
+import { DEFAULT_ROUTE_COLOR, type Route, type RouteType } from '../../domain/routeModel'
 import { distanceInKm, distanceInUnit, type Units } from '../../domain/settings'
 import { useModalFocus } from '../shared/useModalFocus'
 
 const routeColors = [
-  '#7ee787',
-  '#ffb86c',
-  '#72b7ff',
-  '#d6a8ff',
-  '#ff7b72',
-  '#f2cc60',
-  '#00c2a8',
-  '#a855f7',
+  { value: DEFAULT_ROUTE_COLOR, name: 'Hellgrün (Standardfarbe)' },
+  { value: '#ffb86c', name: 'Orange' },
+  { value: '#72b7ff', name: 'Hellblau' },
+  { value: '#d6a8ff', name: 'Hellviolett' },
+  { value: '#ff7b72', name: 'Korallrot' },
+  { value: '#f2cc60', name: 'Gelb' },
+  { value: '#00c2a8', name: 'Türkis' },
+  { value: '#a855f7', name: 'Violett' },
 ]
 function getCustomRouteColor(route: Route) {
   if (route.customColor) return route.customColor
-  if (route.color && !routeColors.includes(route.color)) return route.color
+  if (route.color && !routeColors.some(({ value }) => value === route.color?.toLowerCase())) return route.color
   return undefined
 }
 
@@ -36,6 +36,8 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
       restoreFocus,
     })
     const customColor = getCustomRouteColor(route)
+    const currentColor = (route.color ?? DEFAULT_ROUTE_COLOR).toLowerCase()
+    const selectedColor = routeColors.find(({ value }) => value === currentColor)
     const showDistanceMarkers = Boolean(route.showDistanceMarkers)
     const distanceMarkerMode = route.distanceMarkerMode === 'manual' ? 'manual' : 'auto'
     const manualDistanceMarkerInvalid =
@@ -128,15 +130,17 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         <div className="route-editor-section route-color-section">
           <span className="route-editor-section-label">Routenfarbe</span>
           <div className="route-color-controls">
-            <div className="color-swatches" aria-label="Schnellwahl Routenfarbe">
+            <div className="color-swatches" role="group" aria-label="Schnellwahl Routenfarbe">
               {routeColors.map((color) => (
                 <button
-                  key={color}
+                  key={color.value}
                   type="button"
-                  className={`color-swatch ${route.color === color ? 'selected' : ''}`}
-                  style={{ backgroundColor: color }}
-                  title={`Farbe ${color}`}
-                  onClick={() => updateRouteDraft({ color, customColor })}
+                  className={`color-swatch ${currentColor === color.value ? 'selected' : ''}`}
+                  style={{ backgroundColor: color.value }}
+                  aria-label={`${color.name}, ${color.value}`}
+                  aria-pressed={currentColor === color.value}
+                  title={`${color.name} (${color.value})`}
+                  onClick={() => updateRouteDraft({ color: color.value, customColor })}
                 />
               ))}
             </div>
@@ -155,6 +159,9 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
               <span>Eigene Farbe</span>
             </label>
           </div>
+          <span className="route-color-current">
+            Aktuell: {selectedColor ? `${selectedColor.name} (${selectedColor.value})` : `Eigene Farbe (${route.color})`}
+          </span>
         </div>
         <fieldset className="distance-marker-settings">
           <legend className="distance-marker-heading">

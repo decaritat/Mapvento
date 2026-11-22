@@ -201,6 +201,7 @@
 }
 
 .color-swatch {
+  position: relative;
   width: 17px;
   height: 17px;
   padding: 0;
@@ -212,6 +213,28 @@
 .color-swatch.selected {
   border-color: var(--text);
   box-shadow: 0 0 0 2px rgba(13, 19, 24, 0.9), 0 0 0 3px var(--text);
+}
+
+.color-swatch.selected::after {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 7px;
+  height: 4px;
+  border-bottom: 2px solid #111820;
+  border-left: 2px solid #111820;
+  content: '';
+  transform: rotate(-45deg);
+}
+
+.color-swatch:focus-visible {
+  outline: 2px solid var(--action-focus);
+  outline-offset: 3px;
+}
+
+.route-color-current {
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .color-swatch:disabled {
