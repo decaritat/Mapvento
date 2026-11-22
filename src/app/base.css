@@ -6,8 +6,8 @@
   --border: rgba(204, 228, 241, 0.11);
   --border-strong: rgba(204, 228, 241, 0.2);
   --text: #e8f0f4;
-  --muted: #8da0aa;
-  --faint: #60727d;
+  --muted: #aabac2;
+  --faint: #8da0aa;
   --green: #7ee787;
   --green-dark: #254a35;
   --orange: #ffb86c;
@@ -166,6 +166,12 @@ select option {
   background-color: var(--panel-raised);
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+  opacity: 1;
+}
+
 select:focus,
 input:focus,
 textarea:focus {
@@ -216,7 +222,8 @@ textarea:focus {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(12rem, 1fr) auto;
+  container-type: inline-size;
 }
 
 .sidebar {
@@ -233,7 +240,7 @@ textarea:focus {
 .sidebar-heading {
   justify-content: space-between;
   flex: 0 0 auto;
-  max-height: 25%;
+  max-height: 40%;
   overflow: auto;
   margin: 0 7px 18px;
   padding: 8px;
@@ -252,7 +259,7 @@ textarea:focus {
 .eyebrow {
   display: block;
   color: var(--faint);
-  font-size: 10px;
+  font-size: 0.75rem;
   letter-spacing: 0.14em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -267,7 +274,7 @@ textarea:focus {
   border-radius: 0;
   color: var(--text);
   background: transparent;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -277,7 +284,7 @@ textarea:focus {
   overflow-wrap: anywhere;
   padding: 2px 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -341,8 +348,8 @@ textarea:focus {
 .project-description {
   display: block;
   width: 100%;
-  min-height: 34px;
-  max-height: 80px;
+  min-height: 3.2em;
+  max-height: 8em;
   margin-top: 5px;
   padding: 4px 0;
   border: 0;
@@ -351,9 +358,9 @@ textarea:focus {
   color: var(--muted);
   background: transparent;
   font: inherit;
-  font-size: 10px;
+  font-size: 0.8125rem;
   line-height: 1.35;
-  overflow: hidden;
+  overflow: auto;
   resize: none;
 }
 
@@ -369,7 +376,7 @@ textarea:focus {
   display: block;
   margin-top: 3px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 0.75rem;
   text-align: right;
 }
 
@@ -377,7 +384,7 @@ textarea:focus {
   display: block;
   margin-top: 3px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 0.75rem;
   text-align: right;
 }
 
@@ -395,7 +402,7 @@ textarea:focus {
   border-radius: 6px;
   color: var(--text);
   background: var(--panel-soft);
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 

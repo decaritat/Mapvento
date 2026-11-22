@@ -38,7 +38,7 @@ export function PointEditor({
               ? `POI ${point.name} anzeigen`
               : `POI ${point.name} bearbeiten`
         }
-        style={{ top: top, left: left }}
+        style={{ top, left, maxHeight: `calc(100vh - ${top + 8}px)` }}
         tabIndex={-1}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && poiIconPickerOpen) {

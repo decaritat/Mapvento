@@ -55,7 +55,7 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         role="dialog"
         aria-modal="true"
         aria-label={`Eigenschaften von ${route.name}`}
-        style={{ top: top, left: left }}
+        style={{ top, left, maxHeight: `calc(100vh - ${top + 8}px)` }}
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >

@@ -127,12 +127,17 @@
   stroke-width: 1.6;
 }
 
-.leaflet-control-attribution {
+.map-canvas .leaflet-container .leaflet-control-attribution {
   color: #26343b;
+  background: rgba(255, 255, 255, 0.97);
 }
 
 .leaflet-control-attribution {
   font-size: 9px;
+}
+
+.leaflet-control-attribution a {
+  color: #315a44;
 }
 
 .leaflet-control-scale {
@@ -143,7 +148,7 @@
   border: 2px solid #26343b;
   border-top: 0;
   color: #26343b;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.94);
   font-size: 10px;
   font-weight: 700;
   line-height: 1.1;
@@ -210,7 +215,7 @@
 }
 
 .distance-marker-wrapper:not(.active) .distance-marker-label {
-  opacity: 0.72;
+  border-style: dashed;
 }
 
 .map-tools {
@@ -619,6 +624,10 @@
   font-size: 12px;
 }
 
+.map-search-form input::placeholder {
+  color: #52636b;
+}
+
 .map-search-form button {
   height: 32px;
   padding: 0 9px;
@@ -648,7 +657,7 @@
   margin: 0;
   padding: 8px 11px;
   color: #52636b;
-  font-size: 11px;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
@@ -755,7 +764,7 @@
   background: rgba(13, 19, 24, 0.9);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(10px);
-  font-size: 11px;
+  font-size: 0.8125rem;
   line-height: 1.4;
 }
 
@@ -791,7 +800,7 @@
   background: rgba(13, 19, 24, 0.94);
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
-  font-size: 12px;
+  font-size: 0.8125rem;
   line-height: 1.4;
   text-align: center;
 }
@@ -1116,7 +1125,7 @@
   flex: 1;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 650;
 }
 
@@ -1160,7 +1169,7 @@
 .poi-icon-category legend {
   padding: 0;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
 }
 

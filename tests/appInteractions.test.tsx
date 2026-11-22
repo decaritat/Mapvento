@@ -1427,6 +1427,9 @@ describe('application interactions', () => {
       await importStoredProject(container)
       await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
       const chart = container.querySelector<SVGElement>('.elevation-chart')!
+      const axisLabels = [...container.querySelectorAll<HTMLElement>('.elevation-axis-label-x')]
+      expect(axisLabels.at(-1)?.classList.contains('align-end')).toBe(true)
+      expect(parseFloat(axisLabels.at(-1)!.style.left) - parseFloat(axisLabels.at(-2)!.style.left)).toBeGreaterThanOrEqual(9)
       const help = button(container, 'Hilfe zur Höhenprofilbedienung')
       const tooltip = container.querySelector<HTMLElement>('[role="tooltip"]')!
       expect(help.getAttribute('aria-describedby')).toBe(tooltip.id)
