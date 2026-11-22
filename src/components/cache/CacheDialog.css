@@ -111,20 +111,6 @@
   margin-top: 4px;
 }
 
-.cache-actions button,
-.cache-clear {
-  padding: 7px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  color: var(--text);
-  background: var(--panel-raised);
-}
-
-.cache-actions button:disabled,
-.cache-clear:disabled {
-  color: var(--faint);
-}
-
 .cache-clear {
   margin-top: 16px;
 }

@@ -12,6 +12,31 @@
   --green-dark: #254a35;
   --orange: #ffb86c;
   --shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --action-surface: var(--panel-soft);
+  --action-hover: var(--panel-raised);
+  --action-active: #253941;
+  --action-text: var(--text);
+  --action-border: var(--border-strong);
+  --action-focus: #a6f1ad;
+  --action-primary: var(--green);
+  --action-primary-hover: #a1f4a7;
+  --action-primary-active: #64cf70;
+  --action-primary-text: #10251a;
+  --action-danger: #ff9a91;
+  --action-danger-border: rgba(255, 123, 114, 0.55);
+  --action-danger-hover: rgba(255, 123, 114, 0.12);
+  --action-danger-active: rgba(255, 123, 114, 0.22);
+  --map-surface: rgba(255, 255, 255, 0.97);
+  --map-text: #26343b;
+  --map-muted: #52636b;
+  --map-border: rgba(38, 52, 59, 0.18);
+  --map-action-hover: #e4f5e6;
+  --map-action-active: #c2f5c6;
+  --map-focus: #173c27;
+  --map-danger: #a32520;
+  --map-danger-border: #b95650;
+  --map-danger-hover: #fbe9e8;
+  --map-danger-active: #f7d8d5;
 }
 
 .app-shell {
@@ -134,6 +159,10 @@
 .header-menu button:disabled {
   color: var(--faint);
   cursor: not-allowed;
+}
+
+.header-menu button:active:not(:disabled) {
+  background: var(--action-active);
 }
 
 .header-menu-separator {
@@ -398,45 +427,12 @@ textarea:focus {
 .project-edit-action,
 .route-editor-action {
   padding: 7px 9px;
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  color: var(--text);
-  background: var(--panel-soft);
   font-size: 0.75rem;
   font-weight: 600;
 }
 
-.project-edit-action:hover,
-.route-editor-action:hover:not(:disabled) {
-  border-color: var(--green);
-  background: var(--panel-raised);
-}
-
-.project-edit-action.save,
-.route-editor-action.save {
-  border-color: rgba(126, 231, 135, 0.45);
-  color: var(--green);
-}
-
-.project-edit-action.cancel,
-.route-editor-action.cancel {
-  color: var(--muted);
-}
-
 .route-editor-action.delete {
   margin-right: auto;
-  border-color: rgba(255, 123, 114, 0.4);
-  color: #ff9a91;
-}
-
-.route-editor-action.delete:hover:not(:disabled) {
-  border-color: #ff7b72;
-  background: rgba(255, 123, 114, 0.12);
-}
-
-.route-editor-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .icon-button {

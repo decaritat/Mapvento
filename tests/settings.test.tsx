@@ -87,6 +87,8 @@ describe('settings and units', () => {
       await act(async () => root.render(<RouteEditor route={{ ...initialProject.routes[0], showDistanceMarkers: true, distanceMarkerMode: 'manual', distanceMarkerStepKm: 1.609344 }}
         units={{ ...DEFAULT_SETTINGS.units, distance: 'mi' }} top={0} left={0}
         updateRouteDraft={update} saveRouteProperties={vi.fn()} close={vi.fn()} />))
+      expect(Array.from(container.querySelectorAll('.route-editor-actions button')).map((item) => item.textContent?.trim()))
+        .toEqual(['Abbrechen', 'Übernehmen'])
       const field = container.querySelector<HTMLInputElement>('[aria-label="Manuelle Schrittweite in Meilen"]')!
       expect(field.value).toBe('1')
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!

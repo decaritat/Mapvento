@@ -874,22 +874,22 @@ function App() {
               {editingProjectName && (
                 <div className="project-edit-actions">
                   <button
-                    className="project-edit-action save"
-                    type="button"
-                    aria-label="Projektänderungen übernehmen"
-                    title="Übernehmen"
-                    onClick={saveProjectName}
-                  >
-                    ✓ Übernehmen
-                  </button>
-                  <button
                     className="project-edit-action cancel"
                     type="button"
                     aria-label="Projektänderungen verwerfen"
                     title="Abbrechen"
                     onClick={cancelProjectNameEdit}
                   >
-                    × Abbrechen
+                    Abbrechen
+                  </button>
+                  <button
+                    className="project-edit-action save"
+                    type="button"
+                    aria-label="Projektänderungen übernehmen"
+                    title="Übernehmen"
+                    onClick={saveProjectName}
+                  >
+                    Übernehmen
                   </button>
                 </div>
               )}
@@ -1009,6 +1009,7 @@ function App() {
                 onClick={(event) => event.stopPropagation()}
               >
                 <button
+                  className="danger"
                   onClick={deleteNode}
                   disabled={
                     toolMode !== 'route' ||

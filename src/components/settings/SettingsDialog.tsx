@@ -47,10 +47,10 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
         <form onSubmit={save}>
           <div className="settings-body">
             <nav aria-label="Einstellungskategorien">
-              <button type="button" aria-current={category === 'general' ? 'page' : undefined} onClick={() => setCategory('general')}>Allgemein</button>
-              <button type="button" aria-current={category === 'start' ? 'page' : undefined} onClick={() => setCategory('start')}>Start</button>
-              <button type="button" aria-current={category === 'units' ? 'page' : undefined} onClick={() => setCategory('units')}>Einheiten</button>
-              <button type="button" aria-current={category === 'developer' ? 'page' : undefined} onClick={() => setCategory('developer')}>Entwicklung</button>
+              <button className="action-button" type="button" aria-current={category === 'general' ? 'page' : undefined} onClick={() => setCategory('general')}>Allgemein</button>
+              <button className="action-button" type="button" aria-current={category === 'start' ? 'page' : undefined} onClick={() => setCategory('start')}>Start</button>
+              <button className="action-button" type="button" aria-current={category === 'units' ? 'page' : undefined} onClick={() => setCategory('units')}>Einheiten</button>
+              <button className="action-button" type="button" aria-current={category === 'developer' ? 'page' : undefined} onClick={() => setCategory('developer')}>Entwicklung</button>
             </nav>
             <section className="settings-fields">
               {category === 'general' ? <>
@@ -86,7 +86,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                     <label>Längengrad<input type="number" step="any" min="-180" max="180" value={longitude} onChange={(event) => setLongitude(event.target.value)} /></label>
                     <label>Zoom<input type="number" step="1" min="0" max="19" value={zoom} onChange={(event) => setZoom(event.target.value)} /></label>
                   </div>
-                  <button type="button" onClick={() => { const view = getMapView(); if (view) { setView(view); setError('') } else setError('Die Kartenansicht ist nicht verfügbar.') }}>Aktuelle Kartenposition übernehmen</button>
+                  <button className="action-button" type="button" onClick={() => { const view = getMapView(); if (view) { setView(view); setError('') } else setError('Die Kartenansicht ist nicht verfügbar.') }}>Aktuelle Kartenposition übernehmen</button>
                 </div>
               </> : category === 'units' ? <>
                 <h3>Einheiten</h3>
@@ -125,7 +125,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                 <p>Zeigt Anfrage-, Abbruch- und Cache-Status im OSM-Orte-Menü; keine Kartenkoordinaten, URLs oder Ortsdaten.</p>
               </>}
               <div className="settings-reset">
-                <button type="button" onClick={() => {
+                <button className="action-button" type="button" onClick={() => {
                   if (category === 'start') { setDraft({ ...draft, start: DEFAULT_SETTINGS.start }); setView(DEFAULT_SETTINGS.start) }
                   else if (category === 'units') setDraft({ ...draft, units: DEFAULT_SETTINGS.units })
                   else if (category === 'developer') setDraft({ ...draft, developer: DEFAULT_SETTINGS.developer })
@@ -136,7 +136,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
             </section>
           </div>
           {error && <p className="settings-error" role="alert">{error}</p>}
-          <footer><button type="button" onClick={onClose}>Abbrechen</button><button type="submit">Übernehmen</button></footer>
+          <footer><button className="action-button" type="button" onClick={onClose}>Abbrechen</button><button className="action-button primary" type="submit">Übernehmen</button></footer>
         </form>
       </div>
     </div>, document.body,

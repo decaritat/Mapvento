@@ -1,0 +1,149 @@
+.action-button,
+.project-edit-action,
+.route-editor-action,
+.cache-actions button,
+.cache-clear {
+  padding: 7px 10px;
+  border: 1px solid var(--action-border);
+  border-radius: 6px;
+  color: var(--action-text);
+  background: var(--action-surface);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.action-button:hover:not(:disabled),
+.project-edit-action:hover:not(:disabled),
+.route-editor-action:hover:not(:disabled),
+.cache-actions button:hover:not(:disabled),
+.cache-clear:hover:not(:disabled) {
+  border-color: var(--action-focus);
+  background: var(--action-hover);
+}
+
+.action-button:active:not(:disabled),
+.project-edit-action:active:not(:disabled),
+.route-editor-action:active:not(:disabled),
+.cache-actions button:active:not(:disabled),
+.cache-clear:active:not(:disabled) {
+  background: var(--action-active);
+}
+
+.action-button.primary,
+.project-edit-action.save,
+.route-editor-action.save {
+  border-color: var(--action-primary);
+  color: var(--action-primary-text);
+  background: var(--action-primary);
+}
+
+.action-button.primary:hover:not(:disabled),
+.project-edit-action.save:hover:not(:disabled),
+.route-editor-action.save:hover:not(:disabled) {
+  border-color: var(--action-primary-hover);
+  background: var(--action-primary-hover);
+}
+
+.action-button.primary:active:not(:disabled),
+.project-edit-action.save:active:not(:disabled),
+.route-editor-action.save:active:not(:disabled) {
+  border-color: var(--action-primary-active);
+  background: var(--action-primary-active);
+}
+
+.action-button.danger,
+.route-editor-action.delete,
+.cache-actions button.danger,
+.cache-clear {
+  border-color: var(--action-danger-border);
+  color: var(--action-danger);
+}
+
+.action-button.danger:hover:not(:disabled),
+.route-editor-action.delete:hover:not(:disabled),
+.cache-actions button.danger:hover:not(:disabled),
+.cache-clear:hover:not(:disabled) {
+  border-color: var(--action-danger);
+  background: var(--action-danger-hover);
+}
+
+.action-button.danger:active:not(:disabled),
+.route-editor-action.delete:active:not(:disabled),
+.cache-actions button.danger:active:not(:disabled),
+.cache-clear:active:not(:disabled) {
+  background: var(--action-danger-active);
+}
+
+.action-button:disabled,
+.project-edit-action:disabled,
+.route-editor-action:disabled,
+.cache-actions button:disabled,
+.cache-clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.icon-button:hover:not(:disabled),
+.project-name-edit:hover:not(:disabled),
+.route-menu-trigger:hover:not(:disabled),
+.inspector-close:hover:not(:disabled) {
+  color: var(--action-text);
+  background: var(--action-hover);
+}
+
+.icon-button:active:not(:disabled),
+.project-name-edit:active:not(:disabled),
+.route-menu-trigger:active:not(:disabled),
+.inspector-close:active:not(:disabled) {
+  background: var(--action-active);
+}
+
+.icon-button:disabled,
+.project-name-edit:disabled,
+.route-menu-trigger:disabled,
+.inspector-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.map-tools,
+.osm-place-details {
+  --action-surface: var(--map-surface);
+  --action-hover: var(--map-action-hover);
+  --action-active: var(--map-action-active);
+  --action-text: var(--map-text);
+  --action-border: var(--map-border);
+  --action-focus: var(--map-focus);
+  --action-danger: var(--map-danger);
+  --action-danger-border: var(--map-danger-border);
+  --action-danger-hover: var(--map-danger-hover);
+  --action-danger-active: var(--map-danger-active);
+}
+
+.map-tools .action-button,
+.osm-place-details .action-button {
+  font-size: 0.75rem;
+}
+
+.map-search-form .action-button {
+  border-color: var(--action-primary);
+  color: var(--action-primary-text);
+  background: var(--action-primary);
+}
+
+.map-search-form .action-button:hover:not(:disabled) {
+  border-color: var(--action-primary-hover);
+  background: var(--action-primary-hover);
+}
+
+.map-search-form .action-button:active:not(:disabled) {
+  border-color: var(--action-primary-active);
+  background: var(--action-primary-active);
+}
+
+.map-tools .map-tool-button:active:not(:disabled),
+.map-tools .map-layer-close:active:not(:disabled),
+.map-tools .osm-places-load:active:not(:disabled),
+.osm-place-details .map-layer-close:active:not(:disabled) {
+  background: var(--map-action-active);
+}
