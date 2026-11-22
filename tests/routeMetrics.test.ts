@@ -8,6 +8,7 @@ import {
 import {
   getAutomaticDistanceMarkerStepKm,
   formatDuration,
+  formatDistanceAxis,
   formatRouteMetrics,
   getDistanceMarkers,
   getDistanceScale,
@@ -140,12 +141,17 @@ describe('route geometry and metrics', () => {
     }
     const units = { distance: 'mi', elevation: 'ft', duration: 'minutes' } as const
     expect(formatRouteMetrics(routeMetrics(route), units)).toMatchObject({
-      distance: '1.4', duration: 'ca. 35 min', high: '492', low: '328',
+      distance: '1,4', duration: 'ca. 35 min', high: '492', low: '328',
     })
     const fallback = { ...route, elevations: undefined }
     expect(formatRouteMetrics(routeMetrics(fallback), DEFAULT_SETTINGS.units)).toMatchObject({
-      distance: '2.2', high: '600', low: '588',
+      distance: '2,2', high: '600', low: '588',
     })
+    expect(formatRouteMetrics({ ...routeMetrics(route), length: 1234.56, high: 1234.6 }, DEFAULT_SETTINGS.units))
+      .toMatchObject({ distance: '1.234,6', high: '1.235' })
+    expect(formatDistanceAxis(0.5)).toBe('0,5')
+    expect(formatDistanceAxis(1)).toBe('1')
+    expect(formatDistanceAxis(1234)).toBe('1.234')
   })
 
   it('falls back to generated geometry and elevations when routed data is unavailable', () => {

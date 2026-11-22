@@ -52,7 +52,7 @@ export function PointEditor({
       >
         <div className="route-editor-heading">
           <span className="eyebrow">{isNew ? 'POI anlegen' : 'POI-Eigenschaften'}</span>
-          {isReadOnly && <span className="lock-badge" lang="en">READ-ONLY</span>}
+          {isReadOnly && <span className="lock-badge">Schreibgeschützt</span>}
           <span
             className="poi-editor-selected-icon"
             aria-hidden="true"

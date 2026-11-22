@@ -12,6 +12,7 @@ import type { PlacesDiagnostic } from '../../features/osm-places/placesDiagnosti
 import type { Place } from '../../features/osm-places/places'
 import { getPoiIcon, poiIconSvg } from '../../integrations/map/poiIcons'
 import { OsmPlaceDetails } from './OsmPlaceDetails'
+import { formatNumber } from '../../domain/numberFormat'
 
 const abortLabels: Record<NonNullable<PlacesDiagnostic['abortReason']>, string> = {
   'map-movement': 'Kartenbewegung oder Zoom',
@@ -43,7 +44,7 @@ function describeDiagnostic(event: PlacesDiagnostic): string {
     event.httpStatus === null ? '' : `HTTP ${event.httpStatus}`,
     event.abortReason ? abortLabels[event.abortReason] : '',
     event.detail ? detailLabels[event.detail] : '',
-    `${event.durationMs} ms`,
+    `${formatNumber(event.durationMs)} ms`,
   ].filter(Boolean).join(', ')
 }
 
@@ -80,7 +81,7 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
     places.progress && [
       places.progress.message,
       places.progress.total > 0
-        ? `${places.progress.available}/${places.progress.total} Zell-Typen verfügbar, ${places.progress.pending} ausstehend${places.progress.stale ? `, ${places.progress.stale} veraltet` : ''}.`
+        ? `${formatNumber(places.progress.available)}/${formatNumber(places.progress.total)} Zell-Typen verfügbar, ${formatNumber(places.progress.pending)} ausstehend${places.progress.stale ? `, ${formatNumber(places.progress.stale)} veraltet` : ''}.`
         : '',
     ].filter(Boolean).join(' '),
     places.needsLoad ? 'Neue Ortstypen mit dem Symbol laden.' : '',

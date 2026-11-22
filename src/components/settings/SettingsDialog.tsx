@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useModalFocus } from '../shared/useModalFocus'
 import { layers, overlayLayers } from '../../domain/mapLayers'
 import { DEFAULT_SETTINGS, durationFormats, durationInUnit, isDurationFormat, parseSettings, type Settings } from '../../domain/settings'
+import { formatNumberInput, parseNumberInput } from '../../domain/numberFormat'
 import './SettingsDialog.css'
 
 type View = { latitude: number; longitude: number; zoom: number }
@@ -15,15 +16,15 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
 }) {
   const [category, setCategory] = useState<'general' | 'start' | 'units' | 'developer'>('general')
   const [draft, setDraft] = useState(settings)
-  const [latitude, setLatitude] = useState(String(settings.start.latitude))
-  const [longitude, setLongitude] = useState(String(settings.start.longitude))
+  const [latitude, setLatitude] = useState(formatNumberInput(settings.start.latitude))
+  const [longitude, setLongitude] = useState(formatNumberInput(settings.start.longitude))
   const [zoom, setZoom] = useState(String(settings.start.zoom))
   const [error, setError] = useState('')
   const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(onClose)
 
   function setView(view: View) {
-    setLatitude(String(view.latitude))
-    setLongitude(String(view.longitude))
+    setLatitude(formatNumberInput(view.latitude))
+    setLongitude(formatNumberInput(view.longitude))
     setZoom(String(view.zoom))
   }
 
@@ -31,7 +32,10 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
     event.preventDefault()
     try {
       if (!latitude.trim() || !longitude.trim() || !zoom.trim()) throw new Error('Bitte alle Werte für die Startposition eingeben.')
-      const next = parseSettings({ ...draft, start: { ...draft.start, latitude: Number(latitude), longitude: Number(longitude), zoom: Number(zoom) } })
+      const parsedLatitude = parseNumberInput(latitude)
+      const parsedLongitude = parseNumberInput(longitude)
+      if (parsedLatitude === null || parsedLongitude === null) throw new Error('Bitte gültige Dezimalzahlen für Breitengrad und Längengrad eingeben.')
+      const next = parseSettings({ ...draft, start: { ...draft.start, latitude: parsedLatitude, longitude: parsedLongitude, zoom: Number(zoom) } })
       const saveError = onSave(next)
       if (saveError) { setError(saveError); return }
       onClose()
@@ -82,8 +86,8 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
                 <div className="settings-position" role="group" aria-labelledby="settings-position-title">
                   <h4 id="settings-position-title">Kartenposition beim Start</h4>
                   <div className="settings-position-values">
-                    <label>Breitengrad<input type="number" step="any" min="-85.05112878" max="85.05112878" value={latitude} onChange={(event) => setLatitude(event.target.value)} /></label>
-                    <label>Längengrad<input type="number" step="any" min="-180" max="180" value={longitude} onChange={(event) => setLongitude(event.target.value)} /></label>
+                    <label>Breitengrad<input type="text" inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} /></label>
+                    <label>Längengrad<input type="text" inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} /></label>
                     <label>Zoom<input type="number" step="1" min="0" max="19" value={zoom} onChange={(event) => setZoom(event.target.value)} /></label>
                   </div>
                   <button className="action-button" type="button" onClick={() => { const view = getMapView(); if (view) { setView(view); setError('') } else setError('Die Kartenansicht ist nicht verfügbar.') }}>Aktuelle Kartenposition übernehmen</button>

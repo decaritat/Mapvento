@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { formatDistanceAxis, getAutomaticDistanceMarkerStepKm, getDistanceMarkers, isValidDistanceMarkerStepKm } from '../../domain/routeMetrics'
 import type { ProjectFile } from '../../domain/routeModel'
 import { distanceInUnit, type Units } from '../../domain/settings'
+import { formatNumber } from '../../domain/numberFormat'
 
 type Props = {
   map: L.Map | null
@@ -31,7 +32,7 @@ export function useMapDistanceMarkers({ map, project, zoom, latitude, units }: P
 
       getDistanceMarkers(route, stepKm).forEach(({ coordinate, distance }) => {
         const displayedDistance = distanceInUnit(distance, units.distance)
-        const label = `${displayedDistance < 1 ? displayedDistance.toFixed(2).replace(/\.?0+$/, '') : formatDistanceAxis(displayedDistance)} ${units.distance}`
+        const label = `${displayedDistance < 1 ? formatNumber(displayedDistance, 0, 2) : formatDistanceAxis(displayedDistance)} ${units.distance}`
         const marker = L.marker([coordinate[1], coordinate[0]], {
           icon: L.divIcon({
             className: `distance-marker-wrapper ${route.id === project.activeRouteId ? 'active' : ''}`,

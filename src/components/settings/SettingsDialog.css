@@ -63,7 +63,7 @@
 }
 .settings-position-values input { min-width: 0; }
 .settings-dialog .settings-position button { font-size: 12px; }
-.settings-dialog input[type="number"] {
+.settings-position-values input {
   width: 100%;
   padding: 7px;
   border: 1px solid var(--border-strong);

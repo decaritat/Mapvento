@@ -13,6 +13,7 @@ import {
   type Route,
 } from './routeModel'
 import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from './settings'
+import { formatNumber } from './numberFormat'
 
 export const DISTANCE_MARKER_MIN_STEP_KM = 0.1
 export const DISTANCE_MARKER_MAX_STEP_KM = 1000
@@ -222,9 +223,9 @@ export function formatRouteMetrics(metrics: ReturnType<typeof routeMetrics> | nu
   if (!metrics?.hasRoute) {
     return { distance: '–', duration: '–', ascent: '–', descent: '–', high: '–', low: '–' }
   }
-  const elevation = (value: number) => String(Math.round(elevationInUnit(value, units.elevation)))
+  const elevation = (value: number) => formatNumber(Math.round(elevationInUnit(value, units.elevation)))
   return {
-    distance: distanceInUnit(metrics.length, units.distance).toFixed(1),
+    distance: formatNumber(distanceInUnit(metrics.length, units.distance), 1),
     duration: `${metrics.durationSource === 'estimated' ? 'ca. ' : ''}${durationInUnit(metrics.durationMinutes, units.duration)}`,
     ascent: elevation(metrics.ascent),
     descent: elevation(metrics.descent),
@@ -236,7 +237,7 @@ export function formatRouteMetrics(metrics: ReturnType<typeof routeMetrics> | nu
 export function formatDuration(minutes: number) {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return hours ? `${hours} h ${rest} min` : `${rest} min`
+  return hours ? `${formatNumber(hours)} h ${formatNumber(rest)} min` : `${formatNumber(rest)} min`
 }
 
 export type ElevationScale = {
@@ -269,7 +270,7 @@ export function getDistanceScale(distance: number): DistanceScale {
 }
 
 export function formatDistanceAxis(distance: number) {
-  return distance >= 100 ? distance.toFixed(0) : distance.toFixed(1).replace(/\.0$/, '')
+  return formatNumber(distance, 0, distance >= 100 ? 0 : 1)
 }
 
 export function getElevationScale(elevations: number[]): ElevationScale {
