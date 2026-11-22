@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { formatDistanceAxis, getDistanceScale, getElevationScale, profileDetailsAtFraction, profileDetailsAtIndex, routeMetrics, type ElevationScale } from '../../domain/routeMetrics'
+import { formatDistanceAxis, formatRouteMetrics, getDistanceScale, getElevationScale, profileDetailsAtFraction, profileDetailsAtIndex, routeMetrics, type ElevationScale } from '../../domain/routeMetrics'
 import type { ProfilePointDetails, Route } from '../../domain/routeModel'
 import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from '../../domain/settings'
 
@@ -78,6 +78,10 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
   const [selection, setSelection] = useState<{ route: Route; index: number } | null>(null)
   const [helpDismissed, setHelpDismissed] = useState(false)
   const activeMetrics = useMemo(() => activeRoute ? routeMetrics(activeRoute) : null, [activeRoute])
+  const display = formatRouteMetrics(activeMetrics, units)
+  const durationTitle = !activeMetrics?.hasRoute ? 'Dauer nicht verfügbar'
+    : activeMetrics.durationSource === 'timestamps' ? 'Dauer aus Zeitstempeln'
+      : 'Dauer: Geschätzte Geh- bzw. Fahrzeit basierend auf Streckenlänge und Höhenmetern'
   const elevations = (activeMetrics?.elevations ?? []).map((value) => elevationInUnit(value, units.elevation))
   const distances = (activeMetrics?.distances ?? []).map((value) => distanceInUnit(value, units.distance))
   const activeElevationScale = getElevationScale(elevations)
@@ -163,22 +167,22 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                 <div className="compact-inspector-content">
                   <div className="compact-metric-grid">
                     <span title="Distanz: Gesamtlänge der aktiven Route">
-                      <strong>{distanceInUnit(activeMetrics?.length ?? 0, units.distance).toFixed(1)}</strong> {units.distance}
+                      <strong>{display.distance}</strong> {units.distance}
                     </span>
-                    <span title="Dauer: Geschätzte Geh- bzw. Fahrzeit basierend auf Streckenlänge und Höhenmetern">
-                      <strong>{activeMetrics ? durationInUnit(activeMetrics.durationMinutes, units.duration) : '–'}</strong>
+                    <span title={durationTitle}>
+                      <strong>{display.duration}</strong>
                     </span>
                     <span title="Aufstieg: Summe aller positiven Höhenmeter entlang der Route">
-                      <strong>{Math.round(elevationInUnit(activeMetrics?.ascent ?? 0, units.elevation))}</strong> {units.elevation} Aufstieg
+                      <strong>{display.ascent}</strong> {units.elevation} Aufstieg
                     </span>
                     <span title="Abstieg: Summe aller negativen Höhenmeter entlang der Route">
-                      <strong>{Math.round(elevationInUnit(activeMetrics?.descent ?? 0, units.elevation))}</strong> {units.elevation} Abstieg
+                      <strong>{display.descent}</strong> {units.elevation} Abstieg
                     </span>
                     <span title="Höchster Punkt: Maximale Höhe über dem Meeresspiegel">
-                      <strong>{Math.round(elevationInUnit(activeMetrics?.high ?? 0, units.elevation))}</strong> {units.elevation} höchster
+                      <strong>{display.high}</strong> {units.elevation} höchster
                     </span>
                     <span title="Niedrigster Punkt: Minimale Höhe über dem Meeresspiegel">
-                      <strong>{Math.round(elevationInUnit(activeMetrics?.low ?? 0, units.elevation))}</strong> {units.elevation} niedrigster
+                      <strong>{display.low}</strong> {units.elevation} niedrigster
                     </span>
                   </div>
                   <button
@@ -219,27 +223,27 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                 <div className="metric-grid">
                   <div className="metric" title="Distanz: Gesamtlänge der aktiven Route">
                     <span className="metric-label">Distanz</span>
-                    <strong>{distanceInUnit(activeMetrics?.length ?? 0, units.distance).toFixed(1)} <small>{units.distance}</small></strong>
+                    <strong>{display.distance} <small>{units.distance}</small></strong>
                   </div>
-                  <div className="metric" title="Dauer: Geschätzte Geh- bzw. Fahrzeit basierend auf Streckenlänge und Höhenmetern">
+                  <div className="metric" title={durationTitle}>
                     <span className="metric-label">Dauer</span>
-                    <strong>{activeMetrics ? durationInUnit(activeMetrics.durationMinutes, units.duration) : '–'}</strong>
+                    <strong>{display.duration}</strong>
                   </div>
                   <div className="metric" title="Aufstieg: Summe aller positiven Höhenmeter entlang der Route">
                     <span className="metric-label">Aufstieg</span>
-                    <strong>{Math.round(elevationInUnit(activeMetrics?.ascent ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
+                    <strong>{display.ascent} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Abstieg: Summe aller negativen Höhenmeter entlang der Route">
                     <span className="metric-label">Abstieg</span>
-                    <strong>{Math.round(elevationInUnit(activeMetrics?.descent ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
+                    <strong>{display.descent} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Höchster Punkt: Maximale Höhe über dem Meeresspiegel">
                     <span className="metric-label">Höchster Punkt</span>
-                    <strong>{Math.round(elevationInUnit(activeMetrics?.high ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
+                    <strong>{display.high} <small>{units.elevation}</small></strong>
                   </div>
                   <div className="metric" title="Niedrigster Punkt: Minimale Höhe über dem Meeresspiegel">
                     <span className="metric-label">Niedrigster Punkt</span>
-                    <strong>{Math.round(elevationInUnit(activeMetrics?.low ?? 0, units.elevation))} <small>{units.elevation}</small></strong>
+                    <strong>{display.low} <small>{units.elevation}</small></strong>
                   </div>
                 </div>
               )}
@@ -278,9 +282,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     )}
                   </div>
                 </div>
-                {!canInspect ? (
-                  <p className="profile-message">Für ein Höhenprofil ist eine Route mit mindestens zwei unterschiedlichen Punkten erforderlich.</p>
-                ) : (
+                {canInspect && (
                 <>
                 {!hasRecordedElevations && (
                   <p className="profile-message">Keine vollständigen Höhenwerte vorhanden. Das Profil verwendet synthetische Ersatzwerte.</p>

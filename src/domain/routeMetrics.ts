@@ -12,6 +12,7 @@ import {
   type ProfilePointDetails,
   type Route,
 } from './routeModel'
+import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from './settings'
 
 export const DISTANCE_MARKER_MIN_STEP_KM = 0.1
 export const DISTANCE_MARKER_MAX_STEP_KM = 1000
@@ -200,17 +201,35 @@ export function routeMetrics(route: Route, fallback: ElevationProvider = default
   const ascent = gain.ascent.at(-1) ?? 0
   const descent = gain.descent.at(-1) ?? 0
   const speed = route.type === 'hiking' ? 4.5 : 15
+  const recordedDuration = recordedDurationMinutes(route)
   const durationMinutes =
-    recordedDurationMinutes(route) ?? Math.max(1, Math.round((length / speed) * 60 + ascent / 10))
+    recordedDuration ?? Math.max(1, Math.round((length / speed) * 60 + ascent / 10))
   return {
     length,
     ascent,
     descent,
     durationMinutes,
+    hasRoute: coordinates.length >= 2 && length > 0,
+    durationSource: recordedDuration === null ? 'estimated' as const : 'timestamps' as const,
     high: elevations.length ? Math.max(...elevations) : 0,
     low: elevations.length ? Math.min(...elevations) : 0,
     elevations,
     distances,
+  }
+}
+
+export function formatRouteMetrics(metrics: ReturnType<typeof routeMetrics> | null, units: Units) {
+  if (!metrics?.hasRoute) {
+    return { distance: '–', duration: '–', ascent: '–', descent: '–', high: '–', low: '–' }
+  }
+  const elevation = (value: number) => String(Math.round(elevationInUnit(value, units.elevation)))
+  return {
+    distance: distanceInUnit(metrics.length, units.distance).toFixed(1),
+    duration: `${metrics.durationSource === 'estimated' ? 'ca. ' : ''}${durationInUnit(metrics.durationMinutes, units.duration)}`,
+    ascent: elevation(metrics.ascent),
+    descent: elevation(metrics.descent),
+    high: elevation(metrics.high),
+    low: elevation(metrics.low),
   }
 }
 

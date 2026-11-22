@@ -8,6 +8,7 @@ import {
 import {
   getAutomaticDistanceMarkerStepKm,
   formatDuration,
+  formatRouteMetrics,
   getDistanceMarkers,
   getDistanceScale,
   getElevationScale,
@@ -17,6 +18,7 @@ import {
   routeMetrics,
   selectedRoutePointDetails,
 } from '../src/domain/routeMetrics'
+import { DEFAULT_SETTINGS } from '../src/domain/settings'
 
 function createRoute(type: Route['type'] = 'hiking'): Route {
   return {
@@ -123,7 +125,27 @@ describe('route geometry and metrics', () => {
     ]
 
     expect(routeMetrics(route).durationMinutes).toBe(90)
+    expect(formatRouteMetrics(routeMetrics(route), DEFAULT_SETTINGS.units).duration).toBe('1 h 30 min')
     expect(profileDetailsAtFraction(route, 0.5)?.elapsedMinutes).toBe(30)
+  })
+
+  it('formats unavailable, estimated and timestamped metrics without changing their calculations', () => {
+    const route = createRoute()
+    const empty = { ...route, nodes: [], geometry: undefined, elevations: undefined }
+    const single = { ...empty, nodes: [route.nodes[0]], elevations: [100] }
+    const coincident = { ...route, geometry: [[0, 0], [0, 0]] as Route['geometry'], elevations: [100, 100] }
+    const unavailable = { distance: '–', duration: '–', ascent: '–', descent: '–', high: '–', low: '–' }
+    for (const candidate of [empty, single, coincident]) {
+      expect(formatRouteMetrics(routeMetrics(candidate), DEFAULT_SETTINGS.units)).toEqual(unavailable)
+    }
+    const units = { distance: 'mi', elevation: 'ft', duration: 'minutes' } as const
+    expect(formatRouteMetrics(routeMetrics(route), units)).toMatchObject({
+      distance: '1.4', duration: 'ca. 35 min', high: '492', low: '328',
+    })
+    const fallback = { ...route, elevations: undefined }
+    expect(formatRouteMetrics(routeMetrics(fallback), DEFAULT_SETTINGS.units)).toMatchObject({
+      distance: '2.2', high: '600', low: '588',
+    })
   })
 
   it('falls back to generated geometry and elevations when routed data is unavailable', () => {
