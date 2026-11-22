@@ -128,6 +128,7 @@ function App() {
     routeId: string
     top: number
     left: number
+    focusLast?: boolean
   } | null>(null)
   const [routeEditor, setRouteEditor] = useState<{
     routeId: string
@@ -175,7 +176,9 @@ function App() {
 
   useEffect(() => {
     if (openRouteMenu) {
-      routeMenuPopoverRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
+      const items = routeMenuPopoverRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+      const item = openRouteMenu.focusLast ? items?.item(items.length - 1) : items?.item(0)
+      item?.focus()
     }
   }, [openRouteMenu])
 
@@ -739,12 +742,13 @@ function App() {
     setRouteEditor(null)
   }
 
-  function openRouteActions(routeId: string, button: HTMLButtonElement) {
+  function openRouteActions(routeId: string, button: HTMLButtonElement, focusLast = false) {
     const bounds = button.getBoundingClientRect()
     setOpenRouteMenu({
       routeId,
       top: Math.max(8, Math.min(bounds.bottom + 5, window.innerHeight - 130)),
       left: Math.max(8, Math.min(bounds.right - 160, window.innerWidth - 168)),
+      focusLast,
     })
   }
 

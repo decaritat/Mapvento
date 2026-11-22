@@ -1,54 +1,42 @@
-import { useEffect, useRef, useState } from 'react'
 import { ExternalLink } from '../../shared/ExternalLink'
 import { layers, overlayLayers } from '../../../domain/mapLayers'
 
-export function LayerControl({ layerId, overlayIds, disabled, changeLayer, toggleOverlay }: {
+export function LayerControl({ layerId, overlayIds, disabled, open, onToggle, onClose, changeLayer, toggleOverlay }: {
   layerId: string
   overlayIds: string[]
   disabled: boolean
+  open: boolean
+  onToggle: () => void
+  onClose: (restoreFocus: boolean) => void
   changeLayer: (id: string) => void
   toggleOverlay: (id: string, enabled: boolean) => void
 }) {
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-
   function closePanel() {
-    setOpen(false)
-    buttonRef.current?.focus()
+    onClose(true)
   }
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [open])
 
   return (
     <div
       className="map-layer-control"
-      ref={rootRef}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && open) {
+          event.preventDefault()
           event.stopPropagation()
           closePanel()
         }
       }}
     >
       <button
-        ref={buttonRef}
         type="button"
         className={`map-tool-button ${open && !disabled ? 'active' : ''}`}
         aria-label="Kartenlayer auswählen"
         aria-expanded={open && !disabled}
         aria-controls="map-layer-panel"
+        data-map-panel-trigger="layers"
         data-tooltip="Kartenlayer"
         title="Kartenlayer"
         disabled={disabled}
-        onClick={() => setOpen((value) => !value)}
+        onClick={onToggle}
       >
         <svg viewBox="0 0 20 20" className="map-tool-icon" aria-hidden="true">
           <path d="m2 6 8-4 8 4-8 4-8-4ZM2 10l8 4 8-4M2 14l8 4 8-4" />

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { PLACE_CATEGORIES, PLACE_KINDS } from '../../features/osm-places/places'
 import { DRESEL_EUROPE, PRIVATE_COFFEE } from '../../features/osm-places/placesProviders'
 import type { PlacesControlState } from '../../features/osm-places/useOsmPlaces'
@@ -47,15 +47,15 @@ function describeDiagnostic(event: PlacesDiagnostic): string {
   ].filter(Boolean).join(', ')
 }
 
-export function PlacesControl({ places, disabled, onCreatePoi }: {
+export function PlacesControl({ places, disabled, open, onToggle, onClose, onCreatePoi }: {
   places: PlacesControlState
   disabled: boolean
+  open: boolean
+  onToggle: () => void
+  onClose: (restoreFocus: boolean) => void
   onCreatePoi: (place: Place, clientX: number, clientY: number) => boolean
 }) {
-  const [open, setOpen] = useState(false)
   const [diagnosticMessage, setDiagnosticMessage] = useState('')
-  const root = useRef<HTMLDivElement>(null)
-  const button = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLElement>(null)
   const [panelMaxHeight, setPanelMaxHeight] = useState<number>()
 
@@ -74,15 +74,6 @@ export function PlacesControl({ places, disabled, onCreatePoi }: {
     window.addEventListener('resize', resize)
     return () => { observer?.disconnect(); window.removeEventListener('resize', resize) }
   }, [open, disabled])
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [open])
 
   const status = [
     places.error,
@@ -109,17 +100,18 @@ export function PlacesControl({ places, disabled, onCreatePoi }: {
     }
   }
 
-  return <div className="osm-places-control" ref={root} onKeyDown={(event) => {
+  return <div className="osm-places-control" onKeyDown={(event) => {
     if (event.key === 'Escape' && open) {
+      event.preventDefault()
       event.stopPropagation()
-      setOpen(false)
-      button.current?.focus()
+      onClose(true)
     }
   }}>
-    <button ref={button} type="button" className={`map-tool-button ${open && !disabled ? 'active' : ''}`}
+    <button type="button" className={`map-tool-button ${open && !disabled ? 'active' : ''}`}
       aria-label="OSM-Orte und Filter" aria-expanded={open && !disabled} aria-controls="osm-places-panel"
+      data-map-panel-trigger="places"
       title="OSM-Orte und Filter" data-tooltip="OSM-Orte" disabled={disabled}
-      onClick={() => setOpen((value) => !value)}>
+      onClick={onToggle}>
       <svg viewBox="0 0 20 20" className="map-tool-icon" aria-hidden="true">
         <path d="M10 18s6-5.7 6-10a6 6 0 1 0-12 0c0 4.3 6 10 6 10Z" />
         <circle cx="10" cy="8" r="2" />
@@ -130,7 +122,7 @@ export function PlacesControl({ places, disabled, onCreatePoi }: {
       <div className="map-layer-panel-header">
         <strong>OSM-Orte</strong>
         <button type="button" className="map-layer-close" aria-label="OSM-Orte schließen"
-          onClick={() => { setOpen(false); button.current?.focus() }}>×</button>
+          onClick={() => onClose(true)}>×</button>
       </div>
       {(places.needsLoad || status) && <div className="osm-places-status-row">
         <p className="osm-places-panel-status" role="status">{status}</p>

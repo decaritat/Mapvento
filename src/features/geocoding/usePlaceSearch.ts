@@ -25,10 +25,6 @@ export function usePlaceSearch(clearSearchLayer: () => void) {
     if (updateLoading) setSearchLoading(false)
   }, [])
 
-  useEffect(() => {
-    if (searchOpen) searchInput.current?.focus()
-  }, [searchOpen])
-
   useEffect(() => () => cancelSearch(false), [cancelSearch])
 
   const setSearchQuery = useCallback((query: string) => {

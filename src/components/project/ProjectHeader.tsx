@@ -14,6 +14,7 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
   desktop: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const [focusLastItem, setFocusLastItem] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -29,20 +30,22 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
     ...(desktop ? [{ label: 'Beenden', action: exitApp, available: true, separator: true }] : []),
   ]
 
-  function closeMenu() {
+  function closeMenu(restoreFocus = true) {
     setOpen(false)
-    buttonRef.current?.focus()
+    if (restoreFocus) buttonRef.current?.focus()
   }
 
   useEffect(() => {
     if (!open) return
-    menuRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    const buttons = menuRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+    const target = focusLastItem ? buttons?.item(buttons.length - 1) : buttons?.item(0)
+    target?.focus()
     const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) closeMenu()
+      if (!rootRef.current?.contains(event.target as Node)) closeMenu(false)
     }
     document.addEventListener('pointerdown', closeOnOutsideClick)
     return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
-  }, [open])
+  }, [focusLastItem, open])
 
   return (
     <header className="topbar">
@@ -56,7 +59,20 @@ export function ProjectHeader({ projectInput, newProject, openProject, saveProje
       <div className="topbar-actions" ref={rootRef}>
         <button ref={buttonRef} type="button" className="header-menu-toggle icon-button"
           aria-label="Hauptmenü" aria-haspopup="menu" aria-expanded={open}
-          aria-controls="header-menu" onClick={() => open ? closeMenu() : setOpen(true)}>
+          aria-controls="header-menu"
+          onKeyDown={(event) => {
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+            event.preventDefault()
+            setFocusLastItem(event.key === 'ArrowUp' || event.key === 'End')
+            setOpen(true)
+          }}
+          onClick={() => {
+            if (open) closeMenu()
+            else {
+              setFocusLastItem(false)
+              setOpen(true)
+            }
+          }}>
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
