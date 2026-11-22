@@ -10,6 +10,7 @@ once released versions are maintained.
 
 ### Changed
 
+- Clarify icon states and make route color selection accessible.
 - Consolidate action colors and states and remove symbols from text buttons.
 - Harmonize keyboard navigation and dismissal behavior across menus and map panels.
 - Declare the interface language and improve visible keyboard focus across controls.

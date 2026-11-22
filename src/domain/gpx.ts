@@ -4,6 +4,7 @@ import {
   type ElevationProvider,
 } from './elevation'
 import {
+  DEFAULT_ROUTE_COLOR,
   getDisplayedRouteCoordinates,
   type Coordinate,
   type MapPoint,
@@ -161,7 +162,7 @@ export function parseGpx(xml: string): ParsedGpx | null {
       description,
       type,
       ...(gpxType ? { gpxType } : {}),
-      color: '#7ee787',
+      color: DEFAULT_ROUTE_COLOR,
       editable: false,
       nodes,
       geometry: nodes.map((node) => node.coordinate),

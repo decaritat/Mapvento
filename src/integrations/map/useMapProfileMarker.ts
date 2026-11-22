@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
-import type { ProfilePointDetails, Route } from '../../domain/routeModel'
+import { DEFAULT_ROUTE_COLOR, type ProfilePointDetails, type Route } from '../../domain/routeModel'
 
 const activeRouteLineWeight = 4
 const inactiveRouteLineWeight = 3
@@ -38,7 +38,7 @@ export function useMapProfileMarker({ map, activeRoute, activeRouteId, point }: 
       markerMapRef.current = null
     }
 
-    const color = activeRoute.color ?? '#7ee787'
+    const color = activeRoute.color ?? DEFAULT_ROUTE_COLOR
     const weight =
       activeRoute.id === activeRouteId ? activeRouteLineWeight : inactiveRouteLineWeight
     if (markerRef.current) {

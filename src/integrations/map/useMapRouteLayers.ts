@@ -3,7 +3,7 @@ import L from 'leaflet'
 import type { MutableRefObject } from 'react'
 import type { ToolMode } from '../../app/appTypes'
 import { projectCoordinate } from '../../domain/mapCoordinates'
-import { getDisplayedRouteCoordinates, getRouteInsertionIndex, type ProjectFile, type RouteNode } from '../../domain/routeModel'
+import { DEFAULT_ROUTE_COLOR, getDisplayedRouteCoordinates, getRouteInsertionIndex, type ProjectFile, type RouteNode } from '../../domain/routeModel'
 
 const activeRouteLineWeight = 4
 const inactiveRouteLineWeight = 3
@@ -53,7 +53,7 @@ export function useMapRouteLayers({
         weight: lineWeight + 2,
       }).addTo(map)
       const line = L.polyline(coordinates, {
-        color: active ? route.color ?? '#7ee787' : '#78909c',
+        color: active ? route.color ?? DEFAULT_ROUTE_COLOR : '#78909c',
         lineCap: 'round',
         lineJoin: 'round',
         opacity: active ? 0.95 : 0.6,

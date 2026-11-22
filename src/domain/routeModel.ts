@@ -1,5 +1,7 @@
 import type { PoiIconId } from './poiIconIds'
 
+export const DEFAULT_ROUTE_COLOR = '#7ee787'
+
 export type RouteType = 'hiking' | 'cycling'
 export type DistanceMarkerMode = 'auto' | 'manual'
 export type Coordinate = [number, number]

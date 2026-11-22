@@ -39,6 +39,46 @@ describe('application interactions', () => {
     vi.unstubAllGlobals()
   })
 
+  it('identifies the default, preset and custom route colors and keeps the custom color', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await act(async () => button(container, `Aktionen für ${initialProject.routes[0].name}`).click())
+      await act(async () => document.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())
+      const editor = document.querySelector<HTMLElement>('.route-editor')!
+      const defaultColor = button(editor, 'Hellgrün (Standardfarbe), #7ee787')
+      const orange = button(editor, 'Orange, #ffb86c')
+      const custom = editor.querySelector<HTMLInputElement>('input[aria-label="Eigene Routenfarbe"]')!
+      const current = editor.querySelector('.route-color-current')!
+      expect(defaultColor.getAttribute('aria-pressed')).toBe('true')
+      expect(current.textContent).toContain('Hellgrün (Standardfarbe)')
+      expect(Array.from(editor.querySelectorAll('.color-swatch')).every((item) => item.getAttribute('aria-label'))).toBe(true)
+
+      await act(async () => { orange.focus(); orange.click() })
+      expect(document.activeElement).toBe(orange)
+      expect(orange.getAttribute('aria-pressed')).toBe('true')
+      expect(defaultColor.getAttribute('aria-pressed')).toBe('false')
+      expect(current.textContent).toContain('Orange')
+
+      await changeText(custom, '#123456')
+      expect(current.textContent).toContain('Eigene Farbe (#123456)')
+      expect(editor.querySelectorAll('.color-swatch[aria-pressed="true"]')).toHaveLength(0)
+      await act(async () => defaultColor.click())
+      expect(defaultColor.getAttribute('aria-pressed')).toBe('true')
+      expect(custom.value).toBe('#123456')
+      await act(async () => button(editor, 'Routeneigenschaften übernehmen').click())
+      await act(async () => button(container, `Aktionen für ${initialProject.routes[0].name}`).click())
+      await act(async () => document.querySelector<HTMLButtonElement>('[role="menuitem"]')!.click())
+      expect(document.querySelector<HTMLInputElement>('input[aria-label="Eigene Routenfarbe"]')?.value).toBe('#123456')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it('creates and removes a route node and creates an editable POI through the map', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const mapSpy = vi.spyOn(L, 'map')
@@ -954,8 +994,18 @@ describe('application interactions', () => {
       await act(async () => iconPicker.click())
       expect(iconPicker.getAttribute('aria-expanded')).toBe('true')
       const iconOption = document.querySelector<HTMLButtonElement>('.poi-icon-option')!
-      await act(async () => iconOption.focus())
-      await act(async () => iconOption.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      expect(iconOption.getAttribute('aria-label')).toBe('Trinkwasser')
+      expect(iconOption.getAttribute('title')).toBe('Trinkwasser')
+      expect(iconOption.getAttribute('aria-pressed')).toBe('false')
+      expect(button(document, 'Markierung').getAttribute('aria-pressed')).toBe('true')
+      await act(async () => iconOption.click())
+      expect(document.activeElement).toBe(iconPicker)
+      await act(async () => iconPicker.click())
+      expect(button(document, 'Trinkwasser').getAttribute('aria-pressed')).toBe('true')
+      expect(button(document, 'Markierung').getAttribute('aria-pressed')).toBe('false')
+      const selectedIconOption = button(document, 'Trinkwasser')
+      await act(async () => selectedIconOption.focus())
+      await act(async () => selectedIconOption.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(iconPicker.getAttribute('aria-expanded')).toBe('false')
       expect(document.activeElement).toBe(iconPicker)
       expect(document.querySelector('[aria-label="POI-Titel"]')).not.toBeNull()
