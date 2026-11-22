@@ -17,7 +17,7 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
   routeMenuButtonRef: RefObject<HTMLButtonElement | null>
   routeCardRefs: RefObject<Map<string, HTMLDivElement>>
   focusRoute: (route: Route) => void
-  openRouteActions: (id: string, button: HTMLButtonElement) => void
+  openRouteActions: (id: string, button: HTMLButtonElement, focusLast?: boolean) => void
   showRouteProperties: (route: Route) => void
   exportRoute: (route: Route) => Promise<void>
   confirmDeleteRoute: (route: Route) => void
@@ -91,6 +91,7 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                           type="button"
                           aria-haspopup="menu"
                           aria-expanded={openRouteMenu?.routeId === route.id}
+                          aria-controls={`route-menu-${route.id}`}
                           aria-label={`Aktionen für ${route.name}`}
                           title="Routenaktionen"
                           onClick={(event) => {
@@ -99,6 +100,15 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                             } else {
                               openRouteActions(route.id, event.currentTarget)
                             }
+                          }}
+                          onKeyDown={(event) => {
+                            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+                            event.preventDefault()
+                            openRouteActions(
+                              route.id,
+                              event.currentTarget,
+                              event.key === 'ArrowUp' || event.key === 'End',
+                            )
                           }}
                         >
                           ⋮
@@ -118,13 +128,28 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                 ref={routeMenuPopoverRef}
                 className="route-menu-popover"
                 role="menu"
+                id={`route-menu-${openMenuRoute.id}`}
                 aria-label={`Aktionen für ${openMenuRoute.name}`}
                 style={{ top: openRouteMenu.top, left: openRouteMenu.left }}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
                     event.preventDefault()
+                    event.stopPropagation()
                     setOpenRouteMenu(null)
                     routeMenuButtonRef.current?.focus()
+                  } else if (event.key === 'Tab') {
+                    setOpenRouteMenu(null)
+                    routeMenuButtonRef.current?.focus()
+                  } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+                    event.preventDefault()
+                    const items = Array.from(
+                      routeMenuPopoverRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+                    )
+                    const index = items.indexOf(document.activeElement as HTMLButtonElement)
+                    const next = event.key === 'Home' ? 0
+                      : event.key === 'End' ? items.length - 1
+                        : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+                    items[next]?.focus()
                   }
                 }}
               >

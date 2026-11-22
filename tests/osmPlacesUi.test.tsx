@@ -1,4 +1,4 @@
-import { act } from 'react'
+import { act, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import L from 'leaflet'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,7 +12,11 @@ function Harness({ map, diagnosticsEnabled = false, onPlaceSelected }: {
   onPlaceSelected?: () => void
 }) {
   const places = useOsmPlaces(map, diagnosticsEnabled, onPlaceSelected)
-  return <PlacesControl places={places} disabled={false} onCreatePoi={() => false} />
+  const [open, setOpen] = useState(false)
+  const button = useRef<HTMLButtonElement>(null)
+  return <PlacesControl places={places} disabled={false} open={open} onToggle={() => setOpen(!open)}
+    onClose={(restoreFocus) => { setOpen(false); if (restoreFocus) button.current?.focus() }}
+    onCreatePoi={() => false} />
 }
 
 function kindInput(container: HTMLElement, label: string): HTMLInputElement {

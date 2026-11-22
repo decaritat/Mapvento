@@ -1006,6 +1006,15 @@ describe('application interactions', () => {
       await act(async () => trigger.click())
       const firstAction = document.querySelector<HTMLButtonElement>('[role="menuitem"]')!
       expect(document.activeElement).toBe(firstAction)
+      const menuItems = () => Array.from(document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+      await act(async () => firstAction.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(menuItems()[1])
+      await act(async () => menuItems()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(firstAction)
+      await act(async () => firstAction.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(menuItems().at(-1))
+      await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true })))
+      expect(document.activeElement).toBe(firstAction)
       await act(async () => firstAction.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(document.querySelector('[role="menu"]')).toBeNull()
       expect(document.activeElement).toBe(trigger)
@@ -1169,6 +1178,66 @@ describe('application interactions', () => {
       expect(container.querySelector('.map-layer-panel')).toBeNull()
       expect(trigger.getAttribute('aria-expanded')).toBe('false')
       expect(document.activeElement).toBe(trigger)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('keeps map panels exclusive and preserves focus on close and outside clicks', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const search = button(container, 'Orte suchen')
+      const layers = button(container, 'Kartenlayer auswählen')
+      const places = button(container, 'OSM-Orte und Filter')
+      await act(async () => { search.focus(); search.click() })
+      expect(container.querySelector('.map-search-panel')).not.toBeNull()
+      expect(document.activeElement).toBe(search)
+
+      await act(async () => { layers.focus(); layers.click() })
+      expect(container.querySelector('.map-search-panel')).toBeNull()
+      expect(container.querySelector('#map-layer-panel')).not.toBeNull()
+      expect(document.activeElement).toBe(layers)
+
+      await act(async () => { places.focus(); places.click() })
+      expect(container.querySelector('#map-layer-panel')).toBeNull()
+      expect(container.querySelector('#osm-places-panel')).not.toBeNull()
+      expect(document.activeElement).toBe(places)
+      await act(async () => places.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(container.querySelector('#osm-places-panel')).toBeNull()
+      expect(document.activeElement).toBe(places)
+
+      await act(async () => { search.focus(); search.click() })
+      const searchClose = button(container, 'Suche schließen')
+      searchClose.focus()
+      await act(async () => searchClose.click())
+      expect(container.querySelector('.map-search-panel')).toBeNull()
+      expect(document.activeElement).toBe(search)
+
+      await act(async () => { layers.focus(); layers.click() })
+      const layerClose = button(container, 'Kartenlayer schließen')
+      layerClose.focus()
+      await act(async () => layerClose.click())
+      expect(document.activeElement).toBe(layers)
+
+      await act(async () => { places.focus(); places.click() })
+      const placesClose = button(container, 'OSM-Orte schließen')
+      placesClose.focus()
+      await act(async () => placesClose.click())
+      expect(document.activeElement).toBe(places)
+
+      await act(async () => search.click())
+      const outside = button(container, 'Höhenprofil ausklappen')
+      await act(async () => {
+        outside.focus()
+        outside.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      })
+      expect(container.querySelector('.map-search-panel')).toBeNull()
+      expect(document.activeElement).toBe(outside)
     } finally {
       await act(async () => root.unmount())
       container.remove()
