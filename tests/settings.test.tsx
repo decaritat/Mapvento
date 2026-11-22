@@ -1,4 +1,4 @@
-import { act, createRef } from 'react'
+import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import L from 'leaflet'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -85,7 +85,7 @@ describe('settings and units', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<RouteEditor route={{ ...initialProject.routes[0], showDistanceMarkers: true, distanceMarkerMode: 'manual', distanceMarkerStepKm: 1.609344 }}
-        units={{ ...DEFAULT_SETTINGS.units, distance: 'mi' }} routeEditorRef={createRef()} top={0} left={0}
+        units={{ ...DEFAULT_SETTINGS.units, distance: 'mi' }} top={0} left={0}
         updateRouteDraft={update} saveRouteProperties={vi.fn()} close={vi.fn()} />))
       const field = container.querySelector<HTMLInputElement>('[aria-label="Manuelle Schrittweite in Meilen"]')!
       expect(field.value).toBe('1')

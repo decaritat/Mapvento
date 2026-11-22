@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Place } from '../../features/osm-places/places'
 import { ExternalLink } from '../shared/ExternalLink'
+import { useModalFocus } from '../shared/useModalFocus'
 
 type Selection = { place: Place; anchor: { x: number; y: number; bounds: DOMRect } }
 type PopupPosition = { left: number; top: number }
@@ -66,27 +67,16 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
   onCreatePoi: (place: Place, clientX: number, clientY: number) => boolean
 }) {
   const { place, anchor } = selection
-  const closeButton = useRef<HTMLButtonElement>(null)
-  const dialog = useRef<HTMLElement>(null)
-  const previousFocus = useRef<HTMLElement | null>(null)
+  const { dialogRef: dialog, onKeyDown } = useModalFocus<HTMLElement>(onClose, { initialFocus: '[aria-label="Ortsdetails schließen"]' })
   const [previewUrls, setPreviewUrls] = useState<Set<string>>(() => new Set())
   const [failedUrls, setFailedUrls] = useState<Set<string>>(() => new Set())
   const [position, setPosition] = useState<PopupPosition | null>(null)
-
-  useEffect(() => {
-    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    closeButton.current?.focus()
-    return () => {
-      if (previousFocus.current?.isConnected) previousFocus.current.focus()
-      previousFocus.current = null
-    }
-  }, [])
 
   useLayoutEffect(() => {
     const element = dialog.current
     if (!element) return
     setPosition(popupPosition(element, anchor))
-  }, [anchor, failedUrls, previewUrls])
+  }, [anchor, dialog, failedUrls, previewUrls])
 
   useEffect(() => {
     const reposition = () => {
@@ -94,42 +84,20 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
     }
     window.addEventListener('resize', reposition)
     return () => window.removeEventListener('resize', reposition)
-  }, [anchor])
+  }, [anchor, dialog])
 
   const tags = Object.entries(place.tags)
   const name = place.tags.name?.trim()
 
-  return createPortal(<div className="osm-place-details-backdrop" onMouseDown={(event) => {
-    if (event.target === event.currentTarget) onClose()
-  }}>
+  return createPortal(<div className="osm-place-details-backdrop">
     <section ref={dialog} className="osm-place-details" role="dialog" aria-modal="true"
       style={{
         left: position?.left ?? anchor.x,
         top: position?.top ?? anchor.y,
         maxWidth: Math.min(360, window.innerWidth - 24, Math.max(0, anchor.bounds.width - 16)),
         maxHeight: Math.min(420, window.innerHeight * 0.7, Math.max(0, anchor.bounds.height - 16)),
-        visibility: position ? 'visible' : 'hidden',
       }}
-      aria-labelledby="osm-place-details-title" onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          event.stopPropagation()
-          onClose()
-        } else if (event.key === 'Tab') {
-          const focusable = event.currentTarget.querySelectorAll<HTMLElement>(
-            'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"])',
-          )
-          const first = focusable[0]
-          const last = focusable[focusable.length - 1]
-          if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault()
-            last?.focus()
-          } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault()
-            first?.focus()
-          }
-        }
-      }}>
+      aria-labelledby="osm-place-details-title" tabIndex={-1} onKeyDown={onKeyDown}>
       <header className="osm-place-details-header">
         <div>
           <h2 id="osm-place-details-title">{name || 'OSM-Ort'}</h2>
@@ -145,7 +113,7 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
             }}>Einen POI erstellen</button>
           </div>
         </div>
-        <button ref={closeButton} type="button" className="map-layer-close"
+        <button type="button" className="map-layer-close"
           aria-label="Ortsdetails schließen" onClick={onClose}>×</button>
       </header>
       <div className="osm-place-details-content">

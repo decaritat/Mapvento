@@ -1,6 +1,7 @@
-import type { Dispatch, SetStateAction } from 'react'
+import { useRef, type Dispatch, type SetStateAction } from 'react'
 import { getPoiIcon, POI_ICON_CATEGORIES, poiIconSvg } from '../../integrations/map/poiIcons'
 import type { MapPoint } from '../../domain/routeModel'
+import { useModalFocus } from '../shared/useModalFocus'
 
 export function PointEditor({
   point, isNew, top, left, poiIconPickerOpen, setPoiIconPickerOpen, updatePointDraft,
@@ -19,9 +20,14 @@ export function PointEditor({
 }) {
     const selectedIcon = getPoiIcon(point.icon)
     const isReadOnly = point.editable === false
+    const pickerToggle = useRef<HTMLButtonElement>(null)
+    const { dialogRef, onKeyDown } = useModalFocus<HTMLElement>(close, {
+      initialFocus: isReadOnly ? '.route-editor-action.cancel' : '[aria-label="POI-Titel"]',
+    })
 
     return (
       <section
+        ref={dialogRef}
         className="route-editor poi-editor"
         role="dialog"
         aria-modal="true"
@@ -33,12 +39,14 @@ export function PointEditor({
               : `POI ${point.name} bearbeiten`
         }
         style={{ top: top, left: left }}
+        tabIndex={-1}
         onKeyDown={(event) => {
-          if (event.key !== 'Escape') return
-          if (poiIconPickerOpen) {
+          if (event.key === 'Escape' && poiIconPickerOpen) {
+            event.preventDefault()
             event.stopPropagation()
             setPoiIconPickerOpen(false)
-          } else close()
+            pickerToggle.current?.focus()
+          } else onKeyDown(event)
         }}
       >
         <div className="route-editor-heading">
@@ -52,6 +60,7 @@ export function PointEditor({
         </div>
         <div className={`poi-icon-picker ${poiIconPickerOpen ? 'open' : ''}`}>
           <button
+            ref={pickerToggle}
             className="poi-icon-picker-toggle"
             type="button"
             aria-expanded={poiIconPickerOpen}
@@ -89,6 +98,7 @@ export function PointEditor({
                         onClick={() => {
                           updatePointDraft({ icon: icon.id })
                           setPoiIconPickerOpen(false)
+                          pickerToggle.current?.focus()
                         }}
                       >
                         <span

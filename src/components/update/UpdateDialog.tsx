@@ -1,5 +1,5 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalFocus } from '../shared/useModalFocus'
 import { LATEST_RELEASE_URL } from '../../features/update-check/updateCheck'
 import { openExternalUrl } from '../../integrations/desktop/externalUrl'
 import './UpdateDialog.css'
@@ -13,31 +13,7 @@ export function UpdateDialog({
   availableVersion: string
   onClose: () => void
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const previous = document.activeElement
-    dialogRef.current?.focus()
-    return () => { if (previous instanceof HTMLElement) setTimeout(() => previous.focus(), 0) }
-  }, [])
-
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onClose()
-      return
-    }
-    if (event.key !== 'Tab' || !dialogRef.current) return
-    const buttons = dialogRef.current.querySelectorAll<HTMLButtonElement>('button:not([disabled])')
-    if (!buttons.length) return
-    if (event.shiftKey && (document.activeElement === buttons[0] || document.activeElement === dialogRef.current)) {
-      event.preventDefault()
-      buttons[buttons.length - 1].focus()
-    } else if (!event.shiftKey && document.activeElement === buttons[buttons.length - 1]) {
-      event.preventDefault()
-      buttons[0].focus()
-    }
-  }
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(onClose)
 
   return createPortal(
     <div className="update-backdrop">
@@ -48,7 +24,7 @@ export function UpdateDialog({
         aria-modal="true"
         aria-labelledby="update-title"
         tabIndex={-1}
-        onKeyDown={handleKeyDown}
+        onKeyDown={onKeyDown}
       >
         <h2 id="update-title">Software-Update</h2>
         <p>Eine neue Version von Mapvento ist verfügbar.</p>

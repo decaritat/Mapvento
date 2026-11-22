@@ -134,6 +134,7 @@ function App() {
     draft: Route
     top: number
     left: number
+    restoreFocus: HTMLElement | null
   } | null>(null)
   const [pointEditor, setPointEditor] = useState<{
     pointId: string
@@ -146,10 +147,8 @@ function App() {
   const [hoveredProfilePoint, setHoveredProfilePoint] = useState<ProfilePointDetails | null>(null)
   const [poiIconPickerOpen, setPoiIconPickerOpen] = useState(false)
   const importInput = useRef<HTMLInputElement>(null)
-  const routeCreationOptionRef = useRef<HTMLInputElement>(null)
   const projectInput = useRef<HTMLInputElement>(null)
   const projectDescriptionInput = useRef<HTMLTextAreaElement>(null)
-  const routeEditorRef = useRef<HTMLElement>(null)
   const routeMenuRef = useRef<HTMLDivElement>(null)
   const routeMenuPopoverRef = useRef<HTMLDivElement>(null)
   const routeMenuButtonRef = useRef<HTMLButtonElement>(null)
@@ -179,16 +178,6 @@ function App() {
       routeMenuPopoverRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
     }
   }, [openRouteMenu])
-
-  useEffect(() => {
-    if (routeEditor?.routeId) {
-      routeEditorRef.current?.querySelector<HTMLInputElement>('.sidebar-route-input')?.focus()
-    }
-  }, [routeEditor?.routeId])
-
-  useEffect(() => {
-    if (routeCreationDialogOpen) routeCreationOptionRef.current?.focus()
-  }, [routeCreationDialogOpen])
 
   useEffect(() => {
     if (!notice) return
@@ -637,6 +626,7 @@ function App() {
       setRouteEditor({
         routeId: route.id,
         draft: { ...route },
+        restoreFocus: routeCardRefs.current.get(route.id)?.querySelector<HTMLButtonElement>('.route-menu-trigger') ?? null,
         top: Math.max(8, Math.min(bounds.top, window.innerHeight - 380)),
         left: Math.max(8, Math.min(bounds.right + 8, window.innerWidth - 320)),
       })
@@ -802,7 +792,7 @@ function App() {
       />
       <div
         className="app-shell"
-        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen || projectChangeDialogOpen || Boolean(availableUpdate)}
+        inert={routePropertiesOpen || aboutOpen || cacheOpen || settingsOpen || routeCreationDialogOpen || exitDialogOpen || projectChangeDialogOpen || Boolean(availableUpdate) || Boolean(osmPlaces.selectedPlace)}
         onClick={() => contextMenu && setContextMenu(null)}
       >
 
@@ -925,8 +915,9 @@ function App() {
               <>
                 <div className="route-editor-backdrop" aria-hidden="true" />
                 <RouteEditor route={routeEditor.draft} units={settings.units} top={routeEditor.top} left={routeEditor.left}
-                  routeEditorRef={routeEditorRef} updateRouteDraft={updateRouteDraft}
-                  saveRouteProperties={saveRouteProperties} close={() => setRouteEditor(null)} />
+                  updateRouteDraft={updateRouteDraft}
+                  saveRouteProperties={saveRouteProperties} close={() => setRouteEditor(null)}
+                  restoreFocus={routeEditor.restoreFocus} />
               </>,
               document.body,
             )}
@@ -946,7 +937,7 @@ function App() {
             createPortal(
               <>
                 <div className="route-editor-backdrop" aria-hidden="true" />
-                <RouteCreationDialog mode={routeCreationMode} inputRef={routeCreationOptionRef}
+                <RouteCreationDialog mode={routeCreationMode}
                   onModeChange={setRouteCreationMode} onClose={() => setRouteCreationDialogOpen(false)}
                   onConfirm={confirmRouteCreation} />
               </>,

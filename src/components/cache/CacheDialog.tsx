@@ -1,5 +1,5 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalFocus } from '../shared/useModalFocus'
 import { TileCacheControl } from '../map/cache/TileCacheControl'
 import type { ProjectFile } from '../../domain/routeModel'
 import './CacheDialog.css'
@@ -12,40 +12,12 @@ export function CacheDialog({ onClose, layerIds, retry, project, mapZoom, diagno
   mapZoom: number
   diagnosticsEnabled: boolean
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const previous = document.activeElement
-    dialogRef.current?.focus()
-    return () => {
-      if (previous instanceof HTMLElement) setTimeout(() => previous.focus(), 0)
-    }
-  }, [])
-
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      event.stopPropagation()
-      onClose()
-      return
-    }
-    if (event.key !== 'Tab' || !dialogRef.current) return
-    const controls = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')
-    const first = controls[0]
-    const last = controls[controls.length - 1]
-    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
-      event.preventDefault()
-      last?.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first?.focus()
-    }
-  }
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(onClose)
 
   return createPortal(
-    <div className="cache-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="cache-backdrop">
       <div ref={dialogRef} className="cache-dialog" role="dialog" aria-modal="true"
-        aria-labelledby="cache-title" tabIndex={-1} onKeyDown={handleKeyDown}>
+        aria-labelledby="cache-title" tabIndex={-1} onKeyDown={onKeyDown}>
         <header className="cache-dialog-header">
           <div>
             <h2 id="cache-title">Cache verwalten</h2>

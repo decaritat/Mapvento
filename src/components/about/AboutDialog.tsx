@@ -1,11 +1,10 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
-  type KeyboardEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalFocus } from '../shared/useModalFocus'
 import { ExternalLink } from '../shared/ExternalLink'
 import { getAppVersion } from '../../integrations/desktop/appVersion'
 import { ALL_PROVIDER_ATTRIBUTIONS } from '../../config/providers'
@@ -43,7 +42,7 @@ const projectLinks = [
 ]
 
 export default function AboutDialog({ onClose }: { onClose: () => void }) {
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(onClose)
   const [state, setState] = useState<ThirdPartyState>({ status: 'loading' })
   const [query, setQuery] = useState('')
   const [ecosystem, setEcosystem] = useState<'all' | Ecosystem>('all')
@@ -75,14 +74,6 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
     }
   }, [])
 
-  useEffect(() => {
-    const previous = document.activeElement
-    dialogRef.current?.focus()
-    return () => {
-      if (previous instanceof HTMLElement) setTimeout(() => previous.focus(), 0)
-    }
-  }, [])
-
   const filtered = useMemo(() => {
     if (state.status !== 'ready') return []
     const needle = query.trim().toLowerCase()
@@ -95,31 +86,8 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
     )
   }, [ecosystem, query, state])
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onClose()
-      return
-    }
-    if (event.key !== 'Tab' || !dialogRef.current) return
-    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input, select, summary, [tabindex="0"]',
-    )
-    if (!focusable.length) return
-    const first = focusable[0]
-    const last = focusable[focusable.length - 1]
-    const active = document.activeElement
-    if (event.shiftKey && (active === first || active === dialogRef.current)) {
-      event.preventDefault()
-      last.focus()
-    } else if (!event.shiftKey && active === last) {
-      event.preventDefault()
-      first.focus()
-    }
-  }
-
   return createPortal(
-    <div className="about-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="about-backdrop">
       <div
         ref={dialogRef}
         className="about-dialog"
@@ -127,7 +95,7 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
         aria-modal="true"
         aria-labelledby="about-title"
         tabIndex={-1}
-        onKeyDown={handleKeyDown}
+        onKeyDown={onKeyDown}
       >
         <header className="about-header">
           <img className="about-logo" src="/favicon.svg" alt="" />

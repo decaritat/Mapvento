@@ -1,21 +1,21 @@
-import type { RefObject } from 'react'
+import { useModalFocus } from '../shared/useModalFocus'
 
-export function RouteCreationDialog({ mode, inputRef, onModeChange, onClose, onConfirm }: {
+export function RouteCreationDialog({ mode, onModeChange, onClose, onConfirm }: {
   mode: 'new' | 'gpx'
-  inputRef: RefObject<HTMLInputElement | null>
   onModeChange: (mode: 'new' | 'gpx') => void
   onClose: () => void
   onConfirm: () => void
 }) {
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLElement>(onClose, { initialFocus: 'input:checked' })
   return (
     <section
+      ref={dialogRef}
       className="route-creation-dialog"
       role="dialog"
       aria-modal="true"
       aria-labelledby="route-creation-title"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose()
-      }}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
     >
       <div className="route-editor-heading">
         <span className="eyebrow" id="route-creation-title">
@@ -25,7 +25,6 @@ export function RouteCreationDialog({ mode, inputRef, onModeChange, onClose, onC
       <fieldset className="route-creation-options">
         <label className="route-creation-option">
           <input
-            ref={inputRef}
             type="radio"
             name="route-creation-mode"
             value="new"

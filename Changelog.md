@@ -10,10 +10,12 @@ once released versions are maintained.
 
 ### Changed
 
+- Keep dialog focus and cancellation behavior consistent.
 - Expand the elevation profile via a dedicated button and inspect it using clicks and keyboard navigation.
 
 ### Fixed
 
+- Close place search and cancel waypoint and route-line drags with Escape.
 - Protect unsaved project changes when opening or creating a project.
 
 ## [0.2.0] - 2026-11-20

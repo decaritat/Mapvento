@@ -704,6 +704,7 @@ describe('OSM places map interaction', () => {
       expect(document.body.querySelector('[role="dialog"]')).toBeNull()
       expect(marker?.classList.contains('osm-place-marker-selected')).toBe(false)
       expect(marker?.getAttribute('aria-pressed')).toBe('false')
+      await act(async () => vi.advanceTimersByTime(0))
       expect(document.activeElement).toBe(marker)
     } finally {
       await act(async () => root.unmount())

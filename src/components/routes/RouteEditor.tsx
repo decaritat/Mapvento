@@ -1,9 +1,9 @@
-import type { RefObject } from 'react'
 import { ExternalLink } from '../shared/ExternalLink'
 import { ROUTING_PROVIDER, routingProfileLabel } from '../../domain/routing'
 import { DISTANCE_MARKER_MIN_STEP_KM, DISTANCE_MARKER_MAX_STEP_KM, isValidDistanceMarkerStepKm } from '../../domain/routeMetrics'
 import type { Route, RouteType } from '../../domain/routeModel'
 import { distanceInKm, distanceInUnit, type Units } from '../../domain/settings'
+import { useModalFocus } from '../shared/useModalFocus'
 
 const routeColors = [
   '#7ee787',
@@ -21,16 +21,20 @@ function getCustomRouteColor(route: Route) {
   return undefined
 }
 
-export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft, saveRouteProperties, close, units }: {
+export function RouteEditor({ route, top, left, updateRouteDraft, saveRouteProperties, close, units, restoreFocus }: {
   units: Units
   route: Route
-  routeEditorRef: RefObject<HTMLElement | null>
   top: number
   left: number
   updateRouteDraft: (patch: Partial<Route>) => void
   saveRouteProperties: () => void
   close: () => void
+  restoreFocus?: HTMLElement | null
 }) {
+    const { dialogRef, onKeyDown } = useModalFocus<HTMLElement>(close, {
+      initialFocus: '.sidebar-route-input:not(:disabled)',
+      restoreFocus,
+    })
     const customColor = getCustomRouteColor(route)
     const showDistanceMarkers = Boolean(route.showDistanceMarkers)
     const distanceMarkerMode = route.distanceMarkerMode === 'manual' ? 'manual' : 'auto'
@@ -46,15 +50,14 @@ export function RouteEditor({ route, routeEditorRef, top, left, updateRouteDraft
 
     return (
       <section
-        ref={routeEditorRef}
+        ref={dialogRef}
         className="route-editor"
         role="dialog"
         aria-modal="true"
         aria-label={`Eigenschaften von ${route.name}`}
         style={{ top: top, left: left }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') close()
-        }}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
       >
         <div className="route-editor-heading">
           <span className="eyebrow">Routeneigenschaften</span>
