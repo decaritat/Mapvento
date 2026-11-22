@@ -16,6 +16,8 @@
         "userAgent": "Mapvento/0.1.0 (+https://github.com/decaritat/Mapvento)",
         "width": 1440,
         "height": 960,
+        "minWidth": 1024,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false
       }

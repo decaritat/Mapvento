@@ -40,7 +40,9 @@
 }
 
 .app-shell {
-  min-height: 100vh;
+  min-width: 1024px;
+  min-height: 600px;
+  height: 100vh;
   display: grid;
   grid-template-rows: 72px minmax(0, 1fr);
   background:
@@ -251,7 +253,7 @@ textarea:focus {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(12rem, 1fr) auto;
+  grid-template-rows: minmax(300px, 1fr) minmax(0, auto);
   container-type: inline-size;
 }
 
@@ -268,6 +270,7 @@ textarea:focus {
 
 .sidebar-heading {
   justify-content: space-between;
+  align-items: flex-start;
   flex: 0 0 auto;
   max-height: 40%;
   overflow: auto;

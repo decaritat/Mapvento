@@ -20,6 +20,7 @@ export function PointEditor({
 }) {
     const selectedIcon = getPoiIcon(point.icon)
     const isReadOnly = point.editable === false
+    const editorTop = `min(${top}px, calc(100vh - 160px))`
     const pickerToggle = useRef<HTMLButtonElement>(null)
     const { dialogRef, onKeyDown } = useModalFocus<HTMLElement>(close, {
       initialFocus: isReadOnly ? '.route-editor-action.cancel' : '[aria-label="POI-Titel"]',
@@ -38,7 +39,7 @@ export function PointEditor({
               ? `POI ${point.name} anzeigen`
               : `POI ${point.name} bearbeiten`
         }
-        style={{ top, left, maxHeight: `calc(100vh - ${top + 8}px)` }}
+        style={{ top: editorTop, left: `min(${left}px, calc(100vw - 398px))`, maxHeight: `calc(100vh - ${editorTop} - 8px)` }}
         tabIndex={-1}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && poiIconPickerOpen) {
