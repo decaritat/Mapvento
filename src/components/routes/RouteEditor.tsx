@@ -36,6 +36,7 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
       restoreFocus,
     })
     const customColor = getCustomRouteColor(route)
+    const editorTop = `min(${top}px, calc(100vh - 160px))`
     const currentColor = (route.color ?? DEFAULT_ROUTE_COLOR).toLowerCase()
     const selectedColor = routeColors.find(({ value }) => value === currentColor)
     const showDistanceMarkers = Boolean(route.showDistanceMarkers)
@@ -57,7 +58,7 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         role="dialog"
         aria-modal="true"
         aria-label={`Eigenschaften von ${route.name}`}
-        style={{ top, left, maxHeight: `calc(100vh - ${top + 8}px)` }}
+        style={{ top: editorTop, left: `min(${left}px, calc(100vw - 308px))`, maxHeight: `calc(100vh - ${editorTop} - 8px)` }}
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >

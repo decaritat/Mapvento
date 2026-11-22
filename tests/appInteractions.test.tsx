@@ -39,6 +39,37 @@ describe('application interactions', () => {
     vi.unstubAllGlobals()
   })
 
+  it('updates the map when its container changes size and disconnects on unmount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    let notify!: ResizeObserverCallback
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { notify = callback }
+      observe = observe
+      disconnect = disconnect
+    })
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    let unmounted = false
+    try {
+      await act(async () => root.render(<App />))
+      const map = mapSpy.mock.results[0].value
+      const invalidate = vi.spyOn(map, 'invalidateSize')
+      expect(observe).toHaveBeenCalledWith(map.getContainer())
+      await act(async () => notify([], {} as ResizeObserver))
+      expect(invalidate).toHaveBeenCalledWith({ debounceMoveend: true })
+      await act(async () => root.unmount())
+      unmounted = true
+      expect(disconnect).toHaveBeenCalledOnce()
+    } finally {
+      if (!unmounted) await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it('identifies the default, preset and custom route colors and keeps the custom color', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const container = document.createElement('div')

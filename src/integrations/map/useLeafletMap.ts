@@ -148,8 +148,13 @@ export function useLeafletMap({
     setMapInstance(map)
     updateMapScale()
     const resizeTimer = window.setTimeout(() => map.invalidateSize(), 0)
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(() => map.invalidateSize({ debounceMoveend: true }))
+    resizeObserver?.observe(map.getContainer())
     return () => {
       window.clearTimeout(resizeTimer)
+      resizeObserver?.disconnect()
       map.off('zoomend moveend', updateMapScale)
       disposeTileLayers()
       searchLayerRef.current?.remove()

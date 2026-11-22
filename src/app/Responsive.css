@@ -5,7 +5,7 @@
 @container (max-width: 42rem) {
   .inspector.expanded {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-rows: max-content max-content;
   }
 
   .inspector.expanded .metric-grid {
@@ -42,7 +42,7 @@
 
   .inspector.expanded {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(180px, auto);
+    grid-template-rows: max-content minmax(180px, max-content);
   }
 
   .inspector.expanded .metric-grid {
