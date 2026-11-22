@@ -75,15 +75,7 @@ export function PointEditor({
           >
             <span className="route-editor-section-label">Symbol</span>
             <span className="poi-icon-picker-current">
-              <span
-                className="poi-icon-picker-current-graphic"
-                aria-hidden="true"
-                dangerouslySetInnerHTML={{ __html: poiIconSvg(selectedIcon) }}
-              />
               <span>{selectedIcon.label}</span>
-            </span>
-            <span className="poi-icon-picker-chevron" aria-hidden="true">
-              {poiIconPickerOpen ? '▴' : '▾'}
             </span>
           </button>
           {poiIconPickerOpen && (
@@ -148,18 +140,7 @@ export function PointEditor({
               aria-label="POI löschen"
               title="POI löschen"
             >
-              × Löschen
-            </button>
-          )}
-          {!isReadOnly && (
-            <button
-              className="route-editor-action save"
-              type="button"
-              onClick={savePointProperties}
-              aria-label="POI-Eigenschaften übernehmen"
-              title="Übernehmen"
-            >
-              ✓ Übernehmen
+              Löschen
             </button>
           )}
           <button
@@ -169,8 +150,19 @@ export function PointEditor({
             aria-label={isReadOnly ? 'POI-Ansicht schließen' : 'POI-Eigenschaften verwerfen und schließen'}
             title={isReadOnly ? 'Schließen' : 'Abbrechen'}
           >
-            {isReadOnly ? 'Schließen' : '× Abbrechen'}
+            {isReadOnly ? 'Schließen' : 'Abbrechen'}
           </button>
+          {!isReadOnly && (
+            <button
+              className="route-editor-action save"
+              type="button"
+              onClick={savePointProperties}
+              aria-label="POI-Eigenschaften übernehmen"
+              title="Übernehmen"
+            >
+              Übernehmen
+            </button>
+          )}
         </div>
       </section>
     )

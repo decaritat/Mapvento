@@ -185,9 +185,17 @@
 }
 
 .route-menu-item.danger {
-  color: #ff8f8f;
+  color: var(--action-danger);
 }
 
 .route-menu-item.danger:hover {
-  background: rgba(255, 100, 100, 0.12);
+  background: var(--action-danger-hover);
+}
+
+.route-menu-item:active:not(:disabled) {
+  background: var(--action-active);
+}
+
+.route-menu-item.danger:active:not(:disabled) {
+  background: var(--action-danger-active);
 }

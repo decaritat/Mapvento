@@ -63,14 +63,6 @@
 }
 .settings-position-values input { min-width: 0; }
 .settings-dialog .settings-position button { font-size: 12px; }
-.settings-dialog button:not(.icon-button) {
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 7px 10px;
-  background: var(--panel);
-  color: inherit;
-  cursor: pointer;
-}
 .settings-dialog input[type="number"] {
   width: 100%;
   padding: 7px;
@@ -84,16 +76,7 @@
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
-.settings-dialog .settings-reset button {
-  padding: 4px 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  text-align: left;
-}
-.settings-dialog .settings-reset button:hover,
-.settings-dialog .settings-reset button:focus-visible { color: var(--green); }
+.settings-dialog .settings-reset button { font-size: 12px; text-align: left; }
 .settings-error { color: #ff9a9a; margin: 0 20px 12px; }
 @media (max-width: 500px) {
   .settings-body { grid-template-columns: 1fr; }

@@ -84,7 +84,7 @@ export function TileCacheControl({ layerIds, retry, project, mapZoom, diagnostic
                         await tileCache.revalidate(id)
                         retry(id)
                       })}>Aktualisieren</button>
-                      <button type="button" aria-label={`${label} löschen`} disabled={busy || !entry?.count}
+                      <button className="danger" type="button" aria-label={`${label} löschen`} disabled={busy || !entry?.count}
                         onClick={() => void perform(() => tileCache.clear(id))}>Löschen</button>
                     </div>
                   </div>

@@ -236,22 +236,22 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         </fieldset>
         <div className="route-editor-actions">
           <button
-            className="route-editor-action save"
-            type="button"
-            onClick={saveRouteProperties}
-            aria-label="Routeneigenschaften übernehmen"
-            title="Übernehmen"
-          >
-            ✓ Übernehmen
-          </button>
-          <button
             className="route-editor-action cancel"
             type="button"
             onClick={() => close()}
             aria-label="Routeneigenschaften verwerfen und schließen"
             title="Abbrechen"
           >
-            × Abbrechen
+            Abbrechen
+          </button>
+          <button
+            className="route-editor-action save"
+            type="button"
+            onClick={saveRouteProperties}
+            aria-label="Routeneigenschaften übernehmen"
+            title="Übernehmen"
+          >
+            Übernehmen
           </button>
         </div>
       </section>

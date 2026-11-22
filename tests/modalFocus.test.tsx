@@ -54,6 +54,26 @@ describe('modal focus contract', () => {
     vi.unstubAllGlobals()
   })
 
+  it('orders destructive, cancel and primary choices consistently', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      const choose = vi.fn()
+      await act(async () => root.render(<ExitDialog onChoose={choose} />))
+      const actions = Array.from(document.querySelectorAll<HTMLButtonElement>('.exit-actions button'))
+      expect(actions.map((button) => button.textContent)).toEqual(['Beenden ohne Speichern', 'Abbrechen', 'Speichern'])
+      expect(actions[0].classList.contains('delete')).toBe(true)
+      expect(actions[2].classList.contains('save')).toBe(true)
+      await act(async () => actions[0].click())
+      expect(choose).toHaveBeenCalledWith('discard')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it.each(dialogs)('%s keeps focus inside and restores its opener', async (_name, renderDialog) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const container = document.createElement('div')

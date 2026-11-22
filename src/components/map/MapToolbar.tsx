@@ -165,7 +165,7 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
                         placeholder="Stadt, Ort oder Sehenswürdigkeit"
                         aria-label="Suchbegriff"
                       />
-                      <button type="submit" disabled={searchLoading}>
+                      <button className="action-button primary" type="submit" disabled={searchLoading}>
                         Suchen
                       </button>
                       <button

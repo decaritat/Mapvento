@@ -26,9 +26,9 @@ export function ExitDialog({
         <h2 id="exit-title">{title}</h2>
         <p id="exit-description">{description}</p>
         <div className="exit-actions">
-          <button type="button" className="route-editor-action save" onClick={() => onChoose('save')}>Speichern</button>
-          <button type="button" className="route-editor-action" onClick={() => onChoose('discard')}>{discardLabel}</button>
+          <button type="button" className="route-editor-action delete" onClick={() => onChoose('discard')}>{discardLabel}</button>
           <button type="button" className="route-editor-action cancel" data-cancel onClick={() => onChoose('cancel')}>Abbrechen</button>
+          <button type="button" className="route-editor-action save" onClick={() => onChoose('save')}>Speichern</button>
         </div>
       </div>
     </div>,

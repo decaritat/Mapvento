@@ -10,6 +10,7 @@ once released versions are maintained.
 
 ### Changed
 
+- Consolidate action colors and states and remove symbols from text buttons.
 - Harmonize keyboard navigation and dismissal behavior across menus and map panels.
 - Declare the interface language and improve visible keyboard focus across controls.
 - Improve text contrast and scalable typography in route details, editors and elevation profiles.
