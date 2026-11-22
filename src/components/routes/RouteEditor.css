@@ -25,6 +25,8 @@
   top: 50%;
   left: 50%;
   width: min(360px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   padding: 16px;
   border: 1px solid var(--border-strong);
   border-radius: 9px;
@@ -66,7 +68,7 @@
 
 .poi-editor {
   width: min(390px, calc(100vw - 16px));
-  overflow: visible;
+  overflow: auto;
 }
 
 .route-editor-heading {
@@ -89,7 +91,7 @@
 
 .sidebar-route-input {
   padding: 8px 9px;
-  font-size: 12px;
+  font-size: 0.8125rem;
   font-weight: 650;
 }
 
@@ -98,19 +100,22 @@
   margin-top: 7px;
   padding: 8px 9px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.8125rem;
   resize: vertical;
 }
 
 .sidebar-route-input:disabled,
 .sidebar-route-description:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
+  cursor: default;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+  border-style: dashed;
+  opacity: 1;
 }
 
 .sidebar-route-input:read-only {
   cursor: default;
-  opacity: 0.75;
+  opacity: 1;
 }
 
 .route-editor-section {
@@ -127,14 +132,14 @@
 
 .route-editor-section-label {
   color: var(--faint);
-  font-size: 9px;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .route-editor-provider-link {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.75rem;
   text-decoration: underline;
   text-decoration-color: var(--border);
   text-underline-offset: 2px;
@@ -150,7 +155,7 @@
 .route-editor-section select {
   width: 100%;
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: 0.8125rem;
   color: var(--text);
   background-color: var(--panel-raised);
   color-scheme: dark;
@@ -177,7 +182,7 @@
   align-items: center;
   gap: 5px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 0.75rem;
 }
 
 .sidebar-color-picker input {
@@ -228,7 +233,7 @@
   gap: 6px;
   padding: 0;
   color: var(--text);
-  font-size: 11px;
+  font-size: 0.8125rem;
   font-weight: 650;
 }
 
@@ -312,7 +317,7 @@
 }
 
 .distance-marker-options.disabled {
-  opacity: 0.5;
+  color: var(--muted);
 }
 
 .distance-marker-option {
@@ -321,7 +326,7 @@
   min-height: 22px;
   gap: 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.75rem;
 }
 
 .distance-marker-option input[type='radio'] {
@@ -353,11 +358,14 @@
 
 .distance-marker-step-input:disabled {
   cursor: not-allowed;
-  opacity: 0.65;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+  border-style: dashed;
+  opacity: 1;
 }
 
 .field-error {
   color: #ff9f98;
-  font-size: 9px;
+  font-size: 0.75rem;
   line-height: 1.35;
 }

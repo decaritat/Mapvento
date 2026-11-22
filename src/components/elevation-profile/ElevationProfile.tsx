@@ -121,6 +121,10 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
   const pointDescription = profilePointDetails
     ? `${Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} ${units.elevation} Höhe, ${distanceInUnit(profilePointDetails.distance, units.distance).toFixed(2)} ${units.distance} ab Start, ${durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start`
     : 'Keine Position ausgewählt'
+  const markerFraction = profilePointDetails
+    ? (profileViewBox.plotLeft + profilePointDetails.profileFraction *
+      (profileViewBox.width - profileViewBox.plotLeft - profileViewBox.plotRight)) / profileViewBox.width
+    : 0
   return (
           <section
             className={`inspector ${elevationExpanded ? 'expanded' : 'compact'}`}
@@ -477,6 +481,9 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                       )
                     })}
                     {activeDistanceScale.ticks.map((distance, index) => {
+                      const lastIndex = activeDistanceScale.ticks.length - 1
+                      if (index === lastIndex - 1 &&
+                        activeDistanceScale.ticks[lastIndex] - distance < activeDistanceScale.max * 0.1) return null
                       const x =
                         profileViewBox.plotLeft +
                         (distance / activeDistanceScale.max) *
@@ -484,7 +491,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                             profileViewBox.plotLeft -
                             profileViewBox.plotRight)
                       const isFirst = index === 0
-                      const isLast = index === activeDistanceScale.ticks.length - 1
+                      const isLast = index === lastIndex
                       return (
                         <span
                           key={distance}
@@ -493,7 +500,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                           }`}
                           style={{
                             left: `${(x / profileViewBox.width) * 100}%`,
-                            top: `${(174 / profileViewBox.height) * 100}%`,
+                            top: `${(166 / profileViewBox.height) * 100}%`,
                           }}
                         >
                           {activeDistanceScale.step < 0.1
@@ -514,7 +521,6 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                     <span
                       className="elevation-axis-title-overlay elevation-axis-title-y"
                       style={{
-                        left: `${(10 / profileViewBox.width) * 100}%`,
                         top: `${(92 / profileViewBox.height) * 100}%`,
                       }}
                     >
@@ -527,15 +533,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         profilePointDetails.profileFraction > 0.78 ? 'align-left' : ''
                       }`}
                       style={{
-                        left: `${
-                          ((profileViewBox.plotLeft +
-                            profilePointDetails.profileFraction *
-                              (profileViewBox.width -
-                                profileViewBox.plotLeft -
-                                profileViewBox.plotRight)) /
-                            profileViewBox.width) *
-                          100
-                        }%`,
+                        left: `calc(${markerFraction * 100}% + ${(1 - markerFraction) * 4.5}rem)`,
                       }}
                     >
                       <span>{Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} {units.elevation} Höhe</span>

@@ -2,6 +2,19 @@
   display: none;
 }
 
+@container (max-width: 42rem) {
+  .inspector.expanded {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .inspector.expanded .metric-grid {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+}
+
 @media (max-width: 1150px) {
   .inspector {
     padding-left: 22px;
@@ -13,7 +26,7 @@
   }
 
   .compact-metric-grid {
-    grid-template-columns: repeat(3, minmax(70px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
   }
 
   .elevation-mini-chart-button {

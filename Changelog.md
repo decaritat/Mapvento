@@ -10,6 +10,7 @@ once released versions are maintained.
 
 ### Changed
 
+- Improve text contrast and scalable typography in route details, editors and elevation profiles.
 - Keep dialog focus and cancellation behavior consistent.
 - Expand the elevation profile via a dedicated button and inspect it using clicks and keyboard navigation.
 
