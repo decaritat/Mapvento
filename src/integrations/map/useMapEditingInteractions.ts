@@ -39,6 +39,7 @@ export function useMapEditingInteractions({
   const activeDragCleanupRef = useRef<(() => void) | null>(null)
   const suppressNextRouteClickRef = useRef(false)
   const suppressClickTimerRef = useRef<number | null>(null)
+  const cancelledDragRef = useRef(false)
 
   const clearRouteNodeFocus = useCallback(() => {
     focusedRouteNodeRef.current = null
@@ -56,6 +57,7 @@ export function useMapEditingInteractions({
   useEffect(() => {
     if (!map) return
     const clearSuppressedClick = () => {
+      cancelledDragRef.current = false
       suppressNextRouteClickRef.current = false
       if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
       suppressClickTimerRef.current = null
@@ -65,10 +67,27 @@ export function useMapEditingInteractions({
         focusedRouteNodeRef.current = null
       }
     }
-    const onMouseUp = () => { pointerDownRouteNodeRef.current = null }
+    const onMouseUp = () => {
+      pointerDownRouteNodeRef.current = null
+      if (!cancelledDragRef.current) return
+      cancelledDragRef.current = false
+      suppressClickTimerRef.current = window.setTimeout(clearSuppressedClick, 350)
+    }
     const onMapDragStart = () => clearRouteNodeFocus()
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || (!focusedRouteNodeRef.current && !selectedNodeRef.current)) return
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (activeDragCleanupRef.current) {
+        event.preventDefault()
+        event.stopPropagation()
+        activeDragCleanupRef.current()
+        if (suppressClickTimerRef.current !== null) window.clearTimeout(suppressClickTimerRef.current)
+        suppressClickTimerRef.current = null
+        suppressNextRouteClickRef.current = true
+        cancelledDragRef.current = true
+        setNotice('Routenpunkt-Bearbeitung abgebrochen.')
+        return
+      }
+      if (!focusedRouteNodeRef.current && !selectedNodeRef.current) return
       event.preventDefault()
       event.stopPropagation()
       clearRouteNodeFocus()
@@ -88,7 +107,7 @@ export function useMapEditingInteractions({
       document.removeEventListener('mouseup', onMouseUp)
       window.removeEventListener('blur', onMouseUp)
     }
-  }, [map, clearRouteNodeFocus])
+  }, [map, clearRouteNodeFocus, setNotice])
 
   useEffect(() => {
     if (toolMode !== 'route') clearRouteNodeFocus()

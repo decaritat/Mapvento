@@ -23,6 +23,8 @@ type Props = {
   updateNode: (routeId: string, nodeId: string, coordinate: Coordinate) => void
   openPointEditor: (point: MapPoint, isNew: boolean, clientX: number, clientY: number) => void
   clearRouteNodeFocus: () => void
+  activeDragCleanupRef: MutableRefObject<(() => void) | null>
+  suppressNextRouteClickRef: MutableRefObject<boolean>
 }
 
 export function useMapPointLayers({
@@ -41,6 +43,8 @@ export function useMapPointLayers({
   updateNode,
   openPointEditor,
   clearRouteNodeFocus,
+  activeDragCleanupRef,
+  suppressNextRouteClickRef,
 }: Props) {
   const markersRef = useRef<L.Layer[]>([])
   const routeNodeMarkersRef = useRef(new Map<string, { marker: L.Marker; routeId: string; nodeId: string }>())
@@ -51,6 +55,7 @@ export function useMapPointLayers({
     markersRef.current.forEach((marker) => marker.removeFrom(map))
     markersRef.current = []
     routeNodeMarkers.clear()
+    const markerDragCleanups: Array<() => void> = []
     project.routes.forEach((route) => {
       if (!route.editable) return
       route.nodes.forEach((node, index) => {
@@ -78,6 +83,10 @@ export function useMapPointLayers({
         marker.on('click', (event: L.LeafletMouseEvent) => {
           if (routePropertiesOpen) return
           event.originalEvent.stopPropagation()
+          if (suppressNextRouteClickRef.current) {
+            suppressNextRouteClickRef.current = false
+            return
+          }
           const currentSelection = selectedNodeRef.current
           if (currentSelection?.routeId === route.id && currentSelection.nodeId === node.id) {
             clearRouteNodeFocus()
@@ -97,8 +106,25 @@ export function useMapPointLayers({
           )
         }
         const markerElement = marker.getElement()
+        let cancelDrag: (() => void) | null = null
+        const clearDrag = () => {
+          document.removeEventListener('mouseup', clearDrag)
+          if (activeDragCleanupRef.current === cancelDrag) activeDragCleanupRef.current = null
+          cancelDrag = null
+        }
         const onMouseDown = (event: MouseEvent) => {
-          if (event.button === 0) pointerDownRouteNodeRef.current = nodeKey
+          if (event.button !== 0) return
+          pointerDownRouteNodeRef.current = nodeKey
+          if (event.shiftKey || !marker.dragging?.enabled() || activeDragCleanupRef.current) return
+          const original = marker.getLatLng()
+          cancelDrag = () => {
+            marker.dragging?.disable()
+            marker.setLatLng(original)
+            marker.dragging?.enable()
+            clearDrag()
+          }
+          activeDragCleanupRef.current = cancelDrag
+          document.addEventListener('mouseup', clearDrag)
         }
         markerElement?.addEventListener('mousedown', onMouseDown, true)
         markerElement?.addEventListener('focus', onFocus)
@@ -118,9 +144,11 @@ export function useMapPointLayers({
           })
         })
         marker.on('dragend', () => {
+          clearDrag()
           const coordinate = marker.getLatLng()
           updateNode(route.id, node.id, projectCoordinate(coordinate))
         })
+        markerDragCleanups.push(() => cancelDrag?.())
         markersRef.current.push(marker)
       })
     })
@@ -150,11 +178,12 @@ export function useMapPointLayers({
       markersRef.current.push(marker)
     })
     return () => {
+      markerDragCleanups.forEach((cleanup) => cleanup())
       markersRef.current.forEach((marker) => marker.removeFrom(map))
       markersRef.current = []
       routeNodeMarkers.clear()
     }
-  }, [map, project.activeRouteId, project.points, project.routes, routePropertiesOpen, toolMode, updateNode, openPointEditor, setProject, setSelectedNode, setContextMenu, setNotice, clearRouteNodeFocus, selectedNodeRef, focusedRouteNodeRef, pointerDownRouteNodeRef])
+  }, [map, project.activeRouteId, project.points, project.routes, routePropertiesOpen, toolMode, updateNode, openPointEditor, setProject, setSelectedNode, setContextMenu, setNotice, clearRouteNodeFocus, selectedNodeRef, focusedRouteNodeRef, pointerDownRouteNodeRef, activeDragCleanupRef, suppressNextRouteClickRef])
 
   useEffect(() => {
     const routeNodeMarkers = routeNodeMarkersRef.current

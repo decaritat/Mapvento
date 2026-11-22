@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalFocus } from '../shared/useModalFocus'
 import { layers, overlayLayers } from '../../domain/mapLayers'
 import { DEFAULT_SETTINGS, durationFormats, durationInUnit, isDurationFormat, parseSettings, type Settings } from '../../domain/settings'
 import './SettingsDialog.css'
@@ -18,13 +19,7 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
   const [longitude, setLongitude] = useState(String(settings.start.longitude))
   const [zoom, setZoom] = useState(String(settings.start.zoom))
   const [error, setError] = useState('')
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const previous = document.activeElement
-    dialogRef.current?.focus()
-    return () => { if (previous instanceof HTMLElement) setTimeout(() => previous.focus(), 0) }
-  }, [])
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(onClose)
 
   function setView(view: View) {
     setLatitude(String(view.latitude))
@@ -45,21 +40,9 @@ export function SettingsDialog({ settings, getMapView, onSave, onClose }: {
     }
   }
 
-  function handleKeys(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') { event.preventDefault(); onClose(); return }
-    if (event.key !== 'Tab' || !dialogRef.current) return
-    const items = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled])')
-    if (!items.length) return
-    if (event.shiftKey && (document.activeElement === items[0] || document.activeElement === dialogRef.current)) {
-      event.preventDefault(); items[items.length - 1].focus()
-    } else if (!event.shiftKey && document.activeElement === items[items.length - 1]) {
-      event.preventDefault(); items[0].focus()
-    }
-  }
-
   return createPortal(
     <div className="settings-backdrop">
-      <div className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onKeyDown={handleKeys}>
+      <div className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabIndex={-1} ref={dialogRef} onKeyDown={onKeyDown}>
         <header><h2 id="settings-title">Einstellungen</h2><button type="button" className="icon-button" aria-label="Einstellungen schließen" onClick={onClose}>×</button></header>
         <form onSubmit={save}>
           <div className="settings-body">

@@ -1,5 +1,5 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useModalFocus } from '../shared/useModalFocus'
 import './ExitDialog.css'
 
 export type ExitChoice = 'save' | 'discard' | 'cancel'
@@ -15,40 +15,14 @@ export function ExitDialog({
   description?: string
   discardLabel?: string
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const previous = document.activeElement
-    dialogRef.current?.querySelector<HTMLButtonElement>('[data-cancel]')?.focus()
-    return () => {
-      if (previous instanceof HTMLElement) setTimeout(() => previous.focus(), 0)
-    }
-  }, [])
-
-  function handleKeys(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      event.stopPropagation()
-      onChoose('cancel')
-      return
-    }
-    if (event.key !== 'Tab' || !dialogRef.current) return
-    const buttons = dialogRef.current.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
-    const first = buttons[0]
-    const last = buttons[buttons.length - 1]
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last?.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first?.focus()
-    }
-  }
+  const { dialogRef, onKeyDown } = useModalFocus<HTMLDivElement>(() => onChoose('cancel'), {
+    initialFocus: '[data-cancel]',
+  })
 
   return createPortal(
     <div className="exit-backdrop">
       <div className="exit-dialog" role="dialog" aria-modal="true" aria-labelledby="exit-title"
-        aria-describedby="exit-description" ref={dialogRef} onKeyDown={handleKeys}>
+        aria-describedby="exit-description" ref={dialogRef} tabIndex={-1} onKeyDown={onKeyDown}>
         <h2 id="exit-title">{title}</h2>
         <p id="exit-description">{description}</p>
         <div className="exit-actions">

@@ -1,4 +1,4 @@
-import type { Dispatch, FormEvent, RefObject, SetStateAction } from 'react'
+import { useEffect, useRef, type Dispatch, type FormEvent, type RefObject, type SetStateAction } from 'react'
 import type { PlaceSearchResult, ToolMode } from '../../app/appTypes'
 import { ExternalLink } from '../shared/ExternalLink'
 import { OSM_COPYRIGHT_URL } from '../../domain/mapLayers'
@@ -83,10 +83,34 @@ export function MapToolbar({ searchOpen, routePropertiesOpen, closeSearch, setSe
   osmPlaces: PlacesControlState
   onCreatePoiFromOsm: (place: Place, clientX: number, clientY: number) => boolean
 }) {
+  const searchButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!searchOpen) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('[role="dialog"]')) return
+      const target = event.target
+      if (target !== document.body && !(target instanceof Element && target.closest('.map-container'))) return
+      event.preventDefault()
+      event.stopPropagation()
+      closeSearch()
+      searchButtonRef.current?.focus()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [searchOpen, closeSearch])
+
   return (
             <div className="map-tools" role="toolbar" aria-label="Kartenwerkzeuge">
-              <div className="map-search">
+              <div className="map-search" onKeyDown={(event) => {
+                if (event.key !== 'Escape' || !searchOpen) return
+                event.preventDefault()
+                event.stopPropagation()
+                closeSearch()
+                searchButtonRef.current?.focus()
+              }}>
                 <button
+                  ref={searchButtonRef}
                   type="button"
                   className={`map-tool-button ${searchOpen ? 'active' : ''}`}
                   disabled={routePropertiesOpen}

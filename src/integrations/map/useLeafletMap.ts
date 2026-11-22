@@ -96,6 +96,8 @@ export function useLeafletMap({
     updateNode,
     openPointEditor,
     clearRouteNodeFocus,
+    activeDragCleanupRef,
+    suppressNextRouteClickRef,
   })
   useMapRouteLayers({
     map: mapInstance,

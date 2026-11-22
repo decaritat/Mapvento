@@ -434,6 +434,135 @@ describe('application interactions', () => {
     }
   })
 
+  it('cancels a waypoint drag with Escape without changing the saved route', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('scrollTo', vi.fn())
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    localStorage.setItem('mapvento-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]], routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const write = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('showSaveFilePicker', vi.fn().mockResolvedValue({
+      createWritable: async () => ({ write, close: async () => {} }),
+    }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await importStoredProject(container)
+      const map = mapSpy.mock.results[0].value
+      let marker: L.Marker | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Marker && layer.options.draggable && layer.getLatLng().lng === 13) marker = layer
+      })
+      const element = marker!.getElement()!
+      const downBeforeMovement = new MouseEvent('mousedown', { bubbles: true, button: 0, buttons: 1, clientX: 100, clientY: 100 })
+      Object.defineProperty(downBeforeMovement, 'which', { value: 1 })
+      await act(async () => {
+        element.dispatchEvent(downBeforeMovement)
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+        element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 1, clientX: 140, clientY: 140 }))
+        element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: 140, clientY: 140 }))
+        element.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 140, clientY: 140 }))
+      })
+      expect(marker!.getLatLng().equals(L.latLng(52, 13))).toBe(true)
+      expect(container.querySelector('.route-node.selected')).toBeNull()
+      await act(async () => {
+        const down = new MouseEvent('mousedown', { bubbles: true, button: 0, buttons: 1, clientX: 100, clientY: 100 })
+        Object.defineProperty(down, 'which', { value: 1 })
+        element.dispatchEvent(down)
+        element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 1, clientX: 140, clientY: 140 }))
+      })
+      expect(marker!.getLatLng().equals(L.latLng(52, 13))).toBe(false)
+      await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(marker!.getLatLng().equals(L.latLng(52, 13))).toBe(true)
+      expect(marker!.dragging?.enabled()).toBe(true)
+      await act(async () => {
+        element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 1, clientX: 160, clientY: 160 }))
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: 160, clientY: 160 }))
+        element.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 160, clientY: 160 }))
+      })
+      expect(marker!.getLatLng().equals(L.latLng(52, 13))).toBe(true)
+      await headerAction(container, 'Projekt speichern')
+      const project = JSON.parse(write.mock.calls[0][0])
+      expect(project.routes[0].nodes.map((node: { coordinate: number[] }) => node.coordinate)).toEqual([[13, 52], [14, 53]])
+      expect(project.routes[0].geometry).toEqual([[13, 52], [14, 53]])
+      const down = new MouseEvent('mousedown', { bubbles: true, button: 0, buttons: 1, clientX: 100, clientY: 100 })
+      Object.defineProperty(down, 'which', { value: 1 })
+      await act(async () => {
+        element.dispatchEvent(down)
+        element.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, buttons: 1, clientX: 150, clientY: 150 }))
+        element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, clientX: 150, clientY: 150 }))
+      })
+      await headerAction(container, 'Projekt speichern')
+      expect(JSON.parse(write.mock.calls[1][0]).routes[0].nodes[0].coordinate).not.toEqual([13, 52])
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('cancels a route-line drag with Escape and suppresses its release click', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    localStorage.setItem('mapvento-project', JSON.stringify({
+      ...initialProject,
+      routes: [{
+        ...initialProject.routes[0],
+        nodes: [{ id: 'one', coordinate: [13, 52] }, { id: 'two', coordinate: [14, 53] }],
+        geometry: [[13, 52], [14, 53]], routingState: 'ready',
+      }],
+    }))
+    const mapSpy = vi.spyOn(L, 'map')
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await importStoredProject(container)
+      const map = mapSpy.mock.results[0].value
+      let line: L.Polyline | undefined
+      map.eachLayer((layer: L.Layer) => {
+        if (layer instanceof L.Polyline && layer.options.interactive) line = layer
+      })
+      for (const moved of [false, true]) {
+        await act(async () => {
+          line!.fire('mousedown', {
+            latlng: L.latLng(52.5, 13.5),
+            originalEvent: new MouseEvent('mousedown', { button: 0, clientX: 100, clientY: 100 }),
+          })
+          if (moved) document.dispatchEvent(new MouseEvent('mousemove', { clientX: 130, clientY: 130 }))
+        })
+        expect(map.dragging.enabled()).toBe(false)
+        await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+        expect(map.dragging.enabled()).toBe(true)
+        const guides: L.Polyline[] = []
+        map.eachLayer((layer: L.Layer) => {
+          if (layer instanceof L.Polyline && layer.options.dashArray === '4 6') guides.push(layer)
+        })
+        expect(guides).toHaveLength(0)
+        await act(async () => {
+          document.dispatchEvent(new MouseEvent('mousemove', { clientX: 150, clientY: 150 }))
+          document.dispatchEvent(new MouseEvent('mouseup', { clientX: 150, clientY: 150 }))
+          line!.fire('click', { latlng: L.latLng(52.5, 13.5), originalEvent: new MouseEvent('click') })
+        })
+        expect(container.querySelectorAll('.route-node')).toHaveLength(2)
+      }
+      await act(async () => line!.fire('click', { latlng: L.latLng(52.5, 13.5), originalEvent: new MouseEvent('click') }))
+      expect(container.querySelectorAll('.route-node')).toHaveLength(3)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
   it('keeps the original routed segment throughout a drag and suppresses the release click', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
@@ -751,9 +880,14 @@ describe('application interactions', () => {
       await act(async () => properties.click())
       expect(document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')?.disabled).toBe(true)
       expect(document.querySelector<HTMLTextAreaElement>('[aria-label="Routenbeschreibung"]')?.disabled).toBe(true)
+      const readOnlyRoute = document.querySelector<HTMLElement>('[role="dialog"]')!
+      expect(document.activeElement).toBe(readOnlyRoute)
+      await act(async () => readOnlyRoute.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })))
+      expect(document.activeElement).toBe(button(document, 'Routeneigenschaften verwerfen und schließen'))
       await act(async () => button(document, 'Routeneigenschaften verwerfen und schließen').click())
       await act(async () => container.querySelector<HTMLElement>('.point-marker')!.click())
       expect(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')?.disabled).toBe(true)
+      expect(document.activeElement).toBe(button(document, 'POI-Ansicht schließen'))
       expect(document.querySelector('[aria-label="POI löschen"]')).toBeNull()
       expect(document.querySelector('[aria-label="POI-Eigenschaften übernehmen"]')).toBeNull()
     } finally {
@@ -781,6 +915,10 @@ describe('application interactions', () => {
 
       await openProperties(initialProject.routes[0].name)
       const routeName = document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')!
+      expect(document.activeElement).toBe(routeName)
+      await act(async () => routeName.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })))
+      expect(document.activeElement).toBe(button(document, 'Routeneigenschaften verwerfen und schließen'))
+      await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })))
       expect(document.activeElement).toBe(routeName)
       await changeText(routeName, 'Neue Tour')
       await changeText(document.querySelector<HTMLTextAreaElement>('[aria-label="Routenbeschreibung"]')!, 'Am See')
@@ -812,8 +950,11 @@ describe('application interactions', () => {
       const iconPicker = document.querySelector<HTMLButtonElement>('.poi-icon-picker-toggle')!
       await act(async () => iconPicker.click())
       expect(iconPicker.getAttribute('aria-expanded')).toBe('true')
-      await act(async () => iconPicker.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+      const iconOption = document.querySelector<HTMLButtonElement>('.poi-icon-option')!
+      await act(async () => iconOption.focus())
+      await act(async () => iconOption.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(iconPicker.getAttribute('aria-expanded')).toBe('false')
+      expect(document.activeElement).toBe(iconPicker)
       expect(document.querySelector('[aria-label="POI-Titel"]')).not.toBeNull()
       await act(async () => document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!
         .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
@@ -837,11 +978,21 @@ describe('application interactions', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<App />))
-      await act(async () => button(container, 'Neue Route erstellen oder GPX importieren').click())
+      const open = button(container, 'Neue Route erstellen oder GPX importieren')
+      await act(async () => open.focus())
+      await act(async () => open.click())
       const radio = document.querySelector<HTMLInputElement>('input[name="route-creation-mode"][value="new"]')!
       expect(document.activeElement).toBe(radio)
+      await act(async () => radio.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })))
+      expect(document.activeElement?.textContent).toBe('Weiter')
+      await act(async () => document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })))
+      expect(document.activeElement).toBe(radio)
+      await act(async () => document.querySelector<HTMLElement>('.route-editor-backdrop')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })))
+      expect(document.querySelector('.route-creation-dialog')).not.toBeNull()
       await act(async () => radio.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(document.querySelector('.route-creation-dialog')).toBeNull()
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+      expect(document.activeElement).toBe(open)
       expect(container.querySelectorAll('.route-card')).toHaveLength(1)
 
       const trigger = button(container, `Aktionen für ${initialProject.routes[0].name}`)
@@ -1200,6 +1351,34 @@ describe('application interactions', () => {
       expect(container.querySelector('.map-search-results')).toBeNull()
       expect(container.textContent).not.toContain('Stale result')
       expect(input.value).toBe('Updated query')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
+
+  it('closes place search on Escape, aborts its request and restores focus', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init: RequestInit) =>
+      new Promise<Response>(() => {}),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      const trigger = button(container, 'Orte suchen')
+      await act(async () => trigger.click())
+      const input = container.querySelector<HTMLInputElement>('[aria-label="Suchbegriff"]')!
+      await changeText(input, 'Berlin')
+      await act(async () => container.querySelector<HTMLFormElement>('.map-search-form')!
+        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+      const signal = fetchMock.mock.calls[0][1].signal
+      await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })))
+      expect(signal?.aborted).toBe(true)
+      expect(container.querySelector('.map-search-panel')).toBeNull()
+      expect(document.activeElement).toBe(trigger)
     } finally {
       await act(async () => root.unmount())
       container.remove()
