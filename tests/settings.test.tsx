@@ -137,6 +137,7 @@ describe('settings and units', () => {
       const metrics = routeMetrics({ ...route, nodes: initialProject.routes[0].nodes, geometry: [[0, 0], [0.01, 0], [0.02, 0]] })
       expect(container.querySelector('.route-card-stats')?.textContent).toContain(`${distanceInUnit(metrics.length, 'mi').toFixed(1)} mi`)
       expect(container.querySelector('.route-card-stats')?.textContent).toContain('90 min')
+      expect(container.querySelector('.route-card-stats')?.textContent).not.toContain('ca.')
       expect(container.querySelector('.compact-metric-grid')?.textContent).toContain('492 ft höchster')
       expect(scale.mock.calls.at(-1)?.[0]).toMatchObject({ metric: false, imperial: true })
       expect(container.querySelector('.distance-marker-label')?.textContent).toContain('mi')

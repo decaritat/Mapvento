@@ -1668,8 +1668,25 @@ describe('application interactions', () => {
     const root = createRoot(container)
     try {
       await act(async () => root.render(<App />))
+      expect(container.querySelector('.route-card-stats')?.textContent).toContain('– km')
+      expect(container.querySelector('.compact-metric-grid')?.textContent).toContain('– m Aufstieg')
+      expect(container.querySelector('.metric-unavailable')).toBeNull()
+      expect(container.querySelector('.compact-metric-grid')?.textContent).not.toContain('1 min')
       await act(async () => button(container, 'Höhenprofil ausklappen: Interaktives Profil mit Höhen- und Distanzanalyse öffnen').click())
-      expect(container.textContent).toContain('mindestens zwei unterschiedlichen Punkten')
+      expect(container.querySelector('.profile-message')).toBeNull()
+      expect(container.querySelector('[role="slider"]')).toBeNull()
+      expect(container.querySelector('.metric-grid')?.textContent).toContain('– km')
+      expect(container.querySelector('.metric-grid')?.textContent).not.toContain('1 min')
+
+      const single = {
+        ...initialProject.routes[0], editable: false,
+        nodes: [{ id: 'one', coordinate: [13, 52] }],
+        elevations: [100],
+      }
+      localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [single] }))
+      await importStoredProject(container)
+      expect(container.querySelector('.route-card-stats')?.textContent).toContain('– km')
+      expect(container.querySelector('.metric-grid')?.textContent).toContain('– m')
       expect(container.querySelector('[role="slider"]')).toBeNull()
 
       const route = {
@@ -1679,6 +1696,8 @@ describe('application interactions', () => {
       }
       localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
       await importStoredProject(container)
+      expect(container.querySelector('.route-card-stats')?.textContent).toContain('ca.')
+      expect(container.querySelector('.metric-grid')?.textContent).toContain('ca.')
       expect(container.textContent).toContain('Keine vollständigen Höhenwerte vorhanden. Das Profil verwendet synthetische Ersatzwerte.')
       const chart = container.querySelector<SVGElement>('[role="slider"]')!
       await act(async () => chart.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' })))

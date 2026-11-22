@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { routeMetrics } from '../../domain/routeMetrics'
-import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from '../../domain/settings'
+import { formatRouteMetrics, routeMetrics } from '../../domain/routeMetrics'
+import type { Units } from '../../domain/settings'
 import { DEFAULT_ROUTE_COLOR, type ProjectFile, type Route } from '../../domain/routeModel'
 
 type RouteMenu = { routeId: string; top: number; left: number }
@@ -31,6 +31,7 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
           <div className="route-list">
             {project.routes.map((route) => {
               const metrics = routeMetrics(route)
+              const display = formatRouteMetrics(metrics, units)
               const active = route.id === project.activeRouteId
               return (
                 <div className={`route-entry ${active ? 'selected' : ''}`} key={route.id}>
@@ -66,10 +67,10 @@ export function RouteList({ project, openRouteMenu, setOpenRouteMenu, routeMenuR
                             </span>
                           )}
                         <span className="route-card-stats">
-                          <span>{distanceInUnit(metrics.length, units.distance).toFixed(1)} {units.distance}</span>
-                          <span>{durationInUnit(metrics.durationMinutes, units.duration)}</span>
-                          <span>↗ {Math.round(elevationInUnit(metrics.ascent, units.elevation))} {units.elevation}</span>
-                          <span>↘ {Math.round(elevationInUnit(metrics.descent, units.elevation))} {units.elevation}</span>
+                          <span>{display.distance} {units.distance}</span>
+                          <span>{display.duration}</span>
+                          <span>↗ {display.ascent} {units.elevation}</span>
+                          <span>↘ {display.descent} {units.elevation}</span>
                         </span>
                       </span>
                     </button>
