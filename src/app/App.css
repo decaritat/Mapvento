@@ -4,16 +4,17 @@
 @import './Map.css';
 @import '../components/elevation-profile/ElevationProfile.css';
 @import './Responsive.css';
+@import './actions.css';
 
 :root :is(button, input:not([type='hidden']), select, textarea, a[href], summary, [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline: 2px solid #a6f1ad;
+  outline: 2px solid var(--action-focus);
   outline-offset: 2px;
   scroll-margin: 4px;
 }
 
 :root :is(.map-tools, .leaflet-control, .osm-place-details)
   :is(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])):focus-visible {
-  outline-color: #173c27;
+  outline-color: var(--map-focus);
   outline-offset: -3px;
 }
 

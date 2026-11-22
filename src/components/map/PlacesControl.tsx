@@ -154,10 +154,10 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
             </label>)}
           </fieldset>
         })}
-        {places.needsRetry && <button type="button" disabled={!places.canRefresh} onClick={places.retry}>Erneut versuchen</button>}
+        {places.needsRetry && <button className="action-button" type="button" disabled={!places.canRefresh} onClick={places.retry}>Erneut versuchen</button>}
         {!places.needsRetry && places.activeKinds.length > 0 &&
-          <button type="button" disabled={!places.canRefresh} onClick={places.refresh}>Bereich um Kartenmitte aktualisieren</button>}
-        <button type="button" onClick={() => {
+          <button className="action-button" type="button" disabled={!places.canRefresh} onClick={places.refresh}>Bereich um Kartenmitte aktualisieren</button>}
+        <button className="action-button danger" type="button" onClick={() => {
           if (window.confirm('Alle lokal gespeicherten OSM-Orte löschen?')) void places.clear()
         }}>Orte-Cache löschen</button>
         {places.diagnosticsEnabled && <section aria-label="Overpass-Diagnose">
@@ -166,7 +166,7 @@ export function PlacesControl({ places, disabled, open, onToggle, onClose, onCre
           <p role="status">{places.diagnostics.length
             ? places.diagnostics.slice(-3).map(describeDiagnostic).join(' · ')
             : 'Noch keine Diagnoseereignisse.'}</p>
-          <button type="button" disabled={!places.diagnostics.length} onClick={() => void saveDiagnostics()}>Overpass-Diagnose speichern</button>
+          <button className="action-button" type="button" disabled={!places.diagnostics.length} onClick={() => void saveDiagnostics()}>Overpass-Diagnose speichern</button>
           {diagnosticMessage && <p role="status">{diagnosticMessage}</p>}
         </section>}
         <p className="osm-places-attribution">

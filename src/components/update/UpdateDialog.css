@@ -35,12 +35,3 @@
 .update-dialog h2 { margin: 0 0 16px; }
 .update-dialog p { margin: 8px 0; line-height: 1.5; }
 .update-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-.update-dialog button {
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 7px 10px;
-  background: var(--panel);
-  color: inherit;
-  cursor: pointer;
-}
-.update-dialog .update-download { border-color: var(--green); background: var(--green); color: var(--panel); }

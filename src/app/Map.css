@@ -49,9 +49,9 @@
   height: 30px;
   place-items: center;
   border: 0;
-  border-bottom: 1px solid rgba(38, 52, 59, 0.16);
-  color: #26343b;
-  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--map-border);
+  color: var(--map-text);
+  background: var(--map-surface);
   font-weight: 700;
   line-height: 1;
 }
@@ -62,17 +62,21 @@
 }
 
 .leaflet-control-zoom a:hover,
-.map-tool-button:hover:not(:disabled),
-.map-tool-button.active {
-  color: #10251a;
-  background: rgba(194, 245, 198, 0.96);
+.map-tool-button:hover:not(:disabled) {
+  color: var(--action-primary-text);
+  background: var(--map-action-hover);
+}
+
+.map-tool-button.active:not(:disabled) {
+  color: var(--action-primary-text);
+  background: var(--map-action-active);
 }
 
 .leaflet-control-zoom a:focus-visible,
 .map-tool-button:focus-visible {
   position: relative;
   z-index: 1;
-  outline: 2px solid #26343b;
+  outline: 2px solid var(--map-focus);
   outline-offset: -3px;
 }
 
@@ -87,6 +91,11 @@
   cursor: not-allowed;
   color: rgba(38, 52, 59, 0.35);
   background: rgba(255, 255, 255, 0.72);
+}
+
+.leaflet-control-zoom a:active,
+.map-tool-button:active:not(:disabled) {
+  background: var(--map-action-active);
 }
 
 .map-tool-button[data-tooltip]::after {
@@ -319,15 +328,15 @@
   place-items: center;
   border: 1px solid rgba(38, 52, 59, 0.18);
   border-radius: 5px;
-  color: #52636b;
+  color: var(--map-muted);
   background: transparent;
   cursor: pointer;
 }
 
 .osm-places-load:hover:not(:disabled),
 .osm-places-load:focus-visible {
-  color: #10251a;
-  background: rgba(194, 245, 198, 0.96);
+  color: var(--action-primary-text);
+  background: var(--map-action-hover);
 }
 
 .osm-places-load:disabled {
@@ -431,19 +440,7 @@
 }
 
 .osm-place-details-links button {
-  padding: 2px 6px;
-  border: 1px solid rgba(38, 52, 59, 0.2);
-  border-radius: 4px;
-  color: #315a44;
-  background: transparent;
   font: inherit;
-  cursor: pointer;
-}
-
-.osm-place-details-links button:hover,
-.osm-place-details-links button:focus-visible {
-  color: #10251a;
-  background: rgba(194, 245, 198, 0.96);
 }
 
 .osm-place-details-content {
@@ -519,8 +516,8 @@
   padding: 10px;
   border: 1px solid rgba(38, 52, 59, 0.24);
   border-radius: 7px;
-  color: #26343b;
-  background: rgba(255, 255, 255, 0.97);
+  color: var(--map-text);
+  background: var(--map-surface);
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.28);
   cursor: default;
   font-size: 12px;
@@ -540,9 +537,9 @@
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 1px solid rgba(38, 52, 59, 0.18);
+  border: 1px solid var(--map-border);
   border-radius: 5px;
-  color: #52636b;
+  color: var(--map-muted);
   background: transparent;
   cursor: pointer;
   font-size: 18px;
@@ -551,8 +548,8 @@
 
 .map-layer-close:hover,
 .map-layer-close:focus-visible {
-  color: #10251a;
-  background: rgba(194, 245, 198, 0.96);
+  color: var(--action-primary-text);
+  background: var(--map-action-hover);
 }
 
 .map-layer-panel fieldset {
@@ -631,10 +628,6 @@
 .map-search-form button {
   height: 32px;
   padding: 0 9px;
-  border: 1px solid rgba(38, 52, 59, 0.18);
-  border-radius: 5px;
-  color: #10251a;
-  background: rgba(194, 245, 198, 0.96);
   font-size: 11px;
   font-weight: 650;
   white-space: nowrap;
@@ -648,9 +641,20 @@
 .map-search-form .map-search-close {
   width: 28px;
   padding: 0;
-  color: #52636b;
+  border: 1px solid var(--map-border);
+  border-radius: 5px;
+  color: var(--map-muted);
   background: transparent;
   font-size: 18px;
+}
+
+.map-search-form .map-search-close:hover {
+  color: var(--map-text);
+  background: var(--map-action-hover);
+}
+
+.map-search-form .map-search-close:active {
+  background: var(--map-action-active);
 }
 
 .map-search-message {
@@ -880,6 +884,22 @@
 .context-menu button:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.context-menu button.danger {
+  color: var(--action-danger);
+}
+
+.context-menu button.danger:hover:not(:disabled) {
+  background: var(--action-danger-hover);
+}
+
+.context-menu button:active:not(:disabled) {
+  background: var(--action-active);
+}
+
+.context-menu button.danger:active:not(:disabled) {
+  background: var(--action-danger-active);
 }
 
 .context-menu button:disabled {
@@ -1127,19 +1147,6 @@
   gap: 6px;
   font-size: 0.75rem;
   font-weight: 650;
-}
-
-.poi-icon-picker-current-graphic {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  color: var(--orange);
-}
-
-.poi-icon-picker-chevron {
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .poi-icon-picker-options {

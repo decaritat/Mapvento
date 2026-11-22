@@ -36,8 +36,8 @@ export function UpdateDialog({
           <span>{availableVersion}</span>
         </div>
         <footer>
-          <button type="button" onClick={onClose}>Schließen</button>
-          <button type="button" className="update-download" onClick={() => { void openExternalUrl(LATEST_RELEASE_URL) }}>Zum Download</button>
+          <button className="action-button" type="button" onClick={onClose}>Schließen</button>
+          <button type="button" className="action-button primary update-download" onClick={() => { void openExternalUrl(LATEST_RELEASE_URL) }}>Zum Download</button>
         </footer>
       </div>
     </div>,

@@ -107,7 +107,7 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
           </p>
           <div className="osm-place-details-links">
             <ExternalLink url={osmObjectUrl(place)}>In OpenStreetMap öffnen</ExternalLink>
-            <button type="button" onClick={(event) => {
+            <button className="action-button" type="button" onClick={(event) => {
               const bounds = event.currentTarget.getBoundingClientRect()
               if (onCreatePoi(place, bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)) onClose()
             }}>Einen POI erstellen</button>
@@ -137,7 +137,7 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
                       : <img className="osm-place-image-preview" src={imageUrl} alt={`Vorschaubild: ${name || key}`}
                         loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
                         onError={() => setFailedUrls((current) => new Set(current).add(imageUrl))} />
-                    : <button type="button" className="osm-place-image-load"
+                    : <button type="button" className="action-button osm-place-image-load"
                       onClick={() => setPreviewUrls((current) => new Set(current).add(imageUrl))}>
                       Bildvorschau laden
                     </button>)}

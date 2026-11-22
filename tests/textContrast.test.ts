@@ -56,6 +56,27 @@ function contrast(a: Color, b: Color): number {
 }
 
 describe('text contrast on actual surfaces', () => {
+  it('keeps action text legible in default, hover and pressed states', () => {
+    const token = (name: string) => color(declaration(base, ':root', name))
+    for (const surface of ['--action-primary', '--action-primary-hover', '--action-primary-active']) {
+      expect(contrast(token('--action-primary-text'), token(surface))).toBeGreaterThanOrEqual(4.5)
+    }
+    for (const surface of ['--action-surface', '--action-hover', '--action-active']) {
+      expect(contrast(token('--action-text'), token(surface))).toBeGreaterThanOrEqual(4.5)
+    }
+    const darkSurface = token('--action-surface')
+    for (const surface of [darkSurface, composite(token('--action-danger-hover'), darkSurface), composite(token('--action-danger-active'), darkSurface)]) {
+      expect(contrast(token('--action-danger'), surface)).toBeGreaterThanOrEqual(4.5)
+    }
+    for (const surface of ['--map-danger-hover', '--map-danger-active']) {
+      expect(contrast(token('--map-danger'), token(surface))).toBeGreaterThanOrEqual(4.5)
+    }
+    expect(contrast(token('--map-danger'), composite(token('--map-surface'), [255, 255, 255, 1]))).toBeGreaterThanOrEqual(4.5)
+    for (const surface of ['--map-action-hover', '--map-action-active']) {
+      expect(contrast(token('--map-text'), token(surface))).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   it('keeps secondary text readable on dark panels and hover/focus surfaces', () => {
     const faint = color(declaration(base, ':root', '--faint'))
     const muted = color(declaration(base, ':root', '--muted'))

@@ -252,7 +252,10 @@ describe('desktop header', () => {
       expect(desktop.invoke.mock.calls.some(([command]) => command === 'save_project_file')).toBe(false)
       const dialog = document.querySelector<HTMLElement>('[aria-labelledby="exit-title"]')!
       const buttons = dialog.querySelectorAll<HTMLButtonElement>('button')
-      await act(async () => buttons[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })))
+      await act(async () => {
+        buttons[2].focus()
+        buttons[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
+      })
       expect(document.activeElement).toBe(buttons[0])
       await act(async () => buttons[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })))
       expect(document.activeElement).toBe(buttons[2])
