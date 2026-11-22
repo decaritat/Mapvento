@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import { formatDistanceAxis, formatRouteMetrics, getDistanceScale, getElevationScale, profileDetailsAtFraction, profileDetailsAtIndex, routeMetrics, type ElevationScale } from '../../domain/routeMetrics'
 import type { ProfilePointDetails, Route } from '../../domain/routeModel'
 import { distanceInUnit, durationInUnit, elevationInUnit, type Units } from '../../domain/settings'
+import { formatNumber } from '../../domain/numberFormat'
 
 const profileViewBox = { width: 560, height: 190, plotLeft: 42, plotRight: 10, plotTop: 12, plotBottom: 34 }
 
@@ -123,7 +124,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
 
   const currentIndex = selectedIndex ?? (profilePointDetails ? indexForDistance(profilePointDetails.distance) : 0)
   const pointDescription = profilePointDetails
-    ? `${Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} ${units.elevation} Höhe, ${distanceInUnit(profilePointDetails.distance, units.distance).toFixed(2)} ${units.distance} ab Start, ${durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start`
+    ? `${formatNumber(Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation)))} ${units.elevation} Höhe, ${formatNumber(distanceInUnit(profilePointDetails.distance, units.distance), 2)} ${units.distance} ab Start, ${durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start`
     : 'Keine Position ausgewählt'
   const markerFraction = profilePointDetails
     ? (profileViewBox.plotLeft + profilePointDetails.profileFraction *
@@ -478,7 +479,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                             top: `${(y / profileViewBox.height) * 100}%`,
                           }}
                         >
-                          {value}
+                          {formatNumber(value)}
                         </span>
                       )
                     })}
@@ -506,7 +507,7 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                           }}
                         >
                           {activeDistanceScale.step < 0.1
-                            ? distance.toFixed(Math.min(6, Math.max(1, Math.ceil(-Math.log10(activeDistanceScale.step))))).replace(/\.?0+$/, '')
+                            ? formatNumber(distance, 0, Math.min(6, Math.max(1, Math.ceil(-Math.log10(activeDistanceScale.step)))))
                             : formatDistanceAxis(distance)}
                         </span>
                       )
@@ -538,8 +539,8 @@ export function ElevationProfile({ activeRoute, profilePointDetails, setHoveredP
                         left: `calc(${markerFraction * 100}% + ${(1 - markerFraction) * 4.5}rem)`,
                       }}
                     >
-                      <span>{Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation))} {units.elevation} Höhe</span>
-                      <span>{distanceInUnit(profilePointDetails.distance, units.distance).toFixed(2)} {units.distance} ab Start</span>
+                      <span>{formatNumber(Math.round(elevationInUnit(profilePointDetails.elevation, units.elevation)))} {units.elevation} Höhe</span>
+                      <span>{formatNumber(distanceInUnit(profilePointDetails.distance, units.distance), 2)} {units.distance} ab Start</span>
                       <span>{durationInUnit(profilePointDetails.elapsedMinutes, units.duration)} ab Start</span>
                     </div>
                   )}

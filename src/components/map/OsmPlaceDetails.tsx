@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { formatNumber, formatNumberInput } from '../../domain/numberFormat'
 import type { Place } from '../../features/osm-places/places'
 import { ExternalLink } from '../shared/ExternalLink'
 import { useModalFocus } from '../shared/useModalFocus'
@@ -103,7 +104,7 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
           <h2 id="osm-place-details-title">{name || 'OSM-Ort'}</h2>
           <p>
             {place.type} {place.id}
-            {' · '}{place.latitude}, {place.longitude}
+            {' · '}{formatNumberInput(place.latitude)} / {formatNumberInput(place.longitude)}
           </p>
           <div className="osm-place-details-links">
             <ExternalLink url={osmObjectUrl(place)}>In OpenStreetMap öffnen</ExternalLink>
@@ -117,7 +118,7 @@ function OsmPlaceDetailsDialog({ selection, onClose, onCreatePoi }: {
           aria-label="Ortsdetails schließen" onClick={onClose}>×</button>
       </header>
       <div className="osm-place-details-content">
-        <h3>OSM-Tags ({tags.length})</h3>
+        <h3>OSM-Tags ({formatNumber(tags.length)})</h3>
         {tags.length
           ? <table>
             <thead><tr><th scope="col">Schlüssel</th><th scope="col">Wert</th></tr></thead>

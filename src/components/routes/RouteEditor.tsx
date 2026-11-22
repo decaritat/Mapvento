@@ -1,8 +1,10 @@
 import { ExternalLink } from '../shared/ExternalLink'
+import { useState } from 'react'
 import { ROUTING_PROVIDER, routingProfileLabel } from '../../domain/routing'
 import { DISTANCE_MARKER_MIN_STEP_KM, DISTANCE_MARKER_MAX_STEP_KM, isValidDistanceMarkerStepKm } from '../../domain/routeMetrics'
 import { DEFAULT_ROUTE_COLOR, type Route, type RouteType } from '../../domain/routeModel'
 import { distanceInKm, distanceInUnit, type Units } from '../../domain/settings'
+import { formatNumberInput, parseNumberInput } from '../../domain/numberFormat'
 import { useModalFocus } from '../shared/useModalFocus'
 
 const routeColors = [
@@ -37,6 +39,9 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
     })
     const customColor = getCustomRouteColor(route)
     const editorTop = `min(${top}px, calc(100vh - 160px))`
+    const [stepInput, setStepInput] = useState(() =>
+      formatNumberInput(distanceInUnit(route.distanceMarkerStepKm ?? 1, units.distance)),
+    )
     const currentColor = (route.color ?? DEFAULT_ROUTE_COLOR).toLowerCase()
     const selectedColor = routeColors.find(({ value }) => value === currentColor)
     const showDistanceMarkers = Boolean(route.showDistanceMarkers)
@@ -45,12 +50,6 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
       showDistanceMarkers &&
       distanceMarkerMode === 'manual' &&
       !isValidDistanceMarkerStepKm(route.distanceMarkerStepKm)
-    const manualDistanceMarkerStep =
-      typeof route.distanceMarkerStepKm === 'number' &&
-      Number.isFinite(route.distanceMarkerStepKm)
-        ? route.distanceMarkerStepKm
-        : 1
-
     return (
       <section
         ref={dialogRef}
@@ -65,8 +64,8 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         <div className="route-editor-heading">
           <span className="eyebrow">Routeneigenschaften</span>
           {!route.editable && (
-            <span className="lock-badge" lang="en" title="Diese Route ist schreibgeschützt">
-              READ-ONLY
+            <span className="lock-badge" title="Diese Route ist schreibgeschützt">
+              Schreibgeschützt
             </span>
           )}
         </div>
@@ -204,30 +203,32 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
                 name={`distance-marker-mode-${route.id}`}
                 value="manual"
                 checked={distanceMarkerMode === 'manual'}
-                onChange={() =>
+                onChange={() => {
+                  const step = isValidDistanceMarkerStepKm(route.distanceMarkerStepKm)
+                    ? route.distanceMarkerStepKm
+                    : 1
+                  setStepInput(formatNumberInput(distanceInUnit(step, units.distance)))
                   updateRouteDraft({
                     distanceMarkerMode: 'manual',
-                    distanceMarkerStepKm: isValidDistanceMarkerStepKm(route.distanceMarkerStepKm)
-                      ? route.distanceMarkerStepKm
-                      : 1,
+                    distanceMarkerStepKm: step,
                   })
-                }
+                }}
                 disabled={!showDistanceMarkers}
               />
               <span>Anzeigen in Schritten von</span>
               <input
                 className="distance-marker-step-input"
-                type="number"
-                min={distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, units.distance)}
-                max={distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, units.distance)}
-                step="any"
-                value={Number(distanceInUnit(manualDistanceMarkerStep, units.distance).toFixed(6))}
-                onChange={(event) =>
+                type="text"
+                inputMode="decimal"
+                value={stepInput}
+                onChange={(event) => {
+                  const value = event.target.value
+                  const parsed = parseNumberInput(value)
+                  setStepInput(value)
                   updateRouteDraft({
-                    distanceMarkerStepKm:
-                      event.target.value === '' ? undefined : distanceInKm(Number(event.target.value), units.distance),
+                    distanceMarkerStepKm: parsed === null ? undefined : distanceInKm(parsed, units.distance),
                   })
-                }
+                }}
                 disabled={!showDistanceMarkers || distanceMarkerMode !== 'manual'}
                 aria-invalid={manualDistanceMarkerInvalid}
                 aria-label={`Manuelle Schrittweite in ${units.distance === 'km' ? 'Kilometern' : 'Meilen'}`}
@@ -236,7 +237,7 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
             </label>
             {manualDistanceMarkerInvalid && (
               <span className="field-error" role="alert">
-                Wert zwischen {distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, units.distance).toFixed(units.distance === 'km' ? 1 : 6)} und {distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, units.distance).toFixed(units.distance === 'km' ? 0 : 6)} {units.distance}
+                Wert zwischen {formatNumberInput(distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, units.distance))} und {formatNumberInput(distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, units.distance))} {units.distance}
                 eingeben.
               </span>
             )}

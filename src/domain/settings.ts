@@ -1,4 +1,5 @@
 import { DEFAULT_LAYER_ID, isPersistableLayerId, isPersistableOverlayId } from './mapLayers'
+import { formatNumber } from './numberFormat'
 
 export const durationFormats = [
   { value: 'hours-minutes', label: 'h min' },
@@ -109,10 +110,10 @@ export function elevationInUnit(meters: number, unit: Units['elevation']) {
 }
 
 export function durationInUnit(minutes: number, unit: Units['duration']) {
-  if (unit === 'minutes') return `${minutes} min`
-  if (unit === 'hours') return `${(minutes / 60).toFixed(1).replace('.', ',')} h`
+  if (unit === 'minutes') return `${formatNumber(minutes)} min`
+  if (unit === 'hours') return `${formatNumber(minutes / 60, 1)} h`
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
   if (unit === 'clock') return `${hours}:${String(rest).padStart(2, '0')}`
-  return hours ? `${hours} h ${rest} min` : `${rest} min`
+  return hours ? `${formatNumber(hours)} h ${formatNumber(rest)} min` : `${formatNumber(rest)} min`
 }

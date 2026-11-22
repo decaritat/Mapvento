@@ -52,6 +52,8 @@ describe('settings and units', () => {
     expect(durationInUnit(5, 'clock')).toBe('0:05')
     expect(durationInUnit(60, 'clock')).toBe('1:00')
     expect(durationInUnit(1501, 'clock')).toBe('25:01')
+    expect(durationInUnit(1234, 'minutes')).toBe('1.234 min')
+    expect(durationInUnit(60000, 'hours')).toBe('1.000,0 h')
     expect(parseSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS)
     const oldSettings = { version: 1, start: DEFAULT_SETTINGS.start, units: DEFAULT_SETTINGS.units }
     expect(parseSettings(oldSettings).developer.cacheDiagnostics).toBe(false)
@@ -77,6 +79,28 @@ describe('settings and units', () => {
     expect(profileDetailsAtIndex(route, 1).profileFraction).toBe(1)
   })
 
+  it('displays small profile-axis steps with their significant decimal places', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const route = {
+      ...initialProject.routes[0], editable: false,
+      nodes: [{ id: 'a', coordinate: [0, 0] }, { id: 'b', coordinate: [0.00005, 0] }],
+      geometry: [[0, 0], [0.00005, 0]], elevations: [1000, 1200],
+    }
+    localStorage.setItem('mapvento-project', JSON.stringify({ ...initialProject, routes: [route] }))
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await importStoredProject(container)
+      await click(container.querySelector<HTMLButtonElement>('[aria-label^="Höhenprofil ausklappen"]')!)
+      const labels = Array.from(container.querySelectorAll('.elevation-axis-label-x'), (item) => item.textContent)
+      expect(labels).toContain('0')
+      expect(labels).toContain('0,001')
+      expect(container.querySelector('.metric-grid')?.textContent).toContain('1.200 m')
+    } finally { await act(async () => root.unmount()); container.remove() }
+  })
+
   it('converts manual marker intervals to and from the selected distance unit', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     const update = vi.fn()
@@ -94,6 +118,74 @@ describe('settings and units', () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
       await act(async () => { setter.call(field, '2'); field.dispatchEvent(new Event('input', { bubbles: true })) })
       expect(update.mock.calls.at(-1)?.[0].distanceMarkerStepKm).toBeCloseTo(3.218688)
+      await act(async () => { setter.call(field, '0,5'); field.dispatchEvent(new Event('input', { bubbles: true })) })
+      expect(update.mock.calls.at(-1)?.[0].distanceMarkerStepKm).toBeCloseTo(0.804672)
+      await act(async () => { setter.call(field, '0.25'); field.dispatchEvent(new Event('input', { bubbles: true })) })
+      expect(update.mock.calls.at(-1)?.[0].distanceMarkerStepKm).toBeCloseTo(0.402336)
+    } finally { await act(async () => root.unmount()); container.remove() }
+  })
+
+  it('keeps invalid marker drafts visible and prevents saving them', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await click(container.querySelector<HTMLButtonElement>(`[aria-label="Aktionen für ${initialProject.routes[0].name}"]`)!)
+      await click(document.querySelector<HTMLButtonElement>('[role="menuitem"]')!)
+      await click(document.querySelector<HTMLInputElement>('.distance-marker-toggle input')!)
+      await click(document.querySelector<HTMLInputElement>('.distance-marker-option input[value="manual"]')!)
+      const field = document.querySelector<HTMLInputElement>('[aria-label="Manuelle Schrittweite in Kilometern"]')!
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+      for (const invalid of ['', '1,2.3', '0,09', '1000,1']) {
+        await act(async () => { setter.call(field, invalid); field.dispatchEvent(new Event('input', { bubbles: true })) })
+        expect(field.value).toBe(invalid)
+        expect(field.getAttribute('aria-invalid'), `invalid draft ${JSON.stringify(invalid)}`).toBe('true')
+        await click(document.querySelector<HTMLButtonElement>('[aria-label="Routeneigenschaften übernehmen"]')!)
+        expect(document.querySelector('.route-editor')).not.toBeNull()
+      }
+      await act(async () => { setter.call(field, '0,5'); field.dispatchEvent(new Event('input', { bubbles: true })) })
+      await click(document.querySelector<HTMLButtonElement>('[aria-label="Routeneigenschaften übernehmen"]')!)
+      expect(document.querySelector('.route-editor')).toBeNull()
+      await click(container.querySelector<HTMLButtonElement>(`[aria-label="Aktionen für ${initialProject.routes[0].name}"]`)!)
+      await click(document.querySelector<HTMLButtonElement>('[role="menuitem"]')!)
+      expect(document.querySelector<HTMLInputElement>('[aria-label="Manuelle Schrittweite in Kilometern"]')?.value).toBe('0,5')
+      await click(document.querySelector<HTMLInputElement>('.distance-marker-option input[value="auto"]')!)
+      await click(document.querySelector<HTMLInputElement>('.distance-marker-option input[value="manual"]')!)
+      expect(document.querySelector<HTMLInputElement>('[aria-label="Manuelle Schrittweite in Kilometern"]')?.value).toBe('0,5')
+    } finally { await act(async () => root.unmount()); container.remove() }
+  })
+
+  it('validates decimal coordinate drafts and preserves precision when saving', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<App />))
+      await openSettings(container)
+      await click(button(document, 'Start'))
+      await input('Breitengrad', '52,12345678912345')
+      await input('Längengrad', '13.405')
+      await input('Breitengrad', '52,1.2')
+      await click(button(document, 'Übernehmen'))
+      expect(document.body.textContent).toContain('Bitte gültige Dezimalzahlen')
+      expect(localStorage.getItem(SETTINGS_KEY)).toBeNull()
+      await input('Breitengrad', '')
+      await click(button(document, 'Übernehmen'))
+      expect(document.body.textContent).toContain('Bitte alle Werte')
+      await input('Breitengrad', '52,12345678912345')
+      await click(button(document, 'Übernehmen'))
+      const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)!)
+      expect(saved.start.latitude).toBe(52.12345678912345)
+      expect(saved.start.longitude).toBe(13.405)
+      await openSettings(container)
+      await click(button(document, 'Start'))
+      const latitude = Array.from(document.querySelectorAll('label')).find((item) => item.textContent?.startsWith('Breitengrad'))!.querySelector('input')!
+      expect(latitude.value).toBe('52,12345678912345')
+      await click(button(document, 'Übernehmen'))
+      expect(JSON.parse(localStorage.getItem(SETTINGS_KEY)!).start.latitude).toBe(52.12345678912345)
     } finally { await act(async () => root.unmount()); container.remove() }
   })
 
@@ -135,12 +227,12 @@ describe('settings and units', () => {
       await click(button(document, 'Übernehmen'))
       expect(JSON.parse(localStorage.getItem(SETTINGS_KEY)!).units).toEqual({ distance: 'mi', elevation: 'ft', duration: 'minutes' })
       const metrics = routeMetrics({ ...route, nodes: initialProject.routes[0].nodes, geometry: [[0, 0], [0.01, 0], [0.02, 0]] })
-      expect(container.querySelector('.route-card-stats')?.textContent).toContain(`${distanceInUnit(metrics.length, 'mi').toFixed(1)} mi`)
+      expect(container.querySelector('.route-card-stats')?.textContent).toContain(`${distanceInUnit(metrics.length, 'mi').toFixed(1).replace('.', ',')} mi`)
       expect(container.querySelector('.route-card-stats')?.textContent).toContain('90 min')
       expect(container.querySelector('.route-card-stats')?.textContent).not.toContain('ca.')
       expect(container.querySelector('.compact-metric-grid')?.textContent).toContain('492 ft höchster')
       expect(scale.mock.calls.at(-1)?.[0]).toMatchObject({ metric: false, imperial: true })
-      expect(container.querySelector('.distance-marker-label')?.textContent).toContain('mi')
+      expect(container.querySelector('.distance-marker-label')?.textContent).toContain('1,4 mi')
       await click(container.querySelector<HTMLButtonElement>('[aria-label^="Höhenprofil ausklappen"]')!)
       expect(container.querySelector('.elevation-axis-title-x')?.textContent).toContain('(mi)')
       expect(container.querySelector('.elevation-axis-title-y')?.textContent).toContain('(ft)')
@@ -149,7 +241,7 @@ describe('settings and units', () => {
       vi.spyOn(chart, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 560, height: 190, right: 560, bottom: 190, x: 0, y: 0, toJSON: () => ({}) })
       await act(async () => chart.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 550 })))
       expect(container.querySelector('.profile-selection')?.textContent).toContain('394 ft Höhe')
-      expect(container.querySelector('.profile-selection')?.textContent).toContain(`${distanceInUnit(metrics.length, 'mi').toFixed(2)} mi ab Start`)
+      expect(container.querySelector('.profile-selection')?.textContent).toContain(`${distanceInUnit(metrics.length, 'mi').toFixed(2).replace('.', ',')} mi ab Start`)
       expect(container.querySelector('.profile-selection')?.textContent).toContain('90 min ab Start')
       await openSettings(container)
       await click(button(document, 'Start'))

@@ -23,6 +23,7 @@ import { SettingsDialog } from '../components/settings/SettingsDialog'
 import { UpdateDialog } from '../components/update/UpdateDialog'
 import { ExitDialog } from '../components/exit/ExitDialog'
 import { distanceInUnit, readSettings, SETTINGS_KEY, type Settings } from '../domain/settings'
+import { formatNumberInput } from '../domain/numberFormat'
 import { tileDiagnostics } from '../integrations/map/tileDiagnostics'
 import { openExternalUrl } from '../integrations/desktop/externalUrl'
 import { getAppVersion } from '../integrations/desktop/appVersion'
@@ -694,7 +695,7 @@ function App() {
       !isValidDistanceMarkerStepKm(routeEditor.draft.distanceMarkerStepKm)
     ) {
       setNotice(
-        `Die manuelle Schrittweite muss zwischen ${distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, settings.units.distance).toFixed(settings.units.distance === 'km' ? 1 : 6)} und ${distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, settings.units.distance).toFixed(settings.units.distance === 'km' ? 0 : 6)} ${settings.units.distance} liegen.`,
+        `Die manuelle Schrittweite muss zwischen ${formatNumberInput(distanceInUnit(DISTANCE_MARKER_MIN_STEP_KM, settings.units.distance))} und ${formatNumberInput(distanceInUnit(DISTANCE_MARKER_MAX_STEP_KM, settings.units.distance))} ${settings.units.distance} liegen.`,
       )
       return
     }

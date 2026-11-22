@@ -937,7 +937,7 @@ describe('application interactions', () => {
       await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })))
       expect(container.textContent).toContain('Testtour')
       expect(container.textContent).toContain('GPX schreibgeschützt importiert.')
-      expect(container.textContent).toContain('READ-ONLY')
+      expect(container.textContent).toContain('Schreibgeschützt')
       expect(container.querySelectorAll('.point-marker')).toHaveLength(1)
       expect(container.querySelectorAll('.route-node')).toHaveLength(0)
       await act(async () => mapSpy.mock.results[0].value.fire('click', {
@@ -953,11 +953,13 @@ describe('application interactions', () => {
       expect(document.querySelector<HTMLInputElement>('[aria-label="Routenname"]')?.disabled).toBe(true)
       expect(document.querySelector<HTMLTextAreaElement>('[aria-label="Routenbeschreibung"]')?.disabled).toBe(true)
       const readOnlyRoute = document.querySelector<HTMLElement>('[role="dialog"]')!
+      expect(readOnlyRoute.querySelector('.lock-badge')?.textContent).toContain('Schreibgeschützt')
       expect(document.activeElement).toBe(readOnlyRoute)
       await act(async () => readOnlyRoute.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })))
       expect(document.activeElement).toBe(button(document, 'Routeneigenschaften übernehmen'))
       await act(async () => button(document, 'Routeneigenschaften verwerfen und schließen').click())
       await act(async () => container.querySelector<HTMLElement>('.point-marker')!.click())
+      expect(document.querySelector('.poi-editor .lock-badge')?.textContent).toContain('Schreibgeschützt')
       expect(document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')?.disabled).toBe(true)
       expect(document.activeElement).toBe(button(document, 'POI-Ansicht schließen'))
       expect(document.querySelector('[aria-label="POI löschen"]')).toBeNull()

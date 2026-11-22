@@ -8,6 +8,7 @@ import { useModalFocus } from '../shared/useModalFocus'
 import { ExternalLink } from '../shared/ExternalLink'
 import { getAppVersion } from '../../integrations/desktop/appVersion'
 import { ALL_PROVIDER_ATTRIBUTIONS } from '../../config/providers'
+import { formatNumber } from '../../domain/numberFormat'
 import './AboutDialog.css'
 
 const REPOSITORY_URL = 'https://github.com/decaritat/Mapvento'
@@ -167,7 +168,7 @@ export default function AboutDialog({ onClose }: { onClose: () => void }) {
                     <option value="rust">Rust (Desktop)</option>
                   </select>
                   <span className="about-count" aria-live="polite">
-                    {filtered.length} von {state.data.components.length}
+                    {formatNumber(filtered.length)} von {formatNumber(state.data.components.length)}
                   </span>
                 </div>
                 <ul className="about-components">

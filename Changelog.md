@@ -10,6 +10,7 @@ once released versions are maintained.
 
 ### Changed
 
+- Use consistent German read-only labels and localized measurement formats.
 - Support a 1024 × 600 minimum desktop window with scrollable content at larger text sizes.
 - Keep project file and cache action problems visible and confirm cache deletions.
 - Show unavailable route statistics as placeholders and identify estimated durations.
