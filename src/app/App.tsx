@@ -1031,8 +1031,10 @@ function App() {
             )}
           </section>
 
-          <ElevationProfile activeRoute={activeRoute} profilePointDetails={profilePointDetails}
-            setHoveredProfilePoint={setHoveredProfilePoint} elevationExpanded={elevationExpanded}
+          <ElevationProfile key={activeRoute?.id} activeRoute={activeRoute} profilePointDetails={profilePointDetails}
+            setHoveredProfilePoint={setHoveredProfilePoint}
+            clearProfileSelection={() => { setHoveredProfilePoint(null); setSelectedNode(null) }}
+            elevationExpanded={elevationExpanded}
             setElevationExpanded={setElevationExpanded} units={settings.units} />
         </section>
       </main>
