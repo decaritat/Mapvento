@@ -51,14 +51,19 @@ export function PointEditor({
       >
         <div className="route-editor-heading">
           <span className="eyebrow">{isNew ? 'POI anlegen' : 'POI-Eigenschaften'}</span>
-          {isReadOnly && <span className="lock-badge">READ-ONLY</span>}
+          {isReadOnly && <span className="lock-badge" lang="en">READ-ONLY</span>}
           <span
             className="poi-editor-selected-icon"
             aria-hidden="true"
             dangerouslySetInnerHTML={{ __html: poiIconSvg(selectedIcon) }}
           />
         </div>
-        <div className={`poi-icon-picker ${poiIconPickerOpen ? 'open' : ''}`}>
+        <div
+          className={`poi-icon-picker ${poiIconPickerOpen ? 'open' : ''}`}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setPoiIconPickerOpen(false)
+          }}
+        >
           <button
             ref={pickerToggle}
             className="poi-icon-picker-toggle"

@@ -956,6 +956,13 @@ describe('application interactions', () => {
       expect(iconPicker.getAttribute('aria-expanded')).toBe('false')
       expect(document.activeElement).toBe(iconPicker)
       expect(document.querySelector('[aria-label="POI-Titel"]')).not.toBeNull()
+      await act(async () => iconPicker.click())
+      await act(async () => document.querySelectorAll<HTMLButtonElement>('.poi-icon-option').item(0).focus())
+      const pointTitle = document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!
+      await act(async () => pointTitle.focus())
+      expect(iconPicker.getAttribute('aria-expanded')).toBe('false')
+      expect(document.querySelector('.poi-icon-picker-options')).toBeNull()
+      expect(document.activeElement).toBe(pointTitle)
       await act(async () => document.querySelector<HTMLInputElement>('[aria-label="POI-Titel"]')!
         .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
       expect(container.querySelector('.point-marker-label')?.textContent).toBe('Rastplatz')

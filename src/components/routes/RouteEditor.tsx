@@ -62,7 +62,7 @@ export function RouteEditor({ route, top, left, updateRouteDraft, saveRoutePrope
         <div className="route-editor-heading">
           <span className="eyebrow">Routeneigenschaften</span>
           {!route.editable && (
-            <span className="lock-badge" title="Diese Route ist schreibgeschützt">
+            <span className="lock-badge" lang="en" title="Diese Route ist schreibgeschützt">
               READ-ONLY
             </span>
           )}

@@ -4,3 +4,36 @@
 @import './Map.css';
 @import '../components/elevation-profile/ElevationProfile.css';
 @import './Responsive.css';
+
+:root :is(button, input:not([type='hidden']), select, textarea, a[href], summary, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid #a6f1ad;
+  outline-offset: 2px;
+  scroll-margin: 4px;
+}
+
+:root :is(.map-tools, .leaflet-control, .osm-place-details)
+  :is(button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline-color: #173c27;
+  outline-offset: -3px;
+}
+
+:root .leaflet-container[tabindex]:focus-visible,
+:root .leaflet-container .leaflet-marker-icon:focus-visible {
+  outline: 2px solid #111820;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 4px #fff;
+}
+
+:root .leaflet-container[tabindex]:focus-visible::after {
+  position: absolute;
+  z-index: 1000;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px #111820, inset 0 0 0 4px #fff;
+  content: '';
+  pointer-events: none;
+}
+
+:root .distance-marker-toggle input:focus-visible + .distance-marker-switch {
+  outline: 2px solid #a6f1ad;
+  outline-offset: 2px;
+}
