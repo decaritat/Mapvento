@@ -179,6 +179,21 @@ jobs:
           name: licenses
           path: assets
 
+      - name: Build user guide PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-xetex texlive-latex-recommended texlive-fonts-recommended
+          pandoc docs/user-guide_de.md \
+            --from=gfm \
+            --toc \
+            --metadata=title:"Mapvento – Benutzerhandbuch" \
+            --metadata=lang:de \
+            --pdf-engine=xelatex \
+            --resource-path=docs \
+            --variable=geometry:margin=18mm \
+            --output=assets/Mapvento-User-Guide_de.pdf
+          test -s assets/Mapvento-User-Guide_de.pdf
+
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
