@@ -8,6 +8,10 @@ once released versions are maintained.
 
 ## [Unreleased]
 
+### Added
+
+- Add a German user guide with screenshots and attach its PDF to final releases.
+
 ### Changed
 
 - Use consistent German read-only labels and localized measurement formats.

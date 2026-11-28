@@ -8,6 +8,12 @@
 editing, and analyzing hiking and cycling routes. Routes and projects stay on
 your device; map data is loaded online.
 
+## User Guide
+
+The [German-language user guide](docs/user-guide_de.md) explains
+route planning, map tools, projects, GPX, cache, and settings.
+A PDF version is also attached to final GitHub releases.
+
 ## Features
 
 - Plan and edit multiple hiking and cycling routes on an interactive map
